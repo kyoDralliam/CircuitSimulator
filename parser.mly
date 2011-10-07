@@ -2,7 +2,7 @@
 Premier jet de la syntaxe du langage donné au simulateur de circuit :
 
 Bloc := 
-     NomBloc < Entier > (Entrées)
+     NomBloc < LIST1( Entier, ",") > (Entrées)
      Instructions
      -> Sorties ;
 
