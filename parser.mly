@@ -87,13 +87,14 @@ entier                   INT
 *                        TIMES
 /                        DIV
 %                        MOD
+end_of_file              EOF
 
 *)
 
 
 %{
   (* zone ocaml *)
-
+  open Ast
 %}
 
 (* définition des tokens *)
@@ -101,11 +102,14 @@ entier                   INT
 %token<int> INT 
 %token LESS GREATER LPAREN RPAREN ARROW
 %token SEMI COMMA LSQBR RSQBR START
-%token LBRACK RBRACK DOT DOTDOT
+%token LBRACK RBRACK DOT DOTDOT EOF
 %token PLUS MINUS TIMES DIV MOD
 
 (* mise en place des priorités et des associativités *)
 
+
+
+%start <Ast.circuit> circuit
 
 %%
 
