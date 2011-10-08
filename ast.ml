@@ -59,4 +59,9 @@ type block = {
 }
 
 
-
+(* 
+Un circuit combinatoire : 
+   - un identifiant correspondant au bloc global
+   - une liste des blocs définis dans le code
+*)
+type circuit = id * block list

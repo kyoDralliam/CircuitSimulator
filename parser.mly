@@ -1,6 +1,8 @@
 (** 
 Premier jet de la syntaxe du langage donné au simulateur de circuit :
 
+Program := start NomBloc
+
 Bloc := 
      NomBloc < LIST1( Entier, ",") > (Entrées)
      Instructions
@@ -57,3 +59,46 @@ Additionneur <n> (a[n] , b[n])
        c : F.carry ;
 
 *)
+
+
+(**
+
+Tokens à définir pour le lexer :
+
+identifiantMajuscule     UID
+identifiantminuscule     LID
+start                    START
+<                        LESS
+>                        GREATER
+(                        LPAREN
+)                        RPAREN
+->                       ARROW
+;                        SEMI
+entier                   INT
+,                        COMMA
+[                        LSQBR
+]                        RSQBR
+{                        LBRACK
+}                        RBRACK
+.                        DOT
+..                       DOTDOT
++                        PLUS
+-                        MINUS
+*                        TIMES
+/                        DIV
+%                        MOD
+
+*)
+
+
+%{
+  (* zone ocaml *)
+
+%}
+
+%token<string> UID LID
+%token<int> INT
+%token LESS GREATER LPAREN RPAREN ARROW
+%token SEMI COMMA LSQBR RSQBR START
+%token LBRACK RBRACK DOT DOTDOT
+%token PLUS MINUS TIMES DIV MOD
