@@ -1,3 +1,29 @@
 projet CircuitSimulator (Nom à changer dès que quelqu'un à une idée...)
 
 Isma : La partie simulateur n'est qu'un petit bout du projet donc je propose "VirtualProcessor" (c'est surtout pour essayer un commit)
+
+Pour compiler le lexer/parseur/AST (cela nécessite ocaml et menhir)
+
+menhir --infer parser.mly
+ocamllex lexer.mll
+ocamlc -c ast.ml
+ocamlc -c parser.mli
+ocamlc -c parser.ml
+ocalmc -c lexer.ml
+
+puis pour faire des tests dans le toplevel :
+ocaml ast.cmo parser.cmo lexer.cmo
+
+ou 
+
+ocaml
+#load "ast.cmo";;
+#load "parser.cmo";;
+#load "lexer.cmo";;
+
+
+Les modules intéressant sont 
+Ast
+Parser (notamment Parser.circuit)
+Lexer  (notamment Lexer.token)
+Lexing (notamment Lexing.from_string)
