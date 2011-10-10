@@ -11,6 +11,7 @@ start                    START
 )                        RPAREN
 ->                       ARROW
 ;                        SEMI
+:                        COLON
 entier                   INT
 ,                        COMMA
 [                        LSQBR
@@ -56,7 +57,8 @@ rule token =
   | ")"                     { RPAREN }
   | "->"                    { ARROW }
   | ";"                     { SEMI }
-  | int                     { INT (int_of_string (Lexing.lexeme Lexbuf)) }
+  | ":"                     { COLON }
+  | int                     { INT (int_of_string (Lexing.lexeme lexbuf)) }
   | ","                     { COMMA }
   | "["                     { LSQBR }
   | "]"                     { RSQBR }
@@ -70,5 +72,7 @@ rule token =
   | "/"                     { DIV }
   | "%"                     { MOD }
   | eof                     { EOF }
+  | upperCase alphaNum+     { UID (Lexing.lexeme lexbuf) }
+  | lowerCase               { LID (Lexing.lexeme lexbuf) }
   | _                       { failwith "mal formé" } 
 (* étoffer un peu les erreurs pour simplifier le débogage*)

@@ -74,6 +74,7 @@ start                    START
 )                        RPAREN
 ->                       ARROW
 ;                        SEMI
+:                        COLON
 entier                   INT
 ,                        COMMA
 [                        LSQBR
@@ -94,30 +95,107 @@ end_of_file              EOF
 
 %{
   (* zone ocaml *)
-  open Ast
+  open Ast2
 %}
 
-(* définition des tokens *)
+/* définition des tokens */
 %token<string> UID LID
 %token<int> INT 
 %token LESS GREATER LPAREN RPAREN ARROW
 %token SEMI COMMA LSQBR RSQBR START
 %token LBRACK RBRACK DOT DOTDOT EOF
-%token PLUS MINUS TIMES DIV MOD
+%token PLUS MINUS TIMES DIV MOD COLON
 
-(* mise en place des priorités et des associativités *)
+/* mise en place des priorités et des associativités */
 
+%left PLUS MINUS
+%left TIMES DIV MOD
 
 
 %start <Ast.circuit> circuit
 
 %%
 
-(* corps du parser *)
+/** Tools **/
+%inline slist(S, x)        : l=separated_list(S, x)                    {l}
+%inline snlist(S, x)       : l=separated_nonempty_list(S, x)           {l}
+
+/** corps du parser **/
+
+circuit:
+  | d=definition c=circuit     { fst c, d::(snd c) }
+  | START n=LID c=circuit      { if fst c <> ""
+				 then failwith "un seul bloc peut être marqué start"
+				 else name, snd c }
+  | EOF                        { "", [] }
 
 
 
+%inline definition:
+  | n=UID p=parameters inp=inputs ins=instanciations o=output 
+    { { name = n ; parameters = p ; inputs = inp ; instanciations = ins ; outputs = o } }
 
+%inline parameters:
+  | l=option( LESS slist( COMMA, parameter ) GREATER ) 
+    { match l with None -> [] | Some l -> l }
+
+parameter:
+  | n=INT { Parameter_Value n }
+  | n=LID { Parameter_Name n }
+
+%inline inputs:
+  | LPAREN l=slist( COMMA, wire_declaration ) RPAREN { l }
+
+wire_declaration:
+  | n=LID                        { n, Int 1 }
+  | n=LID LSQBR i=integer RSQBR  { n, i }
+
+integer:
+  | n=INT                              { Int i }
+  | n=LID                              { Var n }
+  | n1=integer op=binary_op n2=integer { Binary_op (op,n1,n2) }
+  | op=unary_op n=integer              { Unary_op (op, n) }
+
+binary_op:
+  | PLUS  { Plus }
+  | MINUS { Minus }
+  | TIMES { Times }
+  | DIV   { Div }
+  | MOD   { Mod }
+
+unary_op:
+  | MINUS { Neg }
+
+%inline instanciations:
+  | l=list( instanciation ) { l }
+
+%inline instanciation:
+  | b=block_type n=UID LPAREN ws=slist( COMMA, wire ) RPAREN
+    { { block_type = b ; var_name = n ; input = ws } }
+
+%inline block_type:
+  | n=UID ps=option(LESS slist( COMMA, INT) GREATER)
+    { n, match ps with None -> [] | Some l -> l }
+
+wire:
+  | wi=wire_identifier                     { Named_Wire wi }
+  | LBRACK ws=snlist( COMMA, wire ) RBRACK { Merge ws }
+  | s=slice                                { Slice s }
+
+%inline wire_identifier:
+  | n1=option( UID ) DOT n2=LID { n1, n2 }
+
+slice:
+  | w=wire RSQBR m=integer LSQBR 
+    { { wire = w ; min = m ; max = m } }
+  | w=wire RSQBR m1=integer DOTDOT m2=integer LSQBR
+    { { wire = w ; min = m1 ; max = m2 } }
+
+%inline output:
+  | ARROW l=slist( COMMA, wire_definition) SEMI { l }
+
+%inline wire_definition:
+  | wd=wire_declaration COLON w=wire { wd, w } 
 
 
 %%

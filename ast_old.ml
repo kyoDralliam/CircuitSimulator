@@ -23,7 +23,11 @@ type integer =
      plus correct, et mettre block = None pour les entrées et sorties
      du bloc courant.
 *)
-type wire_identifier = id option * id
+type wire_identifier =
+    {
+      block : id (* ou id option *)
+      wire : id
+    }
 
 (* Une partie (contiguë) d'un fil *)
 type slice =
@@ -49,48 +53,62 @@ type parameter =
   | Parameter_Name of id
   | Parameter_Value of int
 
-
-(* Déclaration d'un fil : on définit son nom et sa taille. *)
-type wire_declaration = id * integer
-
 (* Définition d'un fil : on le déclare, et on indique
    à quel fil il est connecté. *)
-type wire_definition = wire_declaration * wire
+type wire_definition =
+    {
+      declaration : wire_declaration
+      value : wire
+    }
 
 (* Le type d'un bloc (par exemple Adder<42> pour un additionneur 42 bits). *)
-type block_type = id * integer list
-
+type block_type =
+    {
+      name : id
+      parameter : integer list
+    }
 
 (* Instanciation d'un type de bloc, c'est à dire définition d'un bloc.
    On donne le type du bloc, son nom et ses entrées. *)
-type instantiation = 
+type instantiation =
     {
       block_type : block_type
-      var_name : id
+      name : id
       input : wire list
+    }
+
+(* Déclaration d'un fil : on définit son nom et sa taille. *)
+type wire_declaration =
+    {
+      name : id
+      size : integer
     }
 
 (* Définition d'un type de bloc *)
 type block_type_definition =
     {
       name : id
-      parameters : parameter list
-      inputs : wire_declaration list
+      parameter : parameter list
+      input : wire_declaration list
       instantiations : instantiation list
-      outputs : wire_definition list
+      output : wire_definition list
     }
+
+(* Définition d'un type de périphérique *)
+type device_type_definition =
+    {
+      name : id
+      refresh_period : int
+    }
+
 
 (* 
 Un circuit combinatoire : 
    - un identifiant correspondant au bloc global
    - une liste des blocs définis dans le code
 *)
-type circuit = id * block list
-
-
-
-
-
-(* Définition d'un type de périphérique *)
-type device_type_definition = id * int
-
+type circuit = 
+    {
+      name : id ;
+      block_definitions : block list
+    }
