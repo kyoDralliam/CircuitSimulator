@@ -1,3 +1,4 @@
+%{
 (** 
 Premier jet de la syntaxe du langage donné au simulateur de circuit :
 
@@ -93,9 +94,9 @@ end_of_file              EOF
 *)
 
 
-%{
+
   (* zone ocaml *)
-  open Ast2
+  open Ast
 %}
 
 /* définition des tokens */
@@ -112,13 +113,15 @@ end_of_file              EOF
 %left TIMES DIV MOD
 
 
-%start <Ast.circuit> circuit
+%start circuit
+%type <Ast.circuit> circuit
 
 %%
 
 /** Tools **/
 %inline slist(S, x)        : l=separated_list(S, x)                    {l}
 %inline snlist(S, x)       : l=separated_nonempty_list(S, x)           {l}
+%inline beslist(B, E, S, x): B l=separated_list(S, x) E                {l}
 
 /** corps du parser **/
 
@@ -126,18 +129,17 @@ circuit:
   | d=definition c=circuit     { fst c, d::(snd c) }
   | START n=LID c=circuit      { if fst c <> ""
 				 then failwith "un seul bloc peut être marqué start"
-				 else name, snd c }
+				 else n, snd c }
   | EOF                        { "", [] }
 
 
 
 %inline definition:
   | n=UID p=parameters inp=inputs ins=instanciations o=output 
-    { { name = n ; parameters = p ; inputs = inp ; instanciations = ins ; outputs = o } }
+    { { name = n ; parameters = p ; inputs = inp ; instantiations = ins ; outputs = o } }
 
 %inline parameters:
-  | l=option( LESS slist( COMMA, parameter ) GREATER ) 
-    { match l with None -> [] | Some l -> l }
+  | l=loption( beslist(LESS, GREATER, COMMA, parameter) ) { l }
 
 parameter:
   | n=INT { Parameter_Value n }
@@ -151,12 +153,12 @@ wire_declaration:
   | n=LID LSQBR i=integer RSQBR  { n, i }
 
 integer:
-  | n=INT                              { Int i }
+  | n=INT                              { Int n }
   | n=LID                              { Var n }
-  | n1=integer op=binary_op n2=integer { Binary_op (op,n1,n2) }
-  | op=unary_op n=integer              { Unary_op (op, n) }
+  | n1=integer op=binary_op n2=integer { Binary_Op (op,n1,n2) }
+  | op=unary_op n=integer              { Unary_Op (op, n) }
 
-binary_op:
+%inline binary_op:
   | PLUS  { Plus }
   | MINUS { Minus }
   | TIMES { Times }
@@ -174,8 +176,8 @@ unary_op:
     { { block_type = b ; var_name = n ; input = ws } }
 
 %inline block_type:
-  | n=UID ps=option(LESS slist( COMMA, INT) GREATER)
-    { n, match ps with None -> [] | Some l -> l }
+  | n=UID ps=loption( beslist(LESS, GREATER, COMMA, integer) )
+    { n, ps }
 
 wire:
   | wi=wire_identifier                     { Named_Wire wi }

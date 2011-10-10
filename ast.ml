@@ -28,9 +28,9 @@ type wire_identifier = id option * id
 (* Une partie (contiguë) d'un fil *)
 type slice =
     {
-      wire : wire
-      min : integer
-      max : integer
+      wire : wire ;
+      min : integer ;
+      max : integer 
     }
 
 (* Un fil :
@@ -38,7 +38,7 @@ type slice =
                                sortie d'un sous bloc)
     Merge : Réunion de plusieurs fils en un seul gros fil
     Slice : Une partie (contiguë) d'un fil *)
-and type wire =
+and wire =
   | Named_Wire of wire_identifier
   | Merge of wire list
   | Slice of slice
@@ -65,18 +65,18 @@ type block_type = id * integer list
    On donne le type du bloc, son nom et ses entrées. *)
 type instantiation = 
     {
-      block_type : block_type
-      var_name : id
+      block_type : block_type ;
+      var_name : id ;
       input : wire list
     }
 
 (* Définition d'un type de bloc *)
 type block_type_definition =
     {
-      name : id
-      parameters : parameter list
-      inputs : wire_declaration list
-      instantiations : instantiation list
+      name : id ;
+      parameters : parameter list ;
+      inputs : wire_declaration list ;
+      instantiations : instantiation list ;
       outputs : wire_definition list
     }
 
@@ -85,7 +85,7 @@ Un circuit combinatoire :
    - un identifiant correspondant au bloc global
    - une liste des blocs définis dans le code
 *)
-type circuit = id * block list
+type circuit = id * block_type_definition list
 
 
 

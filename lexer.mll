@@ -48,7 +48,7 @@ let int = ['0'-'9' '_'] +
    | '0' ['b' 'B'] ['0'-'1']+
 *)
 
-rule token =
+rule token = parse
   | [ ' ' '\t' ] +          { token lexbuf }
   | "start"                 { START }
   | "<"                     { LESS }
@@ -59,6 +59,8 @@ rule token =
   | ";"                     { SEMI }
   | ":"                     { COLON }
   | int                     { INT (int_of_string (Lexing.lexeme lexbuf)) }
+  | upperCase alphaNum*     { UID (Lexing.lexeme lexbuf) }
+  | lowerCase alphaNum*     { LID (Lexing.lexeme lexbuf) }
   | ","                     { COMMA }
   | "["                     { LSQBR }
   | "]"                     { RSQBR }
@@ -72,7 +74,5 @@ rule token =
   | "/"                     { DIV }
   | "%"                     { MOD }
   | eof                     { EOF }
-  | upperCase alphaNum+     { UID (Lexing.lexeme lexbuf) }
-  | lowerCase               { LID (Lexing.lexeme lexbuf) }
   | _                       { failwith "mal formé" } 
 (* étoffer un peu les erreurs pour simplifier le débogage*)
