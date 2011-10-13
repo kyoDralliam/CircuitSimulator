@@ -4,26 +4,46 @@ Isma : La partie simulateur n'est qu'un petit bout du projet donc je propose "Vi
 
 Pour compiler le lexer/parseur/AST (cela nécessite ocaml et menhir)
 
-menhir --infer parser.mly
-ocamllex lexer.mll
-ocamlc -c ast.ml
-ocamlc -c parser.mli
-ocamlc -c parser.ml
-ocalmc -c lexer.ml
+Avec ocamlbuild (conseillé) :
 
-puis pour faire des tests dans le toplevel :
-ocaml ast.cmo parser.cmo lexer.cmo
+     sans l'exemple :
+     $ ocamlbuild -use-menhir lexer.cmo
 
-ou 
+     avec l'exemple :
+     $ ocamlbuild -use-menhir test.top
+     $ cd _build
+     $ ./test.top
 
-ocaml
-#load "ast.cmo";;
-#load "parser.cmo";;
-#load "lexer.cmo";;
+Sans ocamlbuild :
+     $ menhir --infer parser.mly
+     $ ocamllex lexer.mll
+     $ ocamlc -c ast.ml
+     $ ocamlc -c parser.mli
+     $ ocamlc -c parser.ml
+     $ ocamlc -c lexer.ml
+
+     plus pour les exemple :
+     $ ocamlc -c test.ml
+     
+     puis pour faire des tests dans le toplevel :
+     $ ocaml ast.cmo parser.cmo lexer.cmo test.cmo
+
+     ou 
+
+     ocaml
+     $ #load "ast.cmo";;
+     $ #load "parser.cmo";;
+     $ #load "lexer.cmo";;
+     $ #load "test.cmo";;
+
+     ou 
+     
+     $ ocamlmktop -o test_top ast.cmo parser.cmo lexer.cmo test.cmo
 
 
-Les modules intéressant sont 
-Ast
-Parser (notamment Parser.circuit)
-Lexer  (notamment Lexer.token)
-Lexing (notamment Lexing.from_string)
+Les modules intéressant sont :
+     Ast
+     Parser (notamment Parser.circuit)
+     Lexer  (notamment Lexer.token)
+     Lexing (notamment Lexing.from_string ou Lexing.from_channel)
+     Test   ( lex_file et parse_file )

@@ -99,6 +99,7 @@ end_of_file              EOF
   open Ast
 
   type circuit_element = Block of block_type_definition | Start of id
+
   let circuit_from_circuit_element_list =
     let f (n,l) = function
       | Block b -> n,b::l
@@ -143,7 +144,7 @@ circuit_element:
   | START n=UID     { Start n }
 
 definition:
-  | n=UID p=parameters inp=inputs ins=instanciations o=output 
+  | n=UID p=parameters inp=inputs ins=instantiations o=output 
     { { name = n ; parameters = p ; inputs = inp ; instantiations = ins ; outputs = o } }
 
 parameters:
@@ -176,10 +177,10 @@ integer:
 unary_op:
   | MINUS { Neg }
 
-instanciations:
-  | l=list( instanciation ) { l }
+instantiations:
+  | l=list( instantiation ) { l }
 
-instanciation:
+instantiation:
   | b=block_type n=UID ws=loption( beslist( LPAREN, RPAREN, COMMA, wire ) )
     { { block_type = b ; var_name = n ; input = ws } }
 
@@ -193,12 +194,13 @@ wire:
   | s=slice                                { Slice s }
 
 %inline wire_identifier:
-  | n1=option( UID ) DOT n2=LID { n1, n2 }
+  | n1=UID DOT n2=LID { Some n1, n2 }
+  | n=LID             { None , n }
 
 slice:
-  | w=wire RSQBR m=integer LSQBR 
+  | w=wire_identifier LSQBR m=integer RSQBR 
     { { wire = w ; min = m ; max = m } }
-  | w=wire RSQBR m1=integer DOTDOT m2=integer LSQBR
+  | w=wire_identifier LSQBR m1=integer DOTDOT m2=integer RSQBR
     { { wire = w ; min = m1 ; max = m2 } }
 
 output:
@@ -214,128 +216,3 @@ output:
 
 
 
-
-
-/* version pour les tests */
-/*
-
-%{
-
-
-
-  (* zone ocaml *)
-  open Ast
-%}
-
-/* définition des tokens */
-%token<string> UID LID
-%token<int> INT 
-%token LESS GREATER LPAREN RPAREN ARROW
-%token SEMI COMMA LSQBR RSQBR START
-%token LBRACK RBRACK DOT DOTDOT EOF
-%token PLUS MINUS TIMES DIV MOD COLON
-
-/* mise en place des priorités et des associativités */
-
-%left PLUS MINUS
-%left TIMES DIV MOD
-
-
-%start circuit
-%type <Ast.circuit> circuit
-
-%start <Ast.block_type_definition> definition
-%start <Ast.instantiation list> instantiations
-%start <Ast.instantiation> instantiation
-%start <Ast.wire> wire
-/* %start <Ast.parameter list> parameters  ok */
-%start <Ast.wire_declaration list> inputs
-%start <Ast.wire_definition list> output
-
-%%
-
-/** Tools **/
-%inline slist(S, x)        : l=separated_list(S, x)                    {l}
-%inline snlist(S, x)       : l=separated_nonempty_list(S, x)           {l}
-%inline beslist(B, E, S, x): B l=separated_list(S, x) E                {l}
-
-/** corps du parser **/
-
-circuit:
-  | d=definition c=circuit     { fst c, d::(snd c) }
-  | START n=LID c=circuit      { if fst c <> ""
-				 then failwith "un seul bloc peut être marqué start"
-				 else n, snd c }
-  | EOF                        { "", [] }
-
-
-
-definition:
-  | n=UID p=parameters inp=inputs ins=instantiations o=output 
-    { { name = n ; parameters = p ; inputs = inp ; instantiations = ins ; outputs = o } }
-
-parameters:
-  | l=loption( beslist(LESS, GREATER, COMMA, parameter) ) { l }
-
-parameter:
-  | n=INT { Parameter_Value n }
-  | n=LID { Parameter_Name n }
-
-inputs:
-  | LPAREN l=slist( COMMA, wire_declaration ) RPAREN { l }
-
-wire_declaration:
-  | n=LID                        { n, Int 1 }
-  | n=LID LSQBR i=integer RSQBR  { n, i }
-
-integer:
-  | n=INT                              { Int n }
-  | n=LID                              { Var n }
-  | n1=integer op=binary_op n2=integer { Binary_Op (op,n1,n2) }
-  | op=unary_op n=integer              { Unary_Op (op, n) }
-
-%inline binary_op:
-  | PLUS  { Plus }
-  | MINUS { Minus }
-  | TIMES { Times }
-  | DIV   { Div }
-  | MOD   { Mod }
-
-unary_op:
-  | MINUS { Neg }
-
-instantiations:
-  | l=list( instantiation ) { l }
-
-instantiation:
-  | b=block_type n=UID LPAREN ws=slist( COMMA, wire ) RPAREN
-    { { block_type = b ; var_name = n ; input = ws } }
-
-block_type:
-  | n=UID ps=loption( beslist(LESS, GREATER, COMMA, integer) )
-    { n, ps }
-
-wire:
-  | wi=wire_identifier                     { Named_Wire wi }
-  | s=slice                                { Slice s }
-  | LBRACK ws=snlist( COMMA, wire ) RBRACK { Merge ws }
-  
-
-%inline wire_identifier:
-  | n1=UID DOT n2=LID { (Some n1), n2 }
-  | n=LID             { None, n }
-
-%inline slice:
-  | w=wire_identifier RSQBR m=integer LSQBR 
-    { { wire = w ; min = m ; max = m } }
-  | w=wire_identifier RSQBR m1=integer DOTDOT m2=integer LSQBR
-    { { wire = w ; min = m1 ; max = m2 } }
-
-output:
-  | ARROW l=slist( COMMA, wire_definition) SEMI { l }
-
-wire_definition:
-  | wd=wire_declaration COLON w=wire { wd, w } 
-
-
-%% */

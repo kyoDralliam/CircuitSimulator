@@ -1,0 +1,10 @@
+HalfAdder ( a, b)
+    Xor X( a, b)
+    And	A( a, b)
+    -> s : X.r, c : A.r ;
+
+FullAdder ( a, b, c)
+    HalfAdder H1( a, b)
+    HalfAdder H2( c, H1.r)
+    And A( H1.c, H2.c)
+    -> s : H2.r, c : A.r ;  
