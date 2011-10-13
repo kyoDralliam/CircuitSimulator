@@ -97,6 +97,16 @@ end_of_file              EOF
 
   (* zone ocaml *)
   open Ast
+
+  type circuit_element = Block of block_type_definition | Start of id
+  let circuit_from_circuit_element_list =
+    let f (n,l) = function
+      | Block b -> n,b::l
+      | Start n'-> 
+	  if n <> "" 
+	  then failwith "un seul bloc peut être marqué start"
+	  else n', l
+    in List.fold_left f ("",[])
 %}
 
 /* définition des tokens */
@@ -126,27 +136,25 @@ end_of_file              EOF
 /** corps du parser **/
 
 circuit:
-  | d=definition c=circuit     { fst c, d::(snd c) }
-  | START n=LID c=circuit      { if fst c <> ""
-				 then failwith "un seul bloc peut être marqué start"
-				 else n, snd c }
-  | EOF                        { "", [] }
+  | l=list( circuit_element ) EOF { circuit_from_circuit_element_list l }
 
+circuit_element:
+  | d=definition    { Block d }
+  | START n=UID     { Start n }
 
-
-%inline definition:
+definition:
   | n=UID p=parameters inp=inputs ins=instanciations o=output 
     { { name = n ; parameters = p ; inputs = inp ; instantiations = ins ; outputs = o } }
 
-%inline parameters:
+parameters:
   | l=loption( beslist(LESS, GREATER, COMMA, parameter) ) { l }
 
 parameter:
   | n=INT { Parameter_Value n }
   | n=LID { Parameter_Name n }
 
-%inline inputs:
-  | LPAREN l=slist( COMMA, wire_declaration ) RPAREN { l }
+inputs:
+  | l=loption( beslist( LPAREN, RPAREN, COMMA, wire_declaration ) ) { l }
 
 wire_declaration:
   | n=LID                        { n, Int 1 }
@@ -168,14 +176,14 @@ integer:
 unary_op:
   | MINUS { Neg }
 
-%inline instanciations:
+instanciations:
   | l=list( instanciation ) { l }
 
-%inline instanciation:
-  | b=block_type n=UID LPAREN ws=slist( COMMA, wire ) RPAREN
+instanciation:
+  | b=block_type n=UID ws=loption( beslist( LPAREN, RPAREN, COMMA, wire ) )
     { { block_type = b ; var_name = n ; input = ws } }
 
-%inline block_type:
+block_type:
   | n=UID ps=loption( beslist(LESS, GREATER, COMMA, integer) )
     { n, ps }
 
@@ -193,8 +201,8 @@ slice:
   | w=wire RSQBR m1=integer DOTDOT m2=integer LSQBR
     { { wire = w ; min = m1 ; max = m2 } }
 
-%inline output:
-  | ARROW l=slist( COMMA, wire_definition) SEMI { l }
+output:
+  | l=beslist( ARROW, SEMI, COMMA, wire_definition) { l }
 
 %inline wire_definition:
   | wd=wire_declaration COLON w=wire { wd, w } 

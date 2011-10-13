@@ -28,7 +28,7 @@ type wire_identifier = id option * id
 (* Une partie (contiguë) d'un fil *)
 type slice =
     {
-      wire : wire ;
+      wire : wire_identifier ;
       min : integer ;
       max : integer 
     }
