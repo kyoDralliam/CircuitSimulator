@@ -8,3 +8,14 @@ FullAdder ( a, b, c)
     HalfAdder H2( c, H1.r)
     And A( H1.c, H2.c)
     -> s : H2.r, c : A.r ;  
+
+ParallelAdder <1> (a, b)
+    HalfAdder F (a, b) 
+    -> result : F.s, c : F.c ;
+
+ParallelAdder <n> (a[n] , b[n])
+    ParallelAdder<n-1> A (a[0..n-2], b[0..n-2])  
+    FullAdder F (a[n-1], b[n-1], A.c) 
+    -> 
+       result : { A.result, F.sortie } , 
+       c : F.carry ;

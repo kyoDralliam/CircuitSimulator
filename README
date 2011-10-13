@@ -10,9 +10,9 @@ Avec ocamlbuild (conseillé) :
      $ ocamlbuild -use-menhir lexer.cmo
 
      avec l'exemple :
-     $ ocamlbuild -use-menhir test.top
+     $ ocamlbuild -use-menhir tools.top
      $ cd _build
-     $ ./test.top
+     $ ./tools.top
 
 Sans ocamlbuild :
      $ menhir --infer parser.mly
@@ -23,10 +23,10 @@ Sans ocamlbuild :
      $ ocamlc -c lexer.ml
 
      plus pour les exemple :
-     $ ocamlc -c test.ml
+     $ ocamlc -c tools.ml
      
      puis pour faire des tests dans le toplevel :
-     $ ocaml ast.cmo parser.cmo lexer.cmo test.cmo
+     $ ocaml ast.cmo parser.cmo lexer.cmo tools.cmo
 
      ou 
 
@@ -34,11 +34,11 @@ Sans ocamlbuild :
      $ #load "ast.cmo";;
      $ #load "parser.cmo";;
      $ #load "lexer.cmo";;
-     $ #load "test.cmo";;
+     $ #load "tools.cmo";;
 
      ou 
      
-     $ ocamlmktop -o test_top ast.cmo parser.cmo lexer.cmo test.cmo
+     $ ocamlmktop -o test_top ast.cmo parser.cmo lexer.cmo tools.cmo
 
 
 Les modules intéressant sont :
@@ -46,4 +46,11 @@ Les modules intéressant sont :
      Parser (notamment Parser.circuit)
      Lexer  (notamment Lexer.token)
      Lexing (notamment Lexing.from_string ou Lexing.from_channel)
-     Test   ( lex_file et parse_file )
+     Tools   ( lex_file et parse_file )
+
+
+Méthode la plus simple pour parser un fichier nommé "bidule" 
+	$ ocamlbuild -use-menhir tools.top
+     	$ cd _build
+     	$ ./tools.top
+	# Tools.parse_file "../bidule";;

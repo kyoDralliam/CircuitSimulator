@@ -98,7 +98,7 @@ end_of_file              EOF
   (* zone ocaml *)
   open Ast
 
-  type circuit_element = Block of block_type_definition | Start of id
+  type circuit_element = Block of block_type_definition | Start of block_type
 
   let circuit_from_circuit_element_list =
     let f (n,l) = function
@@ -141,7 +141,7 @@ circuit:
 
 circuit_element:
   | d=definition    { Block d }
-  | START n=UID     { Start n }
+  | START n=block_type     { Start n }
 
 definition:
   | n=UID p=parameters inp=inputs ins=instantiations o=output 
