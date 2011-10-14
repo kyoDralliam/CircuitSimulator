@@ -46,11 +46,12 @@ Les modules intéressant sont :
      Parser (notamment Parser.circuit)
      Lexer  (notamment Lexer.token)
      Lexing (notamment Lexing.from_string ou Lexing.from_channel)
-     Tools   ( lex_file et parse_file )
+     Tools   ( dump_file, lex_file et parse_file )
 
 
-Méthode la plus simple pour parser un fichier nommé "bidule" 
+Méthode la plus simple pour parser (et avoir un aperçu) d'un fichier nommé "bidule" 
 	$ ocamlbuild -use-menhir tools.top
      	$ cd _build
      	$ ./tools.top
 	# Tools.parse_file "../bidule";;
+	# Tools.dump_file "../bidule";;
