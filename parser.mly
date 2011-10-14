@@ -97,17 +97,20 @@ end_of_file              EOF
 
   (* zone ocaml *)
   open Ast
+  open Integer
+  module IntegerAst = Make(Integer)
+  open IntegerAst
 
   type circuit_element = Block of block_type_definition | Start of block_type
 
   let circuit_from_circuit_element_list =
     let f (n,l) = function
       | Block b -> n,b::l
-      | Start n'-> 
-	  if n <> "" 
+      | Start n' -> 
+	  if (fst n) <> "" 
 	  then failwith "un seul bloc peut être marqué start"
 	  else n', l
-    in List.fold_left f ("",[])
+    in List.fold_left f (("",[]),[])
 %}
 
 /* définition des tokens */
@@ -125,7 +128,7 @@ end_of_file              EOF
 
 
 %start circuit
-%type <Ast.circuit> circuit
+%type <Ast.Make(Ast.Integer).circuit> circuit
 
 %%
 
