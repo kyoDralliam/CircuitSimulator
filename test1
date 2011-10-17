@@ -19,3 +19,5 @@ ParallelAdder <n> (a[n] , b[n])
     -> 
        result : { A.result, F.sortie } , 
        c : F.carry ;
+
+start ParallelAdder<5>
