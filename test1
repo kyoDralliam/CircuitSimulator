@@ -17,7 +17,7 @@ ParallelAdder <n> (a[n] , b[n])
     ParallelAdder<n-1> A (a[0..n-2], b[0..n-2])  
     FullAdder F (a[n-1], b[n-1], A.c) 
     -> 
-       result : { A.result, F.sortie } , 
+       result[n] : { A.result, F.sortie } , 
        c : F.carry ;
 
-start ParallelAdder<5>
+start ParallelAdder < 8 >

@@ -103,14 +103,19 @@ end_of_file              EOF
 
   type circuit_element = Block of block_type_definition | Start of block_type
 
-  let circuit_from_circuit_element_list =
+  let circuit_from_circuit_element_list l0 =
     let f (n,l) = function
       | Block b -> n,b::l
       | Start n' -> 
-	  if (fst n) <> "" 
+	  if n <> None 
 	  then failwith "un seul bloc peut être marqué start"
-	  else n', l
-    in List.fold_left f (("",[]),[])
+	  else (Some n'), l
+    in 
+    let (n,l) = List.fold_left f (None,[]) l0 in
+      match n with
+	| None -> failwith "Il n'y a pas de point de départ. 
+                  Penser à mettre l'instruction start nomBlock"
+	| Some n' -> n', l
 %}
 
 /* définition des tokens */
@@ -151,11 +156,7 @@ definition:
     { { name = n ; parameters = p ; inputs = inp ; instantiations = ins ; outputs = o } }
 
 parameters:
-  | l=loption( beslist(LESS, GREATER, COMMA, parameter) ) { l }
-
-parameter:
-  | n=INT { Parameter_Value n }
-  | n=LID { Parameter_Name n }
+  | l=loption( beslist(LESS, GREATER, COMMA, integer) ) { l }
 
 inputs:
   | l=loption( beslist( LPAREN, RPAREN, COMMA, wire_declaration ) ) { l }
@@ -169,6 +170,7 @@ integer:
   | n=LID                              { Var n }
   | n1=integer op=binary_op n2=integer { Binary_Op (op,n1,n2) }
   | op=unary_op n=integer              { Unary_Op (op, n) }
+  | LPAREN n=integer RPAREN            { n }
 
 %inline binary_op:
   | PLUS  { Plus }

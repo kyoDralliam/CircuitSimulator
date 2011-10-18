@@ -35,13 +35,11 @@ let dump_file filename =
 	"(" ^ (string_of_integer i1) ^ " " ^ (string_of_bop bop) ^ " " ^ (string_of_integer i2) ^ ")"
     | Unary_Op (uop, i) -> (string_of_uop uop) ^ (string_of_integer i)
   in
-  let print_parameter = function  
-      Parameter_Name s -> printf "%s, " s  
-    | Parameter_Value i -> printf "%i, " i
+  let print_parameter x = printf "%s, " (string_of_integer x)
   in
   let print_input (s,i) = printf "%s -> %s, " s (string_of_integer i) in
   let print_instanciation inst = printf "%s, " (fst inst.block_type) in
-  let print_output o = printf "%s, " (fst (fst o)) in
+  let print_output (o,_) = printf "%s -> %s, " (fst o) (string_of_integer (snd o))  in
   let print_block { name ; parameters ; inputs ; instantiations ; outputs } =
     printf "%s : \n\tparameters : " name ;
     List.iter print_parameter parameters ;

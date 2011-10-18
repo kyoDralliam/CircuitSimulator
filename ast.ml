@@ -11,7 +11,7 @@ struct
 
   (* Les opérateurs utilisés dans les expressions arithmétiques. *)
   type binary_op =
-    | Plus | Minus | Times | Div | Mod
+    | Plus | Minus | Times | Div | Mod 
 
   type unary_op =
     | Neg
@@ -22,6 +22,13 @@ struct
     | Var of id
     | Binary_Op of binary_op * integer * integer
     | Unary_Op of unary_op * integer
+
+  let get_binary_op = function
+    | Plus -> (+)
+    | Minus -> (-) 
+    | Times -> ( * ) 
+    | Div -> (/)
+    | Mod -> (mod)
 
 end
 
@@ -62,17 +69,10 @@ struct
      sortie d'un sous bloc)
      Merge : Réunion de plusieurs fils en un seul gros fil
      Slice : Une partie (contiguë) d'un fil *)
-  and wire =
+ type wire =
     | Named_Wire of wire_identifier
     | Merge of wire list
     | Slice of slice
-
-  (* Un paramètre peut être une variable littérale (cas général de la récursion)
-     ou un nombre (cas limite de la récursion). *)
-  type parameter =
-    | Parameter_Name of id
-    | Parameter_Value of int
-	
 
   (* Déclaration d'un fil : on définit son nom et sa taille. *)
   type wire_declaration = id * integer
@@ -91,14 +91,14 @@ struct
       {
 	block_type : block_type ;
 	var_name : id ;
-	input : wire list
+	input : wire list 
       }
 
   (* Définition d'un type de bloc *)
   type block_type_definition =
       {
 	name : id ;
-	parameters : parameter list ;
+	parameters : integer list ;
 	inputs : wire_declaration list ;
 	instantiations : instantiation list ;
 	outputs : wire_definition list
@@ -110,9 +110,9 @@ struct
      - une liste des blocs définis dans le code
   *)
   type circuit = block_type * block_type_definition list
-
+      (* block_type * block_type_definition ConcreteBlockMap.t *)
 
   (* Définition d'un type de périphérique *)
-  type device_type_definition = id * int
+  type device_type_definition = id
 
 end
