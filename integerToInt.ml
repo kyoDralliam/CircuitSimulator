@@ -6,9 +6,9 @@ module IntegerAst = Make(Integer)
 (** Ast sur Int : module d'arrivée du circuit *)
 module IntAst = Make(Int)
 
-module StringMap = Make(
+module StringMap = Map.Make(
   struct
-    type t = int
+    type t = string
     let compare = compare
   end)
 
@@ -31,34 +31,34 @@ struct
   open Integer
 
   let rec integer m = function
-    | IntegerAst.Int n -> n
-    | IntegerAst.Var s -> 
-	try StringMap.find s m
-	with Not_Found -> raise (Free_Variable s)
-    | IntegerAst.BinaryOp (op,l,r) ->
+    | Int n -> n
+    | Var s -> 
+	(try StringMap.find s m
+	with Not_found -> raise (Free_Variable s))
+    | Binary_Op (op,l,r) ->
 	(get_binary_op op) (integer m l) (integer m r)
-    | IntegerAst.UnaryOp (Neg,n) -> -(integer m n)
+    | Unary_Op (Neg,n) -> -(integer m n)
 
   let integer_list m = List.map (integer m)
 
-  let wire m = function
+  let rec wire m = function
     | IntegerAst.Named_Wire s -> IntAst.Named_Wire s
     | IntegerAst.Merge l -> 
 	if l <> []
 	then IntAst.Merge (List.map (wire m) l)
 	else raise (Zero_Sized_Wire "merge vide")
     | IntegerAst.Slice s ->
-	let min = integer m s.min in
-	let max = integer m s.max  in
+	let min = integer m s.IntegerAst.min in 
+	let max = integer m s.IntegerAst.max  in
 	  if max - min > 0
 	  then
-	    IntAst.(slice { 
-		      s with 
-			min = min ; 
-			max = max 
+	    IntAst.(Slice { 
+		      wire = s.IntegerAst.wire ;
+		      min = min ; 
+		      max = max 
 		    })
 	  else raise (Zero_Sized_Wire 
-			(wire_identifier_to_string s.wire))
+			(wire_identifier_to_string s.IntegerAst.wire))
 
   let block_type m (n,l) = (n, integer_list m l)
     
@@ -66,18 +66,19 @@ struct
 
   let wire_definition m (wd,w) = wire_declaration m wd, wire m w
 
-  let instanciation m ins = 
-    { ins with 
-	IntAst.block_type = block_type m ins.block_type
-	IntAst.input = List.map (wire m) ins.input
-    }
+  let instantiation m ins = 
+    IntAst.({
+      block_type = block_type m ins.IntegerAst.block_type ;
+      var_name = ins.IntegerAst.var_name ;
+      input = List.map (wire m) ins.IntegerAst.input
+    })
 
   let block_type_definition m block =
     let open IntAst in
-    { block with
-	parameters = integer_list m block.parameters ;
-	inputs = List.map (wire_declaration m) block.inputs ;
-	instanciations = List.map (instanciations m) block.instanciations ;
-	outputs = List.map (wire_definition m) block.outputs
+      { name = block.IntegerAst.name ;
+	parameters = integer_list m block.IntegerAst.parameters ;
+	inputs = List.map (wire_declaration m) block.IntegerAst.inputs ;
+	instantiations = List.map (instantiation m) block.IntegerAst.instantiations ;
+	outputs = List.map (wire_definition m) block.IntegerAst.outputs
     }
 end

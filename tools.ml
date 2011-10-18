@@ -12,6 +12,12 @@ let parse_file filename =
   let res = Parser.circuit Lexer.token (Lexing.from_channel chan) in
     res
 
+(** fonction d'aide pour filtrer les erreurs*)
+let wire_identifier_to_string = function
+  | None, s2 -> s2
+  | (Some s1), s2 -> s1 ^"."^s2
+
+
 let dump_file filename =
   let circuit = parse_file filename in
   let module IntegerAst = Ast.Make(Ast.Integer) in

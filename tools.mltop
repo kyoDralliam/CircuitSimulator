@@ -2,3 +2,6 @@ Ast
 Parser
 Lexer
 Tools
+IntegerToInt
+Pattern
+SemanticAnalysis

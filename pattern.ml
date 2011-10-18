@@ -33,23 +33,24 @@ let is_parameter_closed x = function
 type affine_combination = (id*int) list  
 
 (** Somme de deux combinaisons affines *)
-let rec add acc = function 
+let rec add ?(acc=[]) = function 
   | [], l | l, [] -> List.rev_append acc l
   | ((x,nx)::xs),((y,ny)::ys) -> match compare x y with
-      | -1 -> add ((x,nx)::acc) (xs,(y,ny)::ys)
+      | -1 -> add ~acc:((x,nx)::acc) (xs,(y,ny)::ys)
       | 0 -> if nx + ny <> 0 
-	then add ((x,nx+ny)::acc) (xs, ys)
-	else add acc (xs, ys)
-      | 1 -> add ((y,ny)::acc) ((x,nx)::xs,ys)
+	then add ~acc:((x,nx+ny)::acc) (xs, ys)
+	else add ~acc (xs, ys)
+      | 1 -> add ~acc:((y,ny)::acc) ((x,nx)::xs,ys)
+      | _ -> failwith "cas impossible"
 
 (** Y-a-t il autre chose que le terme
     constant dans la combinaison affine ?
     oui => retourne la constante, non => -1
 *)
 let is_const = function
-  | [] -> 0 
+  | [] -> 0  
   | [ "", n ] -> n
-  | _ -> -1 in
+  | _ -> (-1) 
 
 (** transforme un integer (interprété comme un pattern)
     en une combinaison affine
@@ -58,20 +59,20 @@ let rec to_combo x =
   match x with
     | Int n -> if n <> 0 then [ "", n ] else []
     | Var s ->  [ s, 1 ]
-    | Unary_Op (Neg, n) -> List.iter (fun (s,x) -> (s,-x)) (to_combo n)
+    | Unary_Op (Neg, n) -> List.map (fun (s,x) -> (s,-x)) (to_combo n)
     | Binary_Op (bop, n1, n2) ->
 	match bop with
 	  | Minus | Div | Mod -> raise Bad_Pattern_Parameter
-	  | Plus -> add ( to_combo n1 ) ( to_combo n2 )
-	  | Fois ->  
+	  | Plus -> add (( to_combo n1 ), ( to_combo n2 ))
+	  | Times ->  
 	      let p1 = to_combo n1 in
 	      let p2 = to_combo n2 in		
 	      let i1 = is_const p1 in		   
 		if i1 <> -1 && i1 <> 0
-		then List.iter (fun (s,x) -> (s,i1*x)) p2
+		then List.map (fun (s,x) -> (s,i1*x)) p2
 		else let i2 = is_const p2 in
 		  if i2 <> -1 && i2 <> 0
-		  then  List.iter (fun (s,x) -> (s,i2*x)) p1
+		  then  List.map (fun (s,x) -> (s,i2*x)) p1
 		  else 
 		    if i1 = 0 || i2 = 0
 		    then [ ]
@@ -82,17 +83,18 @@ let rec to_combo x =
 *)
 let to_pattern x = 
   let ac = to_combo x in
-  let const,ac' = try List.assoc "" , List.remove_assoc "" with Not_Found -> 0, ac in
+  let const,ac' = try (List.assoc "" ac) , (List.remove_assoc "" ac) with Not_found -> 0, ac in
     match List.length ac' with
       | 0 -> Constant_Pattern const
       | 1 -> (match ac with [ s , n ] -> Affine_Pattern (n,s,const) 
 		| _ -> raise Bad_Pattern_Parameter)
       | 2 -> (match ac with
-		| [(s1,n1),(s2,n2)] -> 
+		| [(s1,n1);(s2,n2)] -> 
 		    if n1 = 1 && n2 <> 1 then Double_Pattern(n2,s2,s1,const)
 		    else if n2 = 1 && n1 <> 1 then Double_Pattern(n1,s1,s2,const)
-		    else Bad_Pattern_Parameter
+		    else raise Bad_Pattern_Parameter
 		| _ -> raise Bad_Pattern_Parameter)
+      | _ -> raise Bad_Pattern_Parameter
 
 
 
@@ -102,6 +104,29 @@ let to_pattern x =
 
 
 
+
+
+
+
+(** ATTENTION : Code dangeureux 
+let get_block_type_definition parameters patterns_list = 
+  let map = ref StringMap.empty in 
+  let block_definition = ref IntegerAst.(
+    { name = "" ; parameters = []; inputs = [] ; 
+      instantiations = [] ; outputs = [] }) in
+  let aux2 b param (pattern,block_def) = b && 
+    let b,m = apply_pattern !map pattern param in 
+      block_definition := block_def ;
+      map := m ; 
+      b
+  in
+  let aux b patterns = b && (* le && étant paresseux la map ne sera pas remise à 0 si un pattern est trouvé *)
+    (map := StringMap.empty ;
+     List.fold_left2 aux2 true parameters pattern) 
+  in
+    if List.fold_left aux true patterns_list
+    then !block_definition, !map
+    else failwith "Aucun pattern ne convient"*)
 
 
 (** CODE MORT : ne reste que pour la postérité...
