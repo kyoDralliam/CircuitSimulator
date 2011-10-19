@@ -135,12 +135,30 @@ end_of_file              EOF
 %start circuit
 %type <Ast.Make(Ast.Integer).circuit> circuit
 
+/*********************
+ *                   *
+ *    DEBUG ONLY     *
+ *                   *
+ *********************/
+%start integer_start
+%type <Ast.Integer.integer> integer_start
+
 %%
 
 /** Tools **/
 %inline slist(S, x)        : l=separated_list(S, x)                    {l}
 %inline snlist(S, x)       : l=separated_nonempty_list(S, x)           {l}
 %inline beslist(B, E, S, x): B l=separated_list(S, x) E                {l}
+
+
+/*********************
+ *                   *
+ *    DEBUG ONLY     *
+ *                   *
+ *********************/
+
+integer_start:
+    | n=integer EOF { n }
 
 /** corps du parser **/
 

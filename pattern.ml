@@ -82,13 +82,13 @@ let rec to_combo x =
     en une combinaison affine
 *)
 let to_pattern x = 
-  let ac = to_combo x in
+  let ac = to_combo x in 
   let const,ac' = try (List.assoc "" ac) , (List.remove_assoc "" ac) with Not_found -> 0, ac in
     match List.length ac' with
       | 0 -> Constant_Pattern const
-      | 1 -> (match ac with [ s , n ] -> Affine_Pattern (n,s,const) 
+      | 1 -> (match ac' with [ s , n ] -> Affine_Pattern (n,s,const) 
 		| _ -> raise Bad_Pattern_Parameter)
-      | 2 -> (match ac with
+      | 2 -> (match ac' with
 		| [(s1,n1);(s2,n2)] -> 
 		    if n1 = 1 && n2 <> 1 then Double_Pattern(n2,s2,s1,const)
 		    else if n2 = 1 && n1 <> 1 then Double_Pattern(n1,s1,s2,const)

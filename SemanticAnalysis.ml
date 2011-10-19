@@ -21,8 +21,6 @@ module ConcreteBlockMap = Map.Make(
     let compare = compare 
   end)
 
-(** opérateur de composition *)
-let (&) f g x = f (g x)
 
 (** vrai ssi tous les éléments de 
     la liste vérifient le prédicat p *)

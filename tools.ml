@@ -1,3 +1,6 @@
+let parse_integer integer_string =
+  Parser.integer_start Lexer.token (Lexing.from_string integer_string)
+
 let lex_file filename =
   let chan = open_in filename in
   let t = Lexing.from_channel chan in
