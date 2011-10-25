@@ -32,6 +32,17 @@ entier                   INT
   (* zone de définitions ocaml *)
 
   open Parser
+
+  let lexing_error pos =
+    let open Lexing in
+    let soi = string_of_int in
+    let car_pos = pos.pos_bol - pos.pos_cnum in
+    failwith
+      ("Problème au niveau du lexer " ^
+	 "fichier " ^ pos.pos_fname ^ " " ^
+	 "ligne " ^ (soi pos.pos_lnum) ^ " " ^
+	 "caractère " ^ (soi car_pos))
+
 }
 
 (* définitions de regex *)
@@ -49,7 +60,7 @@ let int = ['0'-'9' '_'] +
 *)
 
 rule token = parse
-  | newline                 { token lexbuf }
+  | newline +               { token lexbuf }
   | [ ' ' '\t' ] +          { token lexbuf }
   | "start"                 { START }
   | "<"                     { LESS }
@@ -74,6 +85,8 @@ rule token = parse
   | "*"                     { TIMES }
   | "/"                     { DIV }
   | "%"                     { MOD }
-  | eof                     { EOF }
-  | _                       { failwith "mal formé" } 
+  | "^"                     { POWER }  
+  | eof                     { EOF }  
+  | _                       { lexing_error (Lexing.lexeme_start_p lexbuf) }  
+ 
 (* étoffer un peu les erreurs pour simplifier le débogage*)

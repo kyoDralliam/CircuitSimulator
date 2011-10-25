@@ -1,11 +1,5 @@
 open Ast
 
-(** Ast sur Integer : module de départ du circuit *)
-module IntegerAst = Make(Integer)
-
-(** Ast sur Int : module d'arrivée du circuit *)
-module IntAst = Make(Int)
-
 module StringMap = Map.Make(
   struct
     type t = string
@@ -50,7 +44,7 @@ struct
     | IntegerAst.Slice s ->
 	let min = integer m s.IntegerAst.min in 
 	let max = integer m s.IntegerAst.max  in
-	  if max - min > 0
+	  if max - min + 1 > 0
 	  then
 	    IntAst.(Slice { 
 		      wire = s.IntegerAst.wire ;

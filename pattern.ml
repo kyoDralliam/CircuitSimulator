@@ -62,7 +62,7 @@ let rec to_combo x =
     | Unary_Op (Neg, n) -> List.map (fun (s,x) -> (s,-x)) (to_combo n)
     | Binary_Op (bop, n1, n2) ->
 	match bop with
-	  | Minus | Div | Mod -> raise Bad_Pattern_Parameter
+	  | Minus -> to_combo (Binary_Op (Plus, n1, Unary_Op( Neg, n2)))
 	  | Plus -> add (( to_combo n1 ), ( to_combo n2 ))
 	  | Times ->  
 	      let p1 = to_combo n1 in
@@ -77,6 +77,7 @@ let rec to_combo x =
 		    if i1 = 0 || i2 = 0
 		    then [ ]
 		    else raise Bad_Pattern_Parameter
+	  | _ -> raise Bad_Pattern_Parameter
 
 (** transforme un integer en un pattern en le transformant d'abord
     en une combinaison affine

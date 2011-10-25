@@ -125,15 +125,16 @@ end_of_file              EOF
 %token SEMI COMMA LSQBR RSQBR START
 %token LBRACK RBRACK DOT DOTDOT EOF
 %token PLUS MINUS TIMES DIV MOD COLON
+%token POWER
 
 /* mise en place des priorités et des associativités */
 
 %left PLUS MINUS
 %left TIMES DIV MOD
-
+%right POWER
 
 %start circuit
-%type <Ast.Make(Ast.Integer).circuit> circuit
+%type <Ast.IntegerAst.circuit> circuit
 
 /*********************
  *                   *
@@ -196,6 +197,7 @@ integer:
   | TIMES { Times }
   | DIV   { Div }
   | MOD   { Mod }
+  | POWER { Power }
 
 unary_op:
   | MINUS { Neg }

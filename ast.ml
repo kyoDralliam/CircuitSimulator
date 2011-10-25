@@ -11,7 +11,7 @@ struct
 
   (* Les opérateurs utilisés dans les expressions arithmétiques. *)
   type binary_op =
-    | Plus | Minus | Times | Div | Mod 
+    | Plus | Minus | Times | Div | Mod | Power
 
   type unary_op =
     | Neg
@@ -23,12 +23,18 @@ struct
     | Binary_Op of binary_op * integer * integer
     | Unary_Op of unary_op * integer
 
+  let rec int_power x = function
+    | 0 -> 1
+    | n when n mod 2 = 0 -> let y = int_power x (n/2) in y*y 
+    | n when n mod 2 = 1 -> let y = int_power x (n/2) in y*y*x
+
   let get_binary_op = function
     | Plus -> (+)
     | Minus -> (-) 
     | Times -> ( * ) 
     | Div -> (/)
     | Mod -> (mod)
+    | Power -> int_power
 
 end
 
@@ -116,3 +122,9 @@ struct
   type device_type_definition = id
 
 end
+
+(** Ast sur Integer : module de départ du circuit *)
+module IntegerAst = Make(Integer)
+
+(** Ast sur Int : module d'arrivée du circuit *)
+module IntAst = Make(Int)

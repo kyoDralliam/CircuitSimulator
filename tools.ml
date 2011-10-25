@@ -15,6 +15,14 @@ let parse_file filename =
   let res = Parser.circuit Lexer.token (Lexing.from_channel chan) in
     res
 
+let mk_string ?(b="") ?(e="") ?(sep="") f l =
+  let open List in
+  let body =  match l with
+      | [] -> ""
+      | [ x ] -> f x
+      | x::xs -> fold_left (fun s x -> s ^ sep ^ (f x)) (f x) xs in
+    b ^ body ^ e
+
 (** fonction d'aide pour filtrer les erreurs*)
 let wire_identifier_to_string = function
   | None, s2 -> s2
@@ -23,9 +31,8 @@ let wire_identifier_to_string = function
 
 let dump_file filename =
   let circuit = parse_file filename in
-  let module IntegerAst = Ast.Make(Ast.Integer) in
   let open Ast.Integer in
-  let open IntegerAst in
+  let open Ast.IntegerAst in
   let open Printf in
   let string_of_bop = function
       | Plus   -> "+"
@@ -61,3 +68,24 @@ let dump_file filename =
     printf "\n\n\n"
   in
     List.iter print_block (snd circuit) 
+
+module IntAstPrinter =
+struct
+  open Ast.IntAst
+  open Printf
+ 
+  let print_output (o,_) = sprintf "%s -> %s" (fst o) (string_of_int (snd o))  
+  let print_input (s,i) = sprintf "%s -> %s" s (string_of_int i) 
+
+  let print_block x =
+    printf "%s : \n\tparameters : %s\n\tinputs : %s\n\tinstantiations : %s\n\toutputs : %s\n\n\n" 
+      x.name 
+      (mk_string ~sep:", " string_of_int x.parameters)
+      (mk_string ~sep:", " print_input x.inputs)
+      (mk_string ~sep:", " (fun z -> fst z.block_type) x.instantiations)
+      (mk_string ~sep:", " print_output x.outputs)
+
+  let print_block_type x = 
+    printf "%s < %s > :\n" (fst x) (mk_string ~sep:", " string_of_int (snd x))
+
+end
