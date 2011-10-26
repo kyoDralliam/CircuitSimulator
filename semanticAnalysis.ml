@@ -168,12 +168,8 @@ let add_abstract_block map block =
 	else tmp
     with Not_found -> [] in
     StringMap.add block.IntegerAst.name ((pattern_list, block)::other_patterns) map 
-    
-(** Blocks de base : plutôt essayer d'aller 
-    les chercher dans un autre fichier 
-*)
-let base_block = [ "Xor" ; "And" ; "Or" ; "Mux" ; "Reg" ; "Not" (* ... *)]
 
+open BaseBlocks
 
 
 (** Employé pour vérifier que les variables 
@@ -184,6 +180,9 @@ module WireIdentMap = Map.Make(
     type t = IntAst.wire_identifier
     let compare = compare
   end)
+
+(** *)
+exception Variable_not_found of string
 
 (** Vérifie que toutes les variables (fils) employées 
     dans un block sont définies et que la taille des fils 
@@ -207,12 +206,18 @@ let check_variables block block_definitions =
   in
   let rec wire_size ?except = function
     | Named_Wire wi -> 
-	if (fst wi) <> except
-	then WireIdentMap.find wi variables
-	else failwith "boucle"
+	if except = None || (fst wi) <> except
+	then 
+	  try 
+	    WireIdentMap.find wi variables 
+	  with Not_found -> raise (Variable_not_found (wire_identifier_to_string wi))
+	else failwith ("boucle " ^ (wire_identifier_to_string wi))
     | Merge l -> fold_left (+) 0 (map (wire_size ?except) l)
     | Slice s -> 
-	let size_wi = WireIdentMap.find s.wire variables in
+	let size_wi = 
+	  try 
+	    WireIdentMap.find s.wire variables 
+	  with Not_found -> raise (Variable_not_found (wire_identifier_to_string s.wire)) in
 	  if s.min >= 0 && s.max < size_wi && s.max - s.min + 1 > 0
 	  then s.max - s.min + 1
 	  else failwith "slice incorrect"
@@ -224,18 +229,18 @@ let check_variables block block_definitions =
   let check_instantiation inst =
     try 
       let block = ConcreteBlockMap.find inst.block_type block_definitions in
-	if block.name <> "Reg" && List.mem block.name base_block
+	print_string (block.name ^ " instantaition checking \n") ;
+	if List.mem block block_without_loop
 	then iter2 (check ~except:inst.var_name) inst.input block.inputs
 	else iter2 check inst.input block.inputs
     with 
-	Not_found -> failwith ""
+	Not_found -> failwith inst.var_name
       | Invalid_argument _ -> failwith "le nombre d'arguments passés à ce block n'est pas bon"
   in
   let check_output (wd,w) = check w wd in
+    print_string (block.name ^ " checked \n") ;
     iter check_instantiation block.instantiations ;
     iter check_output block.outputs
-
-
 
 
 (** Ajoute le block de base nommé s
@@ -243,19 +248,18 @@ let check_variables block block_definitions =
     est un block "fantôme" sans 
     signification ni contenu
 *)
-let add_ghost map s =  
-  let btdef = IntAst.({ name = s ; parameters = [] ; inputs = [] ; instantiations = [] ; outputs = [] }) in 
-    ConcreteBlockMap.add (s, []) btdef map
+let add_block map s =  
+    ConcreteBlockMap.add (s.IntAst.name, []) s map
 
 (** point d'entrée de l'analyseur sémantique *)
 let analyse_circuit circuit = 
   let circuit_start = IntegerToInt.block_type StringMap.empty (fst circuit) in
   let circuit_blocks = snd circuit in
-  let concrete_blocks = List.fold_left add_ghost ConcreteBlockMap.empty base_block in
+  let concrete_blocks = List.fold_left add_block ConcreteBlockMap.empty base_block in
   let abstract_blocks = List.fold_left add_abstract_block StringMap.empty circuit_blocks in
   let final_blocks = reify_blocks circuit_start abstract_blocks BlockTypeSet.empty concrete_blocks in
   let iter_check_variables k x = 
-    if not (List.mem (fst k) base_block)
+    if not (List.mem x base_block)
     then check_variables x final_blocks 
   in
     ConcreteBlockMap.iter iter_check_variables final_blocks ;

@@ -1,13 +1,13 @@
 HalfAdder ( a, b)
     Xor X( a, b)
     And	A( a, b)
-    -> s : X.r, c : A.r ;
+    -> s : X.s, c : A.s ;
 
 FullAdder ( a, b, c)
     HalfAdder H1( a, b)
-    HalfAdder H2( c, H1.r)
+    HalfAdder H2( c, H1.c)
     And A( H1.c, H2.c)
-    -> s : H2.r, c : A.r ;  
+    -> s : H2.s, c : A.s ;  
 
 ParallelAdder <1> (a, b)
     HalfAdder F (a, b) 
@@ -17,7 +17,7 @@ ParallelAdder <n> (a[n] , b[n])
     ParallelAdder<n-1> A (a[0..n-2], b[0..n-2])  
     FullAdder F (a[n-1], b[n-1], A.c) 
     -> 
-       result[n] : { A.result, F.sortie } , 
-       c : F.carry ;
+       result[n] : { A.result, F.s } , 
+       c : F.c ;
 
 start ParallelAdder < 8 >
