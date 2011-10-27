@@ -32,7 +32,7 @@ struct
 
   let ints = List.map (try_option (integer myMap)) TestPattern.ints
 
-  let my_ast = Tools.parse_file "../test1"
+  let my_ast = Tools.parse_file "../tests/test1"
   let [half_adder ; full_adder ; par_adder_1 ; par_adder_n ] = List.rev (snd my_ast)
   let map_test = StringMap.add "n" 5 (StringMap.empty)
   let res = block_type_definition map_test par_adder_n
@@ -47,3 +47,5 @@ struct
     (fun k x -> Tools.IntAstPrinter.(print_block_type k ; print_block x)) (snd input)
 
 end
+
+

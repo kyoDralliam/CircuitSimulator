@@ -15,6 +15,31 @@ let parse_file filename =
   let res = Parser.circuit Lexer.token (Lexing.from_channel chan) in
     res
 
+let localize pos =
+  let open Lexing in
+  let open Printf in
+  let car_pos = pos.pos_cnum - pos.pos_bol + 1 in
+    printf "fichier %s : ligne %d, caractères %d-%d:\n" pos.pos_fname pos.pos_lnum (car_pos-1) car_pos
+
+let main filename =
+  let open Printf in
+  let chan = open_in filename in
+  let buf = Lexing.from_channel chan in
+    try
+      let res = Parser.circuit Lexer.token buf in
+	SemanticAnalysis.analyse_circuit res
+    with 
+	Lexer.Lexing_error c ->
+	  localize (Lexing.lexeme_start_p buf);
+	  printf "Erreur dans l'analyse lexicale: %s." c;
+	  exit 1
+      | Parser.Error ->
+	  localize (Lexing.lexeme_start_p buf);
+	  printf "Erreur dans l'analyse syntaxique.";
+	  exit 1
+      | e -> raise e
+
+
 let mk_string ?(b="") ?(e="") ?(sep="") f l =
   let open List in
   let body =  match l with

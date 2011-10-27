@@ -181,8 +181,18 @@ module WireIdentMap = Map.Make(
     let compare = compare
   end)
 
-(** *)
-exception Variable_not_found of string
+(** levé si une variable n'est pas déclarée dans un bloc *)
+exception Variable_not_found of IntAst.wire_identifier
+
+exception Loop of IntAst.wire_identifier
+
+exception Slice_incorrect of IntAst.wire_identifier
+
+exception Number_of_arguments of IntAst.instantiation
+
+exception Bad_sized_wire of IntAst.wire
+
+exception Bad_block_definition of string * int list * exn
 
 (** Vérifie que toutes les variables (fils) employées 
     dans un block sont définies et que la taille des fils 
@@ -210,37 +220,37 @@ let check_variables block block_definitions =
 	then 
 	  try 
 	    WireIdentMap.find wi variables 
-	  with Not_found -> raise (Variable_not_found (wire_identifier_to_string wi))
-	else failwith ("boucle " ^ (wire_identifier_to_string wi))
+	  with Not_found -> raise (Variable_not_found wi)
+	else raise (Loop wi)
     | Merge l -> fold_left (+) 0 (map (wire_size ?except) l)
     | Slice s -> 
 	let size_wi = 
 	  try 
 	    WireIdentMap.find s.wire variables 
-	  with Not_found -> raise (Variable_not_found (wire_identifier_to_string s.wire)) in
+	  with Not_found -> raise (Variable_not_found s.wire) in
 	  if s.min >= 0 && s.max < size_wi && s.max - s.min + 1 > 0
 	  then s.max - s.min + 1
-	  else failwith "slice incorrect"
+	  else raise (Slice_incorrect s.wire)
   in
   let check ?except w wd = 
     if ( wire_size ?except w ) <> (snd wd ) 
-    then failwith "fil pas de la bonne taille"
+    then raise (Bad_sized_wire w)
   in
   let check_instantiation inst =
     try 
       let block = ConcreteBlockMap.find inst.block_type block_definitions in
-	print_string (block.name ^ " instantaition checking \n") ;
 	if List.mem block block_without_loop
 	then iter2 (check ~except:inst.var_name) inst.input block.inputs
 	else iter2 check inst.input block.inputs
     with 
 	Not_found -> failwith inst.var_name
-      | Invalid_argument _ -> failwith "le nombre d'arguments passés à ce block n'est pas bon"
+      | Invalid_argument _ -> raise (Number_of_arguments inst)
   in
   let check_output (wd,w) = check w wd in
-    print_string (block.name ^ " checked \n") ;
-    iter check_instantiation block.instantiations ;
-    iter check_output block.outputs
+    try
+      iter check_instantiation block.instantiations ;
+      iter check_output block.outputs
+    with e -> raise (Bad_block_definition ( block.name, block.parameters, e))
 
 
 (** Ajoute le block de base nommé s
