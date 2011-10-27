@@ -1,3 +1,5 @@
+open Ast
+
 type bit = Zero | Un
 
 type porte = 
@@ -19,7 +21,13 @@ type noeud = porte * (int*int) list
 
 type graphe = noeud array
 
-module Iset = Set.Make(Int)
+module IntPourSet =
+struct
+        type t = int
+        let compare = Pervasives.compare
+end
+
+module Iset = Set.Make(IntPourSet)
 
 type registres = Iset.t
 (* L'ensemble des numéros de noeuds correspondant aux registres, que l'on
@@ -29,7 +37,7 @@ type entrees = int array
 type sorties = int array
 (* Tableau des positions des portes d'entrée et de sortie *)
 
-type circuit (graphe, entrees, sorties , registres)
+type circuit = graphe * entrees * sorties * registres
 
 (* À titre d'exemple : 
  * Xor : ( [| (Entree,[(2,1)]) ; 
