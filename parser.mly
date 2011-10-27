@@ -101,21 +101,26 @@ end_of_file              EOF
   module IntegerAst = Make(Integer)
   open IntegerAst
 
-  type circuit_element = Block of block_type_definition | Start of block_type
+  type circuit_element = 
+      Block of block_type_definition 
+    | Start of block_type
+    | Device of block_type
 
   let circuit_from_circuit_element_list l0 =
-    let f (n,l) = function
-      | Block b -> n,b::l
-      | Start n' -> 
-	  if n <> None 
+    let f (start,block_defs,devices) = function
+      | Block b -> start,b::block_defs, devices
+      | Start start' -> 
+	  if start <> None 
 	  then failwith "un seul bloc peut être marqué start"
-	  else (Some n'), l
+	  else (Some start'), block_defs, devices
+      | Device d ->
+	  start, block_defs, (fst d, List.length (snd d))::devices
     in 
-    let (n,l) = List.fold_left f (None,[]) l0 in
+    let (n,l,l') = List.fold_left f (None,[],[]) l0 in
       match n with
 	| None -> failwith "Il n'y a pas de point de départ. 
                   Penser à mettre l'instruction start nomBlock"
-	| Some n' -> n', l
+	| Some n' -> n', l, l'
 %}
 
 /* définition des tokens */
@@ -125,7 +130,7 @@ end_of_file              EOF
 %token SEMI COMMA LSQBR RSQBR START
 %token LBRACK RBRACK DOT DOTDOT EOF
 %token PLUS MINUS TIMES DIV MOD COLON
-%token POWER
+%token POWER DEVICE
 
 /* mise en place des priorités et des associativités */
 
@@ -167,8 +172,9 @@ circuit:
   | l=list( circuit_element ) EOF { circuit_from_circuit_element_list l }
 
 circuit_element:
-  | d=definition    { Block d }
+  | d=definition           { Block d }
   | START n=block_type     { Start n }
+  | DEVICE n=block_type    { Device n }
 
 definition:
   | n=UID p=parameters inp=inputs ins=instantiations o=output 

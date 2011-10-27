@@ -46,7 +46,7 @@ entier                   INT
 }
 
 (* définitions de regex *)
-let newline = '\n' | '\r'
+let newline = '\n' | '\r' | '\r' '\n' | '\n' '\r'
 
 let alphaNum = ['A'-'Z' 'a'-'z' '_' '0'-'9']
 let upperCase = ['A'-'Z']
@@ -60,11 +60,12 @@ let int = ['0'-'9' '_'] +
 *)
 
 rule token = parse
-  | newline +               { incr_linenum lexbuf ; token lexbuf }
+  | newline                 { incr_linenum lexbuf ; token lexbuf }
   | [ ' ' '\t' ] +          { token lexbuf }
   | "start"                 { START }
+  | "device"                { DEVICE }
   | "<"                     { LESS }
-  | ">"                     { GREATER }
+  | ">"                     { GREATER } 
   | "("                     { LPAREN }
   | ")"                     { RPAREN }
   | "->"                    { ARROW }
