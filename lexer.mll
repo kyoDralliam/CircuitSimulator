@@ -33,20 +33,20 @@ entier                   INT
 
   open Parser
 
-  let lexing_error pos =
-    let open Lexing in
-    let soi = string_of_int in
-    let car_pos = pos.pos_bol - pos.pos_cnum in
-    failwith
-      ("Problème au niveau du lexer " ^
-	 "fichier " ^ pos.pos_fname ^ " " ^
-	 "ligne " ^ (soi pos.pos_lnum) ^ " " ^
-	 "caractère " ^ (soi car_pos))
+  exception Lexing_error of string
+
+  let incr_linenum lexbuf =
+    let pos = lexbuf.Lexing.lex_curr_p in
+      lexbuf.Lexing.lex_curr_p <- 
+	{ pos with
+	    Lexing.pos_lnum = pos.Lexing.pos_lnum + 1;
+	    Lexing.pos_bol = pos.Lexing.pos_cnum;
+	}
 
 }
 
 (* définitions de regex *)
-let newline = '\n' | '\r'
+let newline = '\n' | '\r' | '\r' '\n' | '\n' '\r'
 
 let alphaNum = ['A'-'Z' 'a'-'z' '_' '0'-'9']
 let upperCase = ['A'-'Z']
@@ -60,11 +60,12 @@ let int = ['0'-'9' '_'] +
 *)
 
 rule token = parse
-  | newline +               { token lexbuf }
+  | newline                 { incr_linenum lexbuf ; token lexbuf }
   | [ ' ' '\t' ] +          { token lexbuf }
   | "start"                 { START }
+  | "device"                { DEVICE }
   | "<"                     { LESS }
-  | ">"                     { GREATER }
+  | ">"                     { GREATER } 
   | "("                     { LPAREN }
   | ")"                     { RPAREN }
   | "->"                    { ARROW }
@@ -87,6 +88,4 @@ rule token = parse
   | "%"                     { MOD }
   | "^"                     { POWER }  
   | eof                     { EOF }  
-  | _                       { lexing_error (Lexing.lexeme_start_p lexbuf) }  
- 
-(* étoffer un peu les erreurs pour simplifier le débogage*)
+  | _ as c  { raise (Lexing_error ("illegal character: " ^ String.make 1 c)) }

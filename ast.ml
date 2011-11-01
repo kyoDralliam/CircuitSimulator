@@ -106,16 +106,29 @@ struct
 	outputs : wire_definition list
       }
 	
+
+  (* Définition d'un type de périphérique 
+     entrée :
+     - bus de données -> 32 bits
+     - bus d'adresse -> 32 bits
+     - byte enable -> 4 bits
+     - write enable -> 1 bit
+     - interrupt enable -> 1 bit
+     - interrupt processed -> 1 bit
+     
+     sortie:
+     - données -> 32 bits
+     - interrupt -> 1 bit
+  *)
+  type device_type_definition = id * int
+
   (* 
      Un circuit combinatoire : 
      - un identifiant correspondant au bloc global
      - une liste des blocs définis dans le code
   *)
-  type circuit = block_type * block_type_definition list
+  type circuit = block_type * block_type_definition list * device_type_definition list
       (* block_type * block_type_definition ConcreteBlockMap.t *)
-
-  (* Définition d'un type de périphérique *)
-  type device_type_definition = id
 
 end
 

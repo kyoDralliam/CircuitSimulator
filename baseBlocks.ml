@@ -6,7 +6,7 @@ let xor_ = {
   parameters = [] ; 
   inputs = [ "a", 1 ; "b", 1] ;  
   instantiations = [] ; 
-  outputs = [ ("s", 1), (Named_Wire (None,"")) ]  
+  outputs = [ ("o", 1), (Named_Wire (None,"")) ]  
 }
 
 let and_ = { 
@@ -14,7 +14,7 @@ let and_ = {
   parameters = [] ; 
   inputs = [ "a", 1 ; "b", 1] ;  
   instantiations = [] ; 
-  outputs = [ ("s", 1), (Named_Wire (None,"")) ]  
+  outputs = [ ("o", 1), (Named_Wire (None,"")) ]  
 }
 
 let or_ = { 
@@ -22,7 +22,7 @@ let or_ = {
   parameters = [] ; 
   inputs = [ "a", 1 ; "b", 1] ;  
   instantiations = [] ; 
-  outputs = [ ("s", 1), (Named_Wire (None,"")) ]  
+  outputs = [ ("o", 1), (Named_Wire (None,"")) ]  
 }
 
 let mux_ = { 
@@ -30,7 +30,7 @@ let mux_ = {
   parameters = [] ; 
   inputs = [ "a", 1 ; "b", 1 ; "c", 1 ] ;  
   instantiations = [] ; 
-  outputs = [ ("s", 1), (Named_Wire (None,"")) ]   
+  outputs = [ ("o", 1), (Named_Wire (None,"")) ]   
 }
 
 let reg_ = { 
@@ -38,7 +38,7 @@ let reg_ = {
   parameters = [] ; 
   inputs = [ "a", 1 ] ;  
   instantiations = [] ; 
-  outputs = [ ("s", 1), (Named_Wire (None,"")) ]  
+  outputs = [ ("o", 1), (Named_Wire (None,"")) ]  
 }
 
 let not_ = { 
@@ -46,7 +46,7 @@ let not_ = {
   parameters = [] ; 
   inputs = [ "a", 1 ] ;  
   instantiations = [] ; 
-  outputs = [ ("s", 1), (Named_Wire (None,"")) ]  
+  outputs = [ ("o", 1), (Named_Wire (None,"")) ]  
 }
 
 (** Blocks de base : plutôt essayer d'aller 

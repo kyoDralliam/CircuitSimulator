@@ -115,37 +115,40 @@ exception Bad_recursion of IntAst.block_type list * string
     abstract_blocks : (pattern list, IntegerAst.block_definition) list StringMap.t
     concrete_blocks : IntAst.block_definition ConcreteBlockMap.t
 *)
-let rec reify_blocks (block_type : IntAst.block_type)  abstract_blocks encountered_blocks concrete_blocks =
+let rec reify_blocks block_type abstract_blocks encountered_blocks concrete_blocks devices_names =
   if ConcreteBlockMap.mem block_type concrete_blocks
   then concrete_blocks
   else
     let id = fst block_type in
-    let patterns = 
-      try StringMap.find id abstract_blocks 
-      with Not_found -> raise (Instance_not_found block_type) in
-    let parameters = snd block_type in
-      if not (for_all ((<=) 0) parameters)
-      then raise (Bad_recursion( [ block_type ], "paramètre(s) négatif(s)" )) ;
-      let block_def,map = 
-	try 
-	  get_block_type_definition parameters patterns 
-	with Instance_not_found _ -> raise (Instance_not_found block_type)
-      in
-      let int_block_def = IntegerToInt.block_type_definition map block_def in
-      let new_encountered_blocks = BlockTypeSet.add block_type encountered_blocks in
-      let next_call map (x : IntAst.instantiation) = 
-	let x_block = x.IntAst.block_type in
-	if BlockTypeSet.mem x_block new_encountered_blocks 
-	then raise (Bad_recursion( [ block_type ; x_block ], "block déja rencontré" ))
-	else 
-	  if fst x_block = id && compare (snd x_block) parameters <> -1
-	  then raise (Bad_recursion ( [ block_type ; x_block ], "paramètres non décroissant" ))
-	  else 
-	    try
-	      reify_blocks x.IntAst.block_type abstract_blocks new_encountered_blocks map 
-	    with Bad_recursion (l,s) -> raise (Bad_recursion (block_type::l,s))
-      in ConcreteBlockMap.add block_type int_block_def
-	   (List.fold_left next_call concrete_blocks int_block_def.IntAst.instantiations)
+      if List.mem id devices_names
+      then concrete_blocks
+      else
+	let patterns = 
+	  try StringMap.find id abstract_blocks 
+	  with Not_found -> raise (Instance_not_found block_type) in
+	let parameters = snd block_type in
+	  if not (for_all ((<=) 0) parameters)
+	  then raise (Bad_recursion( [ block_type ], "paramètre(s) négatif(s)" )) ;
+	  let block_def,map = 
+	    try 
+	      get_block_type_definition parameters patterns 
+	    with Instance_not_found _ -> raise (Instance_not_found block_type)
+	  in
+	  let int_block_def = IntegerToInt.block_type_definition map block_def in
+	  let new_encountered_blocks = BlockTypeSet.add block_type encountered_blocks in
+	  let next_call map (x : IntAst.instantiation) = 
+	    let x_block = x.IntAst.block_type in
+	      if BlockTypeSet.mem x_block new_encountered_blocks 
+	      then raise (Bad_recursion( [ block_type ; x_block ], "block déja rencontré" ))
+	      else 
+		if fst x_block = id && (snd x_block) >= parameters
+		then raise (Bad_recursion ( [ block_type ; x_block ], "paramètres non décroissant" ))
+		else 
+		  try
+		    reify_blocks x.IntAst.block_type abstract_blocks new_encountered_blocks map devices_names
+		  with Bad_recursion (l,s) -> raise (Bad_recursion (block_type::l,s))
+	  in ConcreteBlockMap.add block_type int_block_def
+	       (List.fold_left next_call concrete_blocks int_block_def.IntAst.instantiations)
 
 
 (** levée lorsque deux blocks du même nom
@@ -172,6 +175,12 @@ let add_abstract_block map block =
 open BaseBlocks
 
 
+
+
+
+
+
+
 (** Employé pour vérifier que les variables 
     employées sont bien déclarées
 *)
@@ -181,23 +190,42 @@ module WireIdentMap = Map.Make(
     let compare = compare
   end)
 
-(** *)
-exception Variable_not_found of string
+
+
+(** levé si une variable n'est pas déclarée dans un bloc *)
+exception Variable_not_found of IntAst.wire_identifier
+
+exception Loop of IntAst.wire_identifier
+
+exception Slice_incorrect of IntAst.wire_identifier
+
+exception Number_of_arguments of IntAst.instantiation
+
+exception Bad_sized_wire of IntAst.wire
+
+exception Bad_block_definition of string * int list * exn
+
+
+
 
 (** Vérifie que toutes les variables (fils) employées 
     dans un block sont définies et que la taille des fils 
     corresponds
     à ajouter => émet un warning pour les fils non utilisés
 *)
-let check_variables block block_definitions = 
+let check_variables block block_definitions devices = 
   let open IntAst in
   let open List in
   let add_block_variables acc inst = 
-    try 
-      let block = ConcreteBlockMap.find inst.block_type block_definitions in
-      let add acc ((s,i),_) = WireIdentMap.add  ((Some inst.var_name),s) i acc in 
-	fold_left add acc block.outputs
-    with Not_found -> acc
+    let add var acc ((s,i),_) = WireIdentMap.add  ((Some var),s) i acc in 
+      try 
+	let block = ConcreteBlockMap.find inst.block_type block_definitions in
+	  fold_left (add inst.var_name) acc block.outputs
+      with Not_found -> 
+	try 
+	  ignore (assoc (fst inst.block_type) devices) ;
+	  fold_left (add inst.var_name) acc [ (("data",32),""); (("interrupt",1),"")]
+	with Not_found -> acc
   in
   let variables = 
     let add_input_variables acc (x,i) =  WireIdentMap.add (None,x) i acc in
@@ -210,37 +238,80 @@ let check_variables block block_definitions =
 	then 
 	  try 
 	    WireIdentMap.find wi variables 
-	  with Not_found -> raise (Variable_not_found (wire_identifier_to_string wi))
-	else failwith ("boucle " ^ (wire_identifier_to_string wi))
+	  with Not_found -> raise (Variable_not_found wi)
+	else raise (Loop wi)
     | Merge l -> fold_left (+) 0 (map (wire_size ?except) l)
     | Slice s -> 
 	let size_wi = 
 	  try 
 	    WireIdentMap.find s.wire variables 
-	  with Not_found -> raise (Variable_not_found (wire_identifier_to_string s.wire)) in
+	  with Not_found -> raise (Variable_not_found s.wire) in
 	  if s.min >= 0 && s.max < size_wi && s.max - s.min + 1 > 0
 	  then s.max - s.min + 1
-	  else failwith "slice incorrect"
+	  else raise (Slice_incorrect s.wire)
   in
   let check ?except w wd = 
     if ( wire_size ?except w ) <> (snd wd ) 
-    then failwith "fil pas de la bonne taille"
+    then raise (Bad_sized_wire w)
   in
+    
+  let check_device_instanciation inst =
+    let open List in
+    try 
+      let i = assoc (fst inst.block_type) devices in
+	if i <> length (snd inst.block_type) then failwith "" ;
+	for_all (fun (x,y) -> x = y) (combine (map wire_size inst.input) [32;32;4;1;1;1])
+    with Not_found -> failwith "Cas impossible -> tous les blocks concrets et les devices ont aytéèss checkés"
+      | Invalid_argument _ -> failwith ""
+  in
+
   let check_instantiation inst =
     try 
       let block = ConcreteBlockMap.find inst.block_type block_definitions in
-	print_string (block.name ^ " instantaition checking \n") ;
 	if List.mem block block_without_loop
 	then iter2 (check ~except:inst.var_name) inst.input block.inputs
 	else iter2 check inst.input block.inputs
     with 
-	Not_found -> failwith inst.var_name
-      | Invalid_argument _ -> failwith "le nombre d'arguments passés à ce block n'est pas bon"
+	Not_found -> ignore (check_device_instanciation inst)
+      | Invalid_argument _ -> raise (Number_of_arguments inst)
   in
   let check_output (wd,w) = check w wd in
-    print_string (block.name ^ " checked \n") ;
-    iter check_instantiation block.instantiations ;
-    iter check_output block.outputs
+    try
+      iter check_instantiation block.instantiations ;
+      iter check_output block.outputs
+    with e -> raise (Bad_block_definition ( block.name, block.parameters, e))
+
+
+
+
+(** vérifie les variables de tous les blocks concrets *)
+
+let check_variables_in_blocks final_blocks devices = 
+  let iter_check_variables k x = 
+    if not (List.mem x base_block)
+    then check_variables x final_blocks devices
+  in
+    ConcreteBlockMap.iter iter_check_variables final_blocks ;
+
+
+
+
+
+
+
+
+exception Device_same_name of string
+
+let check_devices_names block_defs devices_names =
+  let check_with_block_def name = 
+    if StringMap.mem name block_defs then raise (Device_same_name name)
+  in
+  let base_blocks_names = List.map (fun x -> x.IntAst.name) base_block in
+  let check_with_base_block name =
+    if List.mem name base_blocks_names then raise (Device_same_name name)
+  in
+    List.iter check_with_block_def devices_names ;
+    List.iter check_with_base_block devices_names
 
 
 (** Ajoute le block de base nommé s
@@ -251,19 +322,19 @@ let check_variables block block_definitions =
 let add_block map s =  
     ConcreteBlockMap.add (s.IntAst.name, []) s map
 
-(** point d'entrée de l'analyseur sémantique *)
-let analyse_circuit circuit = 
-  let circuit_start = IntegerToInt.block_type StringMap.empty (fst circuit) in
-  let circuit_blocks = snd circuit in
+(** point d'entrée de l'analyseur sémantique 
+    retourne une paire formée d'un IntAst.block_type
+    et d'une IntAst.block_type_definition ConcreteBlockMap.t
+*)
+let analyse_circuit (fst_circuit, circuit_blocks, circuit_devices) = 
+  let circuit_start = IntegerToInt.block_type StringMap.empty fst_circuit in
   let concrete_blocks = List.fold_left add_block ConcreteBlockMap.empty base_block in
+  let devices_names = List.map fst circuit_devices in
   let abstract_blocks = List.fold_left add_abstract_block StringMap.empty circuit_blocks in
-  let final_blocks = reify_blocks circuit_start abstract_blocks BlockTypeSet.empty concrete_blocks in
-  let iter_check_variables k x = 
-    if not (List.mem x base_block)
-    then check_variables x final_blocks 
-  in
-    ConcreteBlockMap.iter iter_check_variables final_blocks ;
-    circuit_start, final_blocks
+    check_devices_names abstract_blocks devices_names ;
+    let final_blocks = reify_blocks circuit_start abstract_blocks BlockTypeSet.empty concrete_blocks devices_names in
+      check_variables_in_blocks final_blocks circuit_devices;
+      circuit_start, final_blocks, circuit_devices
 
 
 

@@ -1,13 +1,13 @@
 HalfAdder ( a, b)
     Xor X( a, b)
     And	A( a, b)
-    -> s : X.s, c : A.s ;
+    -> s : X.o, c : A.o ;
 
 FullAdder ( a, b, c)
     HalfAdder H1( a, b)
     HalfAdder H2( c, H1.c)
     And A( H1.c, H2.c)
-    -> s : H2.s, c : A.s ;  
+    -> s : H2.s, c : A.o ;  
 
 ParallelAdder <1> (a, b)
     HalfAdder F (a, b) 
