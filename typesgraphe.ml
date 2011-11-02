@@ -21,7 +21,7 @@ type noeud = porte * (int*int) list
 
 type graphe = noeud array
 
-module IntPourSet =
+(* module IntPourSet =
 struct
         type t = int
         let compare = Pervasives.compare
@@ -29,12 +29,14 @@ end
 
 module Iset = Set.Make(IntPourSet)
 
-type registres = Iset.t
+type registres = Iset.t *)
 (* L'ensemble des numéros de noeuds correspondant aux registres, que l'on
  * conserve pour ne pas avoir à la recalculer *)
 
-type entrees = int array
-type sorties = int array
+type registres = int list
+
+type entrees = int list
+type sorties = int list
 (* Tableau des positions des portes d'entrée et de sortie *)
 
 type circuit = graphe * entrees * sorties * registres
@@ -44,26 +46,26 @@ type circuit = graphe * entrees * sorties * registres
  *            (Entree,[(2,2)]) ; 
  *            (Xor,[(3,1)]) ; 
  *            (Sortie,[]) |] , 
- *         [| 0 ; 1 |] , 
- *         [| 3 |] , 
- *         Iset.empty() )
+ *         [ 0 ; 1 ] , 
+ *         [ 3 ] , 
+ *         [] )
  * Mux : ( [| (Entree,[(3,1)]) ; 
  *            (Entree,[(3,2)]) ; 
  *            (Entree,[(3,3)]) ;
  *            (Multiplexer,[(4,1)]) ; 
  *            (Sortie,[]) |] , 
- *         [| 0 ; 1 ; 2 |] , 
- *         [| 4 |] , 
- *         Iset.empty() )
+ *         [ 0 ; 1 ; 2 ] , 
+ *         [ 4 ] , 
+ *         [] )
  * HalfAdder : ( [| (Entree,[(2,1);(3,1)]) ; 
  *                  (Entree,[(2,2);(3,2)]) ; 
  *                  (Xor,[(4,1)]) ; 
  *                  (Et,[(5,1)]) ; 
  *                  (Sortie,[]) ; 
  *                  (Sortie,[]) |] ,
- *               [| 0 ; 1  |] ,
- *               [| 4 ; 5 |] ,
- *               Iset.empty() ) 
+ *               [ 0 ; 1  ] ,
+ *               [ 4 ; 5 ] ,
+ *               [] ) 
  * Additionneur série : ( [| (Entree,[(2,1),(5,1)]) ;
  *                           (Entree,[(2,2),(5,2)]) ;
  *                           (Xor,[(3,1),(4,1)]) ;
@@ -73,6 +75,8 @@ type circuit = graphe * entrees * sorties * registres
  *                           (Et,[(7,1)]) ;
  *                           (Reg,[(3,2),(4,2)]) ;
  *                           (Sortie,[]) |] ,
- *                        [| 0 ; 1 |] ,
- *                        [| 8 |] ,
- *                        Iset.singleton(7) ) *)
+ *                        [ 0 ; 1 ] ,
+ *                        [ 8 ] ,
+ *                        [ 7 ] ) *)
+
+
