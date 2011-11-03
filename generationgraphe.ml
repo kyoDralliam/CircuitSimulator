@@ -1,8 +1,7 @@
 open Typesgraphe
 open BaseBlocks
 
-(* Fonction qui concatène deux circuits sans rien vérifier ni rien modifier, à
- *   part les décalages d'indices *)
+(* Fonction qui concatène deux circuits sans rien vérifier ni rien modifier *)
 let concatenercircuits c1 c2 =
     match c1 with (g1,e1,s1,r1) ->
     match c2 with (g2,e2,s2,r2) ->
@@ -69,9 +68,6 @@ module CBM = SemanticsAnalysis.ConcreteBlockMap
 (* La table qui contient les circuits que l'on connaît déjà *)
 let table = CBM.empty
 
-(* Le type des maps de fil *)
-module MapFil = SemanticsAnalysis.WireIdentMap
-
 (* creerliste n renvoie [0 ; 1 ; ... ; n-1] *)
 let creerliste n =
     let rec parcours n = function
@@ -84,11 +80,9 @@ let creerliste n =
  *   et d'une définition de bloc, et l'ajoute dans table. *)
 let rec creercircuit env bloc =
     let iter = List.iter in
-
-    (* Le circuit que l'on renvoie et la fonction de concaténation *)
-    let c = ref ([||],[],[],[]) in
-    let ajouter c' = 
-        c := concatenercircuits !c c';
+    let g = ref [||] in
+    let ajouter t = 
+        g := Array.append g t;
     in
 
     (* Si il existe une instantiation du bloc que l'on ne connaît pas, on crée
@@ -99,15 +93,12 @@ let rec creercircuit env bloc =
          bloc.instantiations;
 
     (* Maintenant, toutes les instantiations utilisées sont connues : on les
-     *   concatène comme un gros sac, en retenant au passage le numéro de départ
-     *   de chaque bloc. *)
+     *   concatène comme un gros sac. *)
     (* On commence par ajouter les entrées *)
-    let premiereinstance = ref 0 in
     iter (fun (_,n) -> ajouter (Array.make n (Entree,[]),
                                 creerliste n,
                                 [],
-                                []);
-                       premiereinstance := !premiereinstance + n;) 
+                                [])) 
          bloc.input;
     (* Puis, les différentes instantiations *)
     iter (fun x -> ajouter (CBM.find x.block_type env))
@@ -118,76 +109,6 @@ let rec creercircuit env bloc =
                                     creerliste n,
                                     []))
          bloc.outputs;
-    
-    (* Pour pouvoir brancher tous les fils correctement, on doit savoir
-     *   d'où ils partent. Vu que notre concaténation est grossière, on doit
-     *   noter pour chaque fil le décalage correspondant. *)
-    let depart = MapFil.empty in
-    let compteur = ref 0 in
-    (* D'abord les adresses des entrées du gros bloc *)
-    iter (fun (s,n) -> MapFil.add (None,s) !compteur depart;
-                       compteur := !compteur + n;)
-         bloc.input;
-    (* Puis, les adresses des sorties des instantiations *)
-    iter (fun x -> let definition = (CBM.find x.block_type env) in
-                   match (CBM.find x.block_type table) with (_,_,sorties,_) ->
-                   compteur := !compteur + (List.hd sorties);
-                   iter (fun ((s,n),_) -> MapFil.add (Some (fst x.block_type),s)
-                                                     !compteur
-                                                     depart;
-                                           compteur := !compteur + n)
-                        definition.outputs;)
-         bloc.instantiations;
-
-    (* La liste des positions des entrées des instantiations *)
-    match !c with (_,l,_,_) ->
-    let positionsentrees = List.filter (fun i -> i >= premiereinstance) l in
-    
-    (* On génère la table qui à un fil associe sa taille *)
-    let taillefils = SemanticsAnalysis.get_wires_sizes bloc env in
-
-    (* La liste de toutes les entrees des blocs *)
-    let listeentrees = List.concat (List.map (fun x -> x.inputs)
-                                             bloc.instantiations)
-
-    (* On parcourt en parallèle la liste des entrées et la liste des positions
-     *   des entrées pour faire les branchements nécessaires *)
-    match !c with (g,_,_,_) ->
-    let rec parcours positions entrees = match (positions,entrees) with
-        | (pos,(Merge(liste))::q) -> 
-            parcours pos (liste @ q)
-        | (pos,(Named_Wire w)::q') when (MapFil.find w taillefils) = 0 -> 
-            parcours pos q
-        | (p::q,(Named_Wire w)::q') ->
-            let d = MapFil.find w depart in
-            (match g.(d) with (porte,liste) ->
-                 g.(d) <- (porte,(p,1)::liste))
-            MapFil.add w (d-1) taillefils;
-            parcours q q'
-        | (pos,(Slice s)::q) when s.max < s.min ->
-            parcours pos q
-        | (p::q,(Slice s)::q) ->
-            let d = MapFil.find w depart in
-            (match g.(d+min) with (porte,liste) ->
-                g.(d) <- (porte,(p,1)::liste))
-            parcours q (Slice {wire=s.wire ; min=s.min-1 ; max=s.max})::q
-    in
-    parcours positionsentrees listeentrees;
-
-    (* On fait la même chose pour les sorties du bloc en réutilisant la fonction
-     *   précédente *)
-    let positionssorties = 
-        List.map (fun i -> i+!compteur) (creerliste ((Array.length g)-!compteur)
-    in
-    let listesorties = snd (List.split bloc.outputs) in 
-    parcours positionssorties listesorties;
-
-    (* On renvoie le graphe final, non optimisé *)
-    !c
-
-
-
-    
 
 
 

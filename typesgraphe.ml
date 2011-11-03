@@ -38,9 +38,6 @@ type registres = int list
 type entrees = int list
 type sorties = int list
 (* Tableau des positions des portes d'entrée et de sortie *)
-(* On suppose de plus (pour la génération de circuit) que les sorties sont
- *   systématiquement placées À LA FIN du tableau graphe, et que les entrées
- *   sont placées au début. *)
 
 type circuit = graphe * entrees * sorties * registres
 

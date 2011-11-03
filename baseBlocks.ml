@@ -12,7 +12,7 @@ let ground_ = {
 let out_ = {
   name = "Out"; 
   parameters = []; 
-  inputs = [("a", Ast.Integer.Int 1)];
+  inputs = [("a", 1)];
   instantiations = []; 
   outputs = []
 }
@@ -22,7 +22,7 @@ let in_ = {
   parameters = []; 
   inputs = []; 
   instantiations = [];
-  outputs = [(("o", Ast.Integer.Int 1), Named_Wire (None, ""))]
+  outputs = [(("o", 1), Named_Wire (None, ""))]
 }
 
 let vdd_ = {
@@ -30,7 +30,7 @@ let vdd_ = {
   parameters = []; 
   inputs = []; 
   instantiations = [];
-  outputs = [(("o", Ast.Integer.Int 1), Named_Wire (None, "a"))]
+  outputs = [(("o", 1), Named_Wire (None, "a"))]
 }
 
 let xor_ = { 
