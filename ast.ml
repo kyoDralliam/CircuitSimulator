@@ -51,11 +51,7 @@ struct
 
   include IntModule
 
-  (* Un fil nommé est repéré par le nom du bloc auquel il appartient et par son
-     propre nom. 
-     Attention conflit ! On a le choix entre :
-     - garder block de type id (donc string) et de considérer que
-     pour les entrées et les sorties du bloc courant, block =  ""
+  (* Pour les entrées et les sorties du bloc courant, block =  ""
      - changer block en type id option ce qui sémantiquement me semble 
      plus correct, et mettre block = None pour les entrées et sorties
      du bloc courant.
