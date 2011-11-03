@@ -1,6 +1,38 @@
 open Ast
 open IntAst
 
+let ground_ = {
+  name = "Gnd" ;
+  parameters = [] ;
+  inputs = [] ;
+  instantiations = [] ;
+  outputs = [ ("o", 1), (Named_Wire (None,""))] 
+}
+
+let out_ = {
+  name = "Out"; 
+  parameters = []; 
+  inputs = [("a", Ast.Integer.Int 1)];
+  instantiations = []; 
+  outputs = []
+}
+
+let in_ = {
+  name = "In"; 
+  parameters = []; 
+  inputs = []; 
+  instantiations = [];
+  outputs = [(("o", Ast.Integer.Int 1), Named_Wire (None, ""))]
+}
+
+let vdd_ = {
+  name = "Vdd"; 
+  parameters = []; 
+  inputs = []; 
+  instantiations = [];
+  outputs = [(("o", Ast.Integer.Int 1), Named_Wire (None, "a"))]
+}
+
 let xor_ = { 
   name = "Xor" ; 
   parameters = [] ; 
@@ -28,7 +60,7 @@ let or_ = {
 let mux_ = { 
   name = "Mux" ; 
   parameters = [] ; 
-  inputs = [ "a", 1 ; "b", 1 ; "c", 1 ] ;  
+  inputs = [ "selector", 1 ; "a", 1 ; "b", 1 ] ;  
   instantiations = [] ; 
   outputs = [ ("o", 1), (Named_Wire (None,"")) ]   
 }
@@ -52,6 +84,19 @@ let not_ = {
 (** Blocks de base : plutôt essayer d'aller 
     les chercher dans un autre fichier 
 *)
-let base_block = [ xor_ ; and_ ; or_ ; mux_ ; reg_ ; not_ ]
+let base_block = [ xor_ ; and_ ; or_ ; mux_ ; reg_ ; not_ ; ground_ ; vdd_ ]
 
-let block_without_loop = [ xor_ ; and_ ; or_ ; mux_ ; not_ ] 
+let block_without_loop = [ xor_ ; and_ ; or_ ; mux_ ; not_ ; ground_ ; vdd_ ] 
+
+module BlockType =
+struct 
+  type t = IntAst.block_type 
+  let compare = compare 
+end
+
+(** Map ayant comme clés des block_type et 
+    comme valeur des block_type_definition *)
+module ConcreteBlockMap = Map.Make(BlockType)
+
+(** Set ayant comme clés des block_type *)
+module BlockTypeSet = Set.Make(BlockType)

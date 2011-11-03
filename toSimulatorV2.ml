@@ -6,40 +6,51 @@ let rec fold_left_for f x debut fin =
   else
     x
 
+type tri_topologique_etat =
+  | Non_Traite
+  | En_Traitement
+  | Traite
+
 let tri_topologique graphe =
   
   let nouvelle_num = Array.make (Array.length graphe) 0 in
   let ancienne_num = Array.make (Array.length graphe) 0 in
-  let parcouru = Array.make (Array.length graphe) None in
+  let parcouru = Array.make (Array.length graphe) Non_Traite in
   
-  let rec parcourir num_parcours prochain_num_attribue noeud_ancienne =
-    let prochain_num_attribue = 
-      match fst graphe.(noeud_ancienne) with
-        | Registre | Device _ -> prochain_num_attribue
-        | _ ->
-            List.fold_left
-              (fun prochain_num_attribue (fils_ancienne,_) ->
-                match parcouru.(fils_ancienne) with
-                  | None ->
-                      parcouru.(fils_ancienne) <- Some num_parcours;
-                      parcourir num_parcours prochain_num_attribue fils_ancienne
-                  | Some n when n = num_parcours ->
-                      failwith "Cycle !"
-                  | _ -> prochain_num_attribue)
-              prochain_num_attribue
-              (snd graphe.(noeud_ancienne))
-    in
-    
-    nouvelle_num.(noeud_ancienne) <- prochain_num_attribue;
-    ancienne_num.(prochain_num_attribue) <- noeud_ancienne;
-    
-    prochain_num_attribue + 1
+  let rec parcourir prochain_num_attribue noeud_ancienne =
+    match parcouru.(noeud_ancienne) with
+      | Non_Traite ->
+	  (
+	    parcouru.(noeud_ancienne) <- En_Traitement;
+
+	    let prochain_num_attribue =
+	      match fst graphe.(noeud_ancienne) with
+		| Registre | Device _ -> prochain_num_attribue
+		| _ -> 
+		    List.fold_left
+		      (fun prochain_num_attribue (fils_ancienne,_) ->
+			 parcourir prochain_num_attribue fils_ancienne)
+		      prochain_num_attribue
+		      (snd graphe.(noeud_ancienne)) 	      
+	    in
+		
+	    nouvelle_num.(noeud_ancienne) <- prochain_num_attribue;
+	    ancienne_num.(prochain_num_attribue) <- noeud_ancienne;
+
+	    parcouru.(noeud_ancienne) <- Traite;
+
+	    prochain_num_attribue - 1
+	  )
+      | En_Traitement ->
+          failwith "Cycle !"
+      | Traite -> prochain_num_attribue
+	  
   in  
   
   assert
     (fold_left_for
       (fun prochain_num_attribue noeud_ancienne ->
-        parcourir noeud_ancienne prochain_num_attribue noeud_ancienne)
+        parcourir prochain_num_attribue noeud_ancienne)
       (Array.length graphe - 1)
       0
       (Array.length graphe - 1) = -1);
@@ -68,7 +79,7 @@ let string_of_graphe (graphe,_,_,_) =
     (string_of_gate porte) ^ " " ^ 
       (string_of_int (List.length liste_sorties)) ^ " " ^ 
       (String.concat " " (List.map 
-        (fun (x,y) -> (string_of_int nouvelle_num.(x)) ^ " " ^ (string_of_int nouvelle_num.(y))) 
+        (fun (x,y) -> (string_of_int nouvelle_num.(x)) ^ " " ^ (string_of_int y)) 
 	liste_sorties ))
   in
 
