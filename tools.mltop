@@ -1,9 +1,12 @@
 Ast
 Parser
 Lexer
-Tools
+#Tools
 IntegerToInt
 Pattern
 SemanticAnalysis
-Tests
+#Tests
 BaseBlocks
+Typesgraphe
+ToSimulator
+ToSimulatorV2
