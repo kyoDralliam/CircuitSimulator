@@ -1,7 +1,8 @@
 open Typesgraphe
 open BaseBlocks
 
-(* Fonction qui concatène deux circuits sans rien vérifier ni rien modifier *)
+(* Fonction qui concatène deux circuits sans rien vérifier ni rien modifier, à
+ *   part les décalages d'indices *)
 let concatenercircuits c1 c2 =
     match c1 with (g1,e1,s1,r1) ->
     match c2 with (g2,e2,s2,r2) ->
@@ -68,6 +69,14 @@ module CBM = SemanticsAnalysis.ConcreteBlockMap
 (* La table qui contient les circuits que l'on connaît déjà *)
 let table = CBM.empty
 
+(* Le type des maps de fil *)
+module Fil =
+struct 
+  type t = string option * string
+  let compare = compare 
+end
+module MapFil = Map.Make(Fil)
+
 (* creerliste n renvoie [0 ; 1 ; ... ; n-1] *)
 let creerliste n =
     let rec parcours n = function
@@ -80,9 +89,11 @@ let creerliste n =
  *   et d'une définition de bloc, et l'ajoute dans table. *)
 let rec creercircuit env bloc =
     let iter = List.iter in
-    let g = ref [||] in
-    let ajouter t = 
-        g := Array.append g t;
+
+    (* Le circuit que l'on renvoie et la fonction de concaténation *)
+    let c = ref ([||],[],[],[]) in
+    let ajouter c' = 
+        c := concatenercircuits c c';
     in
 
     (* Si il existe une instantiation du bloc que l'on ne connaît pas, on crée
@@ -93,7 +104,8 @@ let rec creercircuit env bloc =
          bloc.instantiations;
 
     (* Maintenant, toutes les instantiations utilisées sont connues : on les
-     *   concatène comme un gros sac. *)
+     *   concatène comme un gros sac, en retenant au passage le numéro de départ
+     *   de chaque bloc. *)
     (* On commence par ajouter les entrées *)
     iter (fun (_,n) -> ajouter (Array.make n (Entree,[]),
                                 creerliste n,
@@ -109,6 +121,28 @@ let rec creercircuit env bloc =
                                     creerliste n,
                                     []))
          bloc.outputs;
+    
+    (* De plus, pour pouvoir brancher tous les fils correctement, on doit savoir
+     *   d'où ils partent. Vu que notre concaténation est grossière, on doit
+     *   noter pour chaque fil le décalage correspondant. *)
+    let depart = MapFil.empty in
+    let compteur = ref 0 in
+    (* D'abord les adresses des entrées du gros bloc *)
+    iter (fun (s,n) -> MapFil.add (None,s) !compteur depart;
+                       compteur := !compteur + n;)
+         bloc.input;
+    (* Puis, les adresses des sorties des instantiations *)
+    iter (fun x -> let definition = (CBM.find x.block_type env) in
+                   match (CBM.find x.block_type table) with (_,_,sorties,_) ->
+                   compteur := !compteur + (List.hd sorties);
+                   iter (fun ((s,n),_) -> MapFil.add (Some (fst x.block_type),s)
+                                                     !compteur
+                                                     depart;
+                                           compteur := !compteur + n)
+                        definition.outputs;)
+         bloc.instantiations;
+
+    
 
 
 
