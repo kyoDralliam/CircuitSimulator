@@ -1,3 +1,4 @@
+open Typesgraphe
 
 let main (graphe,_,_,_) =
 
@@ -20,10 +21,10 @@ let main (graphe,_,_,_) =
       (string_of_int (List.length out_list)) ^ " " ^ 
       (String.concat " " (List.map 
         (fun (x,y) -> string_of_int x) 
-        list_out))
+        out_list))
   in 
 
-  let string_list = List.iter string_of_node (Array.to_list graphe) in
+  let string_list = List.map string_of_node (Array.to_list graphe) in
 
   (string_of_int (Array.length graphe)) ^ "\n" ^
     String.concat "\n" string_list

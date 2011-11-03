@@ -14,7 +14,7 @@ let tri_topologique graphe =
   
   let rec parcourir num_parcours prochain_num_attribue noeud_ancienne =
     let prochain_num_attribue = 
-      match snd graphe.(noeud_ancienne) with
+      match fst graphe.(noeud_ancienne) with
         | Registre | Device _ -> prochain_num_attribue
         | _ ->
             List.fold_left
@@ -64,12 +64,12 @@ let string_of_graphe (graphe,_,_,_) =
 
   let (nouvelle_num, ancienne_num) = tri_topologique graphe in
 
-  let string_of_neud (porte, liste_sorties) =
+  let string_of_noeud (porte, liste_sorties) =
     (string_of_gate porte) ^ " " ^ 
       (string_of_int (List.length liste_sorties)) ^ " " ^ 
       (String.concat " " (List.map 
-        (fun (x,y) -> (string_of_int nouvelle_num.(x)) ^ " " ^ (string_of_int nouvelle_num.(y)) 
-        liste_sorties)))
+        (fun (x,y) -> (string_of_int nouvelle_num.(x)) ^ " " ^ (string_of_int nouvelle_num.(y))) 
+	liste_sorties ))
   in
 
   let resultat = ref ((string_of_int (Array.length graphe)) ^ "\n") in

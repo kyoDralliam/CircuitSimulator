@@ -98,7 +98,6 @@ end_of_file              EOF
   (* zone ocaml *)
   open Ast
   open Integer
-  module IntegerAst = Make(Integer)
   open IntegerAst
 
   type circuit_element = 
