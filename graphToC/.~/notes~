@@ -1,0 +1,16 @@
+
+Circuit (a,b)
+    And D(a,b)
+    Xor U(a,b)
+    Reg R(U.o)
+    -> d : D.o, u : U.o, x : R.o;
+
+start Circuit
+________________________
+
+let graph = [| (Sortie, []); (Sortie, []); (Sortie, []);
+            (Xor, [[(0,0);(5,0)]]); (And, [[(1,0)]]); (Reg, [[(2,0)]]);
+            (Entree, [[(3,0);(4,0)]]); (Entree, [[(3,1);(4,1)]]) |] in
+let inputs = [6;7] in
+let outputs = [0;1;2] in
+let registers = [5]
