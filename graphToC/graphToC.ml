@@ -2,11 +2,28 @@
 (* #load "str.cma";; *)
 open Typesgraphe
 
+(* On choisit les noms qu'auront les différents tableaux utilisés dans le
+   code C :
+*)
+
+(* Le tableau qui contient la valeur de chaque sortie de chaque porte *)
 let gates_outputs_array_name = "gates_outputs"
+(* Le tableau qui contient la future valeur de chaque registre
+   (à chaque cycle, après les calculs, la sortie de chaque registre est mise
+   à jour en fonction de ce tableau)
+*)
 let registers_array_name = "registers"
+(* Le tableau dans lequel on stocke les entrées du circuit, au moment où
+   l'on les lit depuis l'entrée standard
+*)
 let circuit_inputs_array_name = "circuit_inputs"
+(* Le tableau dans lequel on stocke les sorties du circuit, avant de les
+   écrire sur la sortie standard *)
 let circuit_outputs_array_name = "circuit_outputs"
 
+
+(* Le numéro à partir duquel commence la numérotation
+   des entrées d'une porte *)
 let first_input_number = 1
 
 let file_slurp name =
@@ -17,6 +34,7 @@ let file_slurp name =
   close_in input_channel;
   file_content
 
+(* On charge les fichiers qui contiennent la base du code C que l'on génère *)
 let text_before = file_slurp "text_before"
 let text_after = file_slurp "text_after"
 
@@ -26,6 +44,8 @@ let rec fold_left_for f x first last =
   else
     x
 
+(* Renvoie une version modifiée de s, dans laquelle on a remplacé toutes les
+   instances de $(k) par v, pour tout (k,v) dans la liste passée en argument *)
 let rec replace_vars s = function
   | [] -> s
   | (k,v)::t -> let r = Str.regexp ("\\$(" ^ k ^ ")") in
@@ -36,6 +56,24 @@ type topological_sort_state =
   | Being_Processed
   | Processed
 
+(* Effectue un tri topologique sur graph :
+
+    Une porte est placée avant les portes qui dépendent de ses sorties, sauf
+    si cette porte est un registre ou un périphérique.
+
+    Renvoie le couple (new_num,old_num) de tableaux d'entiers, où
+    new_num.(i) donne la position du noeud i dans le tri topologique, et
+     old_num.(j) donne le numéro du noeud en position j dans le tri topologique.
+
+    Les arguments circuit_inputs et circuit_outputs doivent contenir
+    respectivement la liste des entrées et la liste des sorties du circuit.
+    On garantit alors que le tri topologique préserve l'ordre à l'intérieur
+    de ces deux listes (si le noeud i est placé avant le noeud j dans une
+    de ces listes, alors new_num.(i) < new_num.(j)).
+
+    Si graph contient un cycle qui n'est pas "coupé" par un registre ou un
+    périphérique, la fonction lève une exception.
+*) 
 let topological_sort graph circuit_inputs circuit_outputs =
  
   let used_space = Array.fold_left 
@@ -111,7 +149,21 @@ let topological_sort graph circuit_inputs circuit_outputs =
 
   (new_num,old_num)
 
+(* Attribue à chaque porte une plage de positions dans le tableau
+   des sorties des portes :
+   
+   Renvoie le couple (gates_outputs_positions, number_of_gates_outputs) :
 
+   number_of_gates_outputs désigne le nombre de sorties de portes.
+   
+   gates_outputs_position.(i) = (first_output, length), où first_output
+   indique le début de la plage attribuée à cette porte, et length la
+   longueur de cette plage.
+   (i est la position de la porte dans le tri topologique)
+
+   Toutes les portes Gnd se voient attribuer la plage {0} et
+   toutes les portes Vdd la plage {1}.
+*)
 let gates_outputs_positions graph old_num =
   
   (* Les 2 premières sorties sont Gnd et Vdd *)
@@ -136,6 +188,7 @@ let gates_outputs_positions graph old_num =
   
   (positions, !number_of_outputs)
 
+(* Indique le nombre d'entrées d'une porte en fonction de sa nature *)
 let expected_number_of_inputs = function
   | Bit _ -> 0
   | Non | Ou | Et | Xor -> 2
@@ -145,7 +198,20 @@ let expected_number_of_inputs = function
   | Sortie -> 1
   | Device _ -> 67
   | VideIntersideral -> 0
-    
+
+(* Calcule pour chaque porte la position de chacune de ses entrées dans
+   le tableau des sorties des portes :
+
+   renvoie le couple (gates_inputs_positions, number_of_gates_inputs) :
+
+   number_of_gates_inputs indique le nombre d'entrées de portes
+
+   gates_inputs_positions.(i) est un tableau indiquant pour chaque
+   entrée de la porte dans quelle case du tableau des sorties des
+   portes on doit aller chercher la valeur de cette entrée.
+   (i est la position de la porte dans le tri topologique;
+   l'indice 0 du tableau correspond à l'entrée numérotée first_input_number)
+*)
 let gates_inputs_positions graph new_num old_num outputs_positions =
   
   let number_of_inputs = ref 0 in
@@ -187,6 +253,15 @@ let gates_inputs_positions graph new_num old_num outputs_positions =
   
   (inputs_positions, !number_of_inputs)
 
+(* Calcule pour chaque registre la position de sa sortie dans le
+   tableau des sorties des portes :
+   
+   Renvoie les tableau registers_outputs_positions :
+
+   Soit le registre en position i dans la liste registers,
+   registers_outputs_position.(i) indique la position de la sortie de ce
+   registre dans le tableau des sorties des portes.
+*)
 let registers_outputs_positions graph old_num registers outputs_positions =
   
   let registers_outputs_positions = Array.make (List.length registers) (-1) in
@@ -209,6 +284,15 @@ let registers_outputs_positions graph old_num registers outputs_positions =
   
   registers_outputs_positions
 
+(* Calcule pour chaque entrée du circuit la position de sa sortie dans
+   le tableau des sorties des portes :
+
+   Renvoie le tableau circuit_inputs_positions :
+
+   Soit l'entrée en position i dans la liste circuit_inputs,
+   circuit_inputs_positions.(i) indique la position de la sortie de cette
+   entrée dans le tableau des sorties des portes.
+*)
 let circuit_inputs_positions graph old_num circuit_inputs
     gates_outputs_positions =
   
@@ -232,6 +316,16 @@ let circuit_inputs_positions graph old_num circuit_inputs
 
   circuit_inputs_positions
 
+(* Calcule pour chaque sortie du circuit la case du tableau des sorties
+   des portes où la sortie doit aller chercher sa valeur (c'est-à-dire
+   la position de la sortie à laquelle son entrée est connectée)
+
+   Renvoie le tableau circuit_outputs_positions :
+
+   Soit la sortie en position i dans la liste circuit_outputs,
+   circuit_outputs_positions.(i) indique la case du tableau des sorties
+   des portes où cette sortie doit aller chercher sa valeur.
+ *)
 let circuit_outputs_positions graph old_num circuit_outputs 
     gates_inputs_positions =
 
@@ -258,6 +352,12 @@ let circuit_outputs_positions graph old_num circuit_outputs
  
   circuit_outputs_positions
 
+(* Crée pour une porte un code C qui renvoient la valeur de la sortie de la
+   porte, à partir de codes C qui renvoient la valeur de sers entrées.
+
+   Lève une exception si la porte a plusieurs sorties (c'est-à-dire s'il
+   s'agit d'in périphérique)
+*)
 let gate_operation_code gate inputs_codes =
   (* On vérifie que l'on reçoit le bon nombre d'arguments *)
   assert (Array.length inputs_codes = expected_number_of_inputs gate);
@@ -273,10 +373,15 @@ let gate_operation_code gate inputs_codes =
       inputs_codes.(0) ^ " ? " ^ inputs_codes.(2) ^ " : " ^ inputs_codes.(1)
     | Registre -> inputs_codes.(0)
     | Sortie -> inputs_codes.(0)
-    | Device _ -> failwith "Not implemented 1 in GraphToC.gate_operation_code"
-      (* FIXME *)
-    | VideIntersideral -> failwith "TSNH 1 in GraphToC.gate_operation_code"
+    | Device _ -> failwith "TSNH 1 in GraphToC.gate_operation_code"
+    | VideIntersideral -> failwith "TSNH 2 in GraphToC.gate_operation_code"
 
+(* Crée un code qui met à jour les cases du tableau des sorties des portes
+   correspondant aux sorties d'une porte donnée (ou qui met à jour sa case
+   dans le tableau des registres si cette porte est un registre :
+
+   node_new indique la position de la porte dans le tri topologique.
+*)   
 let node_code graph old_num gates_inputs_positions gates_outputs_positions
     next_register node_new =
   
@@ -314,6 +419,18 @@ let node_code graph old_num gates_inputs_positions gates_outputs_positions
   
   (code, match gate with Registre -> next_register + 1 | _ -> next_register)
 
+(* Crée le code source d'un programme C qui simule l'exécution du cricuit
+   passé en argument, en prenant ses entrées sur l'entrée standard (dans
+   l'ordre de la liste circuit_inputs) et en écrivant ses sorties sur la
+   sortie standard (dans l'ordre de la liste circuit_outputs)
+
+   Le programme s'appelle de la façon suivante :
+   nom_du_programme [-s] CYCLES
+    -s : Afficher la valeur des sorties à chaque cycle (une ligne
+         par cycle) plutôt qu'une seule fois, après le dernier cycle
+
+    CYCLES : Durée de la simulation, en cycles
+*)
 let circuit_code (graph, circuit_inputs, circuit_outputs, registers) =
   
   let (new_num,old_num) = topological_sort graph circuit_inputs circuit_outputs in

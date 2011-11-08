@@ -1,5 +1,6 @@
 TMP = _build
 LIBS = str
+NATIVEORBYTE = native
 
 CYCLES = 10
 
@@ -16,7 +17,7 @@ test : circuit
 
 clean :
 	ocamlbuild -clean
-	rm -f graphToC.byte
+	rm -f graphToC.$(NATIVEORBYTE)
 
 delete : clean
 	rm -f graphToC
@@ -29,12 +30,14 @@ $(TMP)/circuit.c : graphToC
 	rm -f $@
 	./$< > $@
 
-graphToC : graphToC.byte
+graphToC : graphToC.$(NATIVEORBYTE)
 	cp $< $@
 
 FORCE :
 
 %.byte : FORCE
+	@ocamlbuild -quiet -libs $(LIBS) $@
+%.native : FORCE
 	@ocamlbuild -quiet -libs $(LIBS) $@
 %.cmo : FORCE
 	@ocamlbuild -quiet $@
