@@ -76,7 +76,7 @@ let table = ref CBM.empty
 module MapFil = SemanticAnalysis.WireIdentMap
 
 (* creerliste n renvoie [0 ; 1 ; ... ; n-1] *)
-let creerliste n =
+let creerliste n = 
     let rec parcours n = function
         | 0 -> []
         | i -> (n-i) :: parcours n (i-1)
@@ -85,22 +85,22 @@ let creerliste n =
 
 (* La fonction qui crée un circuit en partant d'une map de définitions de blocs
 * et d'une définition de bloc, et l'ajoute dans table. *)
-let rec creercircuit env bloc =
+let rec creercircuit env bloc = 
     let iter = List.iter in
-
+    
     (* Le circuit que l'on renvoie et la fonction de concaténation *)
     let c = ref ([||],[],[],[]) in
     let ajouter c' =
         c := concatenercircuits !c c';
     in
-
+    
     (* Si il existe une instantiation du bloc que l'on ne connaît pas, on crée
 * d'abord le circuit associé pour le rajouter dans la map et pouvoir s'en
 * servir. *)
     iter (fun x -> if not (CBM.mem (x.block_type) !table) then
-                                creercircuit env (CBM.find x.block_type env))
+                       ignore (creercircuit env (CBM.find x.block_type env)))
          bloc.instantiations;
-
+    
     (* Maintenant, toutes les instantiations utilisées sont connues : on les
 * concatène comme un gros sac, en retenant au passage le numéro de départ
 * de chaque bloc. *)
@@ -142,7 +142,7 @@ let rec creercircuit env bloc =
                                 compteur := !compteur + n;)
                         definition.outputs;)
          bloc.instantiations;
-
+    
     (* La liste des positions des entrées des instantiations *)
     let (g,l,_,_) = !c in
     let positionsentrees = List.filter (fun i -> i >= !premiereinstance) l in
@@ -151,11 +151,11 @@ let rec creercircuit env bloc =
     (* let taillefils = Wire.wire_size env bloc in *)
     let gwims = SemanticAnalysis.get_wire_identifier_map_size in
     let taillefils = ref (gwims bloc env []) in
-
+    
     (* La liste de toutes les entrees des blocs *)
     let listeentrees = List.concat (List.map (fun x -> x.input)
                                              bloc.instantiations) in
-
+    
     (* On parcourt en parallèle la liste des entrées et la liste des positions
 * des entrées pour faire les branchements nécessaires *)
     let rec parcours positions entrees = match (positions,entrees) with
@@ -181,13 +181,18 @@ let rec creercircuit env bloc =
     parcours positionsentrees listeentrees;
 
     (* On fait la même chose pour les sorties du bloc en réutilisant la fonction
-* précédente *)
+     * précédente *)
     let positionssorties =
         List.map (fun i -> i + !compteur) 
                  (creerliste ((Array.length g) - !compteur))
     in
     let listesorties = snd (List.split bloc.outputs) in
     parcours positionssorties listesorties;
-
-    (* On renvoie le graphe final, non optimisé *)
+    
+    (* On rajoute le graphe obtenu dans la table globale *)
     table := CBM.add (bloc.name,bloc.parameters) !c !table;
+    
+    (* Et on renvoie le graphe final, non optimisé *)
+
+
+Printf.printf "coucou";;
