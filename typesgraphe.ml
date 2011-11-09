@@ -9,7 +9,8 @@ type porte =
         | Multiplexer
         | Registre 
         | Sortie
-        | Device of int 
+        | Device of string 
+        | VideIntersideral
 (* Portes de base *)
 
 type noeud = porte * (int*int) list 

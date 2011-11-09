@@ -83,8 +83,13 @@ let creerliste n =
     in
     parcours n n
 
+let rec eliminerdoublons = function
+    | t::t'::q when t=t' -> eliminerdoublons (t::q)
+    | t::q -> t::(eliminerdoublons q)
+    | [] -> []
+
 (* La fonction qui crée un circuit en partant d'une map de définitions de blocs
-* et d'une définition de bloc, et l'ajoute dans table. *)
+ * et d'une définition de bloc, et l'ajoute dans table. *)
 let rec creercircuit env bloc = 
     let iter = List.iter in
     
@@ -93,17 +98,20 @@ let rec creercircuit env bloc =
     let ajouter c' =
         c := concatenercircuits !c c';
     in
+
+    (* Quelques raccourcis pour pouvoir traiter c *)
+    let (g,l,s,_) = !c in
     
     (* Si il existe une instantiation du bloc que l'on ne connaît pas, on crée
-* d'abord le circuit associé pour le rajouter dans la map et pouvoir s'en
-* servir. *)
+     * d'abord le circuit associé pour le rajouter dans la map et pouvoir s'en
+     * servir. *)
     iter (fun x -> if not (CBM.mem (x.block_type) !table) then
                        ignore (creercircuit env (CBM.find x.block_type env)))
          bloc.instantiations;
     
     (* Maintenant, toutes les instantiations utilisées sont connues : on les
-* concatène comme un gros sac, en retenant au passage le numéro de départ
-* de chaque bloc. *)
+     * concatène comme un gros sac, en retenant au passage le numéro de départ
+     * de chaque bloc. *)
     (* On commence par ajouter les entrées *)
     let premiereinstance = ref 0 in
     iter (fun (_,n) -> ajouter (Array.make n (Entree,[]),
@@ -123,8 +131,8 @@ let rec creercircuit env bloc =
          bloc.outputs;
     
     (* Pour pouvoir brancher tous les fils correctement, on doit savoir
-* d'où ils partent. Vu que notre concaténation est grossière, on doit
-* noter pour chaque fil le décalage correspondant. *)
+     * d'où ils partent. Vu que notre concaténation est grossière, on doit
+     * noter pour chaque fil le décalage correspondant. *)
     let depart = ref MapFil.empty in
     let compteur = ref 0 in
     (* D'abord les adresses des entrées du gros bloc *)
@@ -144,11 +152,9 @@ let rec creercircuit env bloc =
          bloc.instantiations;
     
     (* La liste des positions des entrées des instantiations *)
-    let (g,l,_,_) = !c in
     let positionsentrees = List.filter (fun i -> i >= !premiereinstance) l in
     
     (* On génère la table qui à un fil associe sa taille *)
-    (* let taillefils = Wire.wire_size env bloc in *)
     let gwims = SemanticAnalysis.get_wire_identifier_map_size in
     let taillefils = ref (gwims bloc env []) in
     
@@ -157,7 +163,7 @@ let rec creercircuit env bloc =
                                              bloc.instantiations) in
     
     (* On parcourt en parallèle la liste des entrées et la liste des positions
-* des entrées pour faire les branchements nécessaires *)
+     * des entrées pour faire les branchements nécessaires *)
     let rec parcours positions entrees = match (positions,entrees) with
         | (pos,(Merge(liste))::q') ->
             parcours pos (liste @ q')
@@ -182,15 +188,45 @@ let rec creercircuit env bloc =
 
     (* On fait la même chose pour les sorties du bloc en réutilisant la fonction
      * précédente *)
+    let debutsorties = !compteur in
     let positionssorties =
-        List.map (fun i -> i + !compteur) 
-                 (creerliste ((Array.length g) - !compteur))
+        List.map (fun i -> i + debutsorties) 
+                 (creerliste ((Array.length g) - debutsorties))
     in
     let listesorties = snd (List.split bloc.outputs) in
     parcours positionssorties listesorties;
     
+    (* On optimise le graphe, en virant tout ce qui ne sert à rien *)
+    (* La fonction principale d'optimisation *)
+    let rec optimiser n = match g.(n) with (typeporte,liste) ->
+        let nouvelleliste = ref [] in
+        iter (fun (x,y) -> if fst g.(x) = Entree then 
+                           nouvelleliste := (snd g.(x)) @ !nouvelleliste
+                       else if fst g.(x) = Sortie && x < debutsorties then
+                           nouvelleliste := (snd g.(x)) @ !nouvelleliste
+                       else 
+                           nouvelleliste := (x,y) :: !nouvelleliste)
+             (List.rev liste);
+        (* Élimination des doublons *)     
+        nouvelleliste := eliminerdoublons (List.sort (compare) !nouvelleliste);
+        g.(n) <- (typeporte,!nouvelleliste);
+        if !nouvelleliste <> liste then
+            optimiser n;
+    in
+    (* On l'itère sur tout le graphe *)
+    for i = 0 to (Array.length g) - 1 do
+        optimiser i
+    done;
+    (* Et on vire les entrées/sorties intermédiaires *)
+    for i = !premiereinstance to debutsorties do
+        match g.(i) with 
+            | (Entree,_) -> g.(i) <- (VideIntersideral,[])
+            | (Sortie,_) -> g.(i) <- (VideIntersideral,[])
+            | _ -> ()
+    done;
+    
     (* On rajoute le graphe obtenu dans la table globale *)
     table := CBM.add (bloc.name,bloc.parameters) !c !table;
     
-    (* Et on renvoie le graphe final, non optimisé *)
+    (* Et on renvoie le graphe final, optimisé *)
     !c
