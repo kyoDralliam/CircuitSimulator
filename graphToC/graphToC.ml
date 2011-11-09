@@ -196,7 +196,7 @@ let expected_number_of_inputs = function
   | Multiplexer -> 3
   | Registre -> 1
   | Sortie -> 1
-  | Device _ -> 67
+  | Device _ -> 71 (* cf ast.ml *)
   | VideIntersideral -> 0
 
 (* Calcule pour chaque porte la position de chacune de ses entrées dans
