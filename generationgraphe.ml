@@ -193,6 +193,4 @@ let rec creercircuit env bloc =
     table := CBM.add (bloc.name,bloc.parameters) !c !table;
     
     (* Et on renvoie le graphe final, non optimisé *)
-
-
-Printf.printf "coucou";;
+    !c
