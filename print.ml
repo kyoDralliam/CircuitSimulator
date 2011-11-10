@@ -76,6 +76,7 @@ struct
 
 end
 
+
 module IntAstPrinter = AstPrinter(IntPrinter)
 module IntegerAstPrinter = AstPrinter(IntegerPrinter)
 
@@ -91,7 +92,7 @@ let print_int_ast (start,map,devices) =
   let open IntAstPrinter in
   let open Printf in
     printf "start %s\n\n\n" (block_type start) ; 
-    SemanticAnalysis.ConcreteBlockMap.iter 
+    BaseBlocks.ConcreteBlockMap.iter 
       (fun k x -> printf "%s :\n%s" (block_type k) (block_type_definition x)) map ;
     printf "%s" (mk_string ~b:"device list :\n" ~sep:"\n" 
 		    (fun (id,n) -> sprintf "> %s -> %s" id (string_of_int n)) devices)

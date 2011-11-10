@@ -2,7 +2,7 @@ open Ast
 
 open IntegerToInt
 open Pattern
-include BaseBlocks
+open BaseBlocks
 
 
 (** vrai ssi tous les éléments de 
@@ -326,7 +326,7 @@ let analyse_circuit (fst_circuit, circuit_blocks, circuit_devices) =
     check_devices_names abstract_blocks devices_names ;
     let final_blocks = reify_blocks circuit_start abstract_blocks BlockTypeSet.empty concrete_blocks devices_names in
       check_variables_in_blocks final_blocks circuit_devices;
-      circuit_start, final_blocks, circuit_devices
+      circuit_start, final_blocks, (circuit_devices : IntAst.device_type_definition list)
 
 
 
