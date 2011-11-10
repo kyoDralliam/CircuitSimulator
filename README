@@ -1,3 +1,9 @@
 pour compiler : make
 pour lancer le toplevel : make run
 pour ajouter un module au toplevel : le rajouter dans le fichier tools.mltop
+
+pour tester un circuit sur une entrée : ./main.native nom_du_fichier
+les options sont données par : ./main.native -h 
+puis utilisées de la manière suivante : ./main.native -pdf bidule.pdf source
+
+attention certaines options ne sont que peu ou pas encore implémentées, merci d'y contribuer

@@ -9,26 +9,25 @@ end
 module IntegerPrinter =
 struct
 
-  open Integer
   include IntegerAst
   
   let string_of_bop = function
-    | Plus   -> "+"
-    | Minus  -> "-"
-    | Times  -> "*"
-    | Div    -> "/"
-    | Mod    -> "%"
-    | Power  -> "^" 
+    | Integer.Plus   -> "+"
+    | Integer.Minus  -> "-"
+    | Integer.Times  -> "*"
+    | Integer.Div    -> "/"
+    | Integer.Mod    -> "%"
+    | Integer.Power  -> "^" 
 	
   let string_of_uop = function 
-    | Neg -> "-"
+    | Integer.Neg -> "-"
   
   let rec integer = function
-    | Int i -> string_of_int i
-    | Var s -> s
-    | Binary_Op (bop, i1, i2) -> 
+    | Integer.Int i -> string_of_int i
+    | Integer.Var s -> s
+    | Integer.Binary_Op (bop, i1, i2) -> 
 	"(" ^ (integer i1) ^ " " ^ (string_of_bop bop) ^ " " ^ (integer i2) ^ ")"
-    | Unary_Op (uop, i) -> (string_of_uop uop) ^ (integer i)
+    | Integer.Unary_Op (uop, i) -> (string_of_uop uop) ^ (integer i)
 end
 
 module IntPrinter =
@@ -80,19 +79,67 @@ end
 module IntAstPrinter = AstPrinter(IntPrinter)
 module IntegerAstPrinter = AstPrinter(IntegerPrinter)
 
-let print_integer_ast (start,list,devices) =
+let integer_ast_to_string (start,list,devices) =
   let open IntegerAstPrinter in
   let open Printf in
-    printf "start %s\n\n\n" (block_type start) ; 
-    printf "%s" (String.concat "\n" (List.map block_type_definition list)) ;
-    printf "%s" (mk_string ~b:"device list :\n" ~sep:"\n" 
-		    (fun (id,n) -> sprintf "> %s -> %s" id (string_of_int n)) devices)
+  let s1 = sprintf "start %s\n\n\n" (block_type start) in
+  let s2 = sprintf "%s" (String.concat "\n" (List.map block_type_definition list)) in
+  let device_to_string (id,n) = sprintf "> %s -> %s" id (string_of_int n) in
+  let s3 = sprintf "%s" (mk_string ~b:"device list :\n" ~sep:"\n" 
+			   device_to_string devices) in
+      s1 ^ s2 ^ s3
 
-let print_int_ast (start,map,devices) = 
+let print_integer_ast ast = print_string (integer_ast_to_string ast)
+
+let int_ast_to_string (start,map,devices) = 
   let open IntAstPrinter in
   let open Printf in
-    printf "start %s\n\n\n" (block_type start) ; 
-    BaseBlocks.ConcreteBlockMap.iter 
-      (fun k x -> printf "%s :\n%s" (block_type k) (block_type_definition x)) map ;
-    printf "%s" (mk_string ~b:"device list :\n" ~sep:"\n" 
-		    (fun (id,n) -> sprintf "> %s -> %s" id (string_of_int n)) devices)
+  let s1 = sprintf "start %s\n\n\n" (block_type start) in
+  let collect k x acc = (sprintf "%s :\n%s" (block_type k) (block_type_definition x))::acc in
+  let s2 = String.concat "" (BaseBlocks.ConcreteBlockMap.fold collect map []) in
+  let device_to_string (id,n) = sprintf "> %s -> %s" id (string_of_int n) in
+  let s3 = sprintf "%s" (mk_string ~b:"device list :\n" ~sep:"\n" 
+			   device_to_string devices) in
+    s1 ^ s2 ^ s3
+
+let print_int_ast ast = print_string (int_ast_to_string ast)
+
+
+
+module GraphPrinter =
+struct
+  open Printf
+  open TestDestruction
+
+  let gate gate_type gate_index = sprintf "%s (%i)" 
+    (gate_to_base_block gate_type) gate_index
+
+  (*
+    ig : input_gate 
+    igi : input_gate_index 
+    og : output_gate 
+    ogi : output_gate_index 
+    igoi : input_gate_output_index 
+    ogii : output_gate_input_index
+  *)
+  let transition ig igi og ogi igoi ogii labelize =
+    let label = if labelize then sprintf "[label=\"%i:%i -> %i:%i\"]" igi igoi ogi ogii else "" in
+    sprintf "\"%s\" -> \"%s\" %s;" (gate ig igi) (gate og ogi) label
+
+  let graph ?(label=false) g =  
+    let map_fun ig igi igoi (ogi,ogii) = let og = fst g.(ogi) in transition ig igi og ogi igoi ogii label in
+    let mapi_fun ig igi igoi l = List.map (map_fun ig igi igoi) l in
+    let mapi_fun2 i s = List.concat (Array.to_list (Array.mapi (mapi_fun (fst s) i) (snd s))) in
+    let content = String.concat "\n  " (List.concat (Array.to_list (Array.mapi mapi_fun2 g))) in
+    sprintf "digraph A {\n%s\n}" content
+
+end
+    
+
+module LexerPrinter =
+struct
+
+  (* FIXME : à implémenter *)
+  let token _ = "token"
+
+end

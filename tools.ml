@@ -1,5 +1,27 @@
+let output_to_file filename s =
+  let chan = open_out filename in
+    output_string chan s;
+    close_out chan
+
+let file_slurp name =
+  let input_channel = open_in name in
+  let file_size = in_channel_length input_channel in
+  let file_content = String.create file_size in
+  really_input input_channel file_content 0 file_size;
+  close_in input_channel;
+  file_content
+
+let get_files_content filenames =
+  String.concat "\n" (List.map file_slurp filenames)
+      
+
 let parse_integer integer_string =
   Parser.integer_start Lexer.token (Lexing.from_string integer_string)
+
+let parse_file filename = 
+  let chan = open_in filename in
+  let res = Parser.circuit Lexer.token (Lexing.from_channel chan) in
+    res
 
 let lex_file filename =
   let chan = open_in filename in
@@ -10,15 +32,23 @@ let lex_file filename =
       | x -> process (x::acc)
   in process []
 
-let parse_file filename = 
-  let chan = open_in filename in
-  let res = Parser.circuit Lexer.token (Lexing.from_channel chan) in
-    res
+let lex_string s =
+  let t = Lexing.from_string s in
+  let rec process acc =
+    match Lexer.token t with
+      | Parser.EOF -> List.rev acc
+      | x -> process (x::acc)
+  in process []
+
+
+let mk_pdf pdf_name s =
+  let dot_name = pdf_name ^ ".dot" in
+    output_to_file dot_name s ;
+    Sys.command ("dot -Tpdf " ^ dot_name ^ " > " ^ pdf_name)
 
 
 let mk_string ?(b="") ?(e="") ?(sep="") f l =
   b ^ (String.concat sep (List.map f l)) ^ e
-
 
 
 let dump_file filename = Print.print_integer_ast (parse_file filename)
@@ -63,8 +93,9 @@ let main filename =
   let chan = open_in filename in
   let buf = Lexing.from_channel chan in
     try
-      let res = Parser.circuit Lexer.token buf in
-	SemanticAnalysis.analyse_circuit res
+      let ast = Parser.circuit Lexer.token buf in
+      let analized_ast = SemanticAnalysis.analyse_circuit ast in
+	analized_ast
     with 
 	Lexer.Lexing_error c ->
 	  localize (Lexing.lexeme_start_p buf);

@@ -10,10 +10,10 @@ type complex_wire = simple_wire ref list
 type gate = 
   | Gnd | Vdd
   | Not | Or | And | Xor 
-  | Input
+  | Input of int
   | Multiplexer
   | Register 
-  | Output
+  | Output of int
   | Device of (string * int list)
 
 
@@ -28,11 +28,21 @@ type node = gate * ((int*int) list) array
 type graph = node array
 
 let base_blocks_to_gates = [ 
-  "Gnd", Gnd ; "Out", Output ; "In", Input ; 
-  "Vdd", Vdd ; "Xor", Xor ; "And", And ; 
+  "Gnd", Gnd ; "Vdd", Vdd ; 
+  "Xor", Xor ; "And", And ; 
   "Or", Or ; "Mux", Multiplexer ; 
   "Reg", Register ; "Not", Not 
 ]
+
+let gate_to_base_block = function
+    Input _ -> "Input"
+  | Output _ -> "Output"
+  | g -> 
+      let get r (s,g') = if g = g' then Some s else r in
+      let res = fold_left get None base_blocks_to_gates in
+	match res with
+	  | Some s -> s
+	  | None -> assert false
 
 exception Not_a_base_block
 
@@ -46,8 +56,10 @@ let gate_of_block block device_list =
   
 
 let rec make_base_block_list block_type_definitions device_list block =
-  Printf.printf "a ::> %s\n" (Print.IntAstPrinter.block_type block) ;
-  try [ gate_of_block block device_list ]
+  try 
+    let res = [ gate_of_block block device_list ] in
+      (*Printf.printf "a ::> %s\n" (Print.IntAstPrinter.block_type block) ;*)
+      res
   with Not_a_base_block -> 
     let block_def = ConcreteBlockMap.find block block_type_definitions in
     let map_fun x = make_base_block_list block_type_definitions device_list x.block_type in
@@ -85,32 +97,52 @@ let main (start, block_type_definitions, device_list) =
   in
 
   let n_max = ref 0 in
-  
+
+
   let make_global_input () =
-    let plug_to_input i simple_wire_ref =
-      simple_wire_ref := Some (!n_max,i) , snd !simple_wire_ref ;
-      i + 1
+    let plug_to_input complex_wire =
+      let wire_count = ref 0 in
+      let aux simple_wire_ref =
+	simple_wire_ref := Some (!n_max,!wire_count) , snd !simple_wire_ref ;
+	incr wire_count 
+      in
+	iter aux complex_wire ; 
+	!wire_count
     in
     let process_complex_wire wd =
       let (s,i) = wd in
       let complex_wire = make_complex_wire i in
-	ignore (fold_left plug_to_input 0 complex_wire) ;
-	incr n_max ;
-	(Input, Array.make 1 []), complex_wire
+	let wire_count = plug_to_input complex_wire in
+	let gate = (Input wire_count, Array.make wire_count []) in
+	  incr n_max ;
+	  gate, complex_wire
     in
-    split (map process_complex_wire block_def.inputs)
+    let input_lists, complex_wires = split (map process_complex_wire block_def.inputs) in
+      input_lists, complex_wires
   in
 
+
+
   let make_global_output () =  
+    let plug_to_output complex_wire =
+      let wire_count = ref 0 in
+      let aux simple_wire_ref =
+	simple_wire_ref := fst !simple_wire_ref, (!n_max, !wire_count)::(snd !simple_wire_ref) ;
+	incr wire_count
+      in
+	iter aux complex_wire ; !wire_count
+    in
     let outputs = block_def.outputs in
-    let add_to_local_map local_map ((id,m),_) =
-      WMap.add (Some "sortie", id) (make_complex_wire m) local_map
+    let add_to_local_map (local_map,acc) ((id,m),_) =
+      let complex_wire = make_complex_wire m in
+      let local_map' = WMap.add (Some "sortie", id) complex_wire local_map in
+      let wire_count = plug_to_output complex_wire in
+      let gate = Output wire_count, [| |] in
+	incr n_max ;
+	local_map' , gate::acc (*l'ajout en tête inverse l'ordre ce qui est géré aprés l'appel*)
     in
-    let create_output_gate _ =
-      Output, [| |] (* n'a pas de sorties *)
-    in
-    let local_map = fold_left add_to_local_map WMap.empty outputs in
-    let output_gate_list = map create_output_gate outputs in
+    let local_map,gate_list = fold_left add_to_local_map (WMap.empty,[]) outputs in
+    let output_gate_list = rev gate_list in
       output_gate_list, local_map
   in
 
@@ -120,7 +152,7 @@ let main (start, block_type_definitions, device_list) =
   let graph = Array.of_list ( input_gate_list @ output_gate_list @ base_block_list ) in
   let max_size = Array.length graph in
 
-    Printf.printf "-------\n" ;
+    (* Printf.printf "-------\n" ; *) 
 
   (** Fabrique récursivement le graphe en 3 étapes :
 
@@ -233,7 +265,8 @@ let main (start, block_type_definitions, device_list) =
 	  (match fst !w' with
 	     | Some (input_index, output_num) ->
 		 assert ( input_index < max_size) ;
-		 let _,output_array = graph.(input_index) in
+		 let gate,output_array = graph.(input_index) in
+		   (* Printf.printf "%s : %d\n" (gate_to_base_block gate) input_index ;*)
 		   assert ( output_num < Array.length output_array ) ;
 		   output_array.(output_num) <- (!n_max,i)::output_array.(output_num) 
 	     | None -> ());
@@ -260,16 +293,17 @@ let main (start, block_type_definitions, device_list) =
 	  ignore (fold_left (process_output_wire out) 0 output_wires);
 	  incr n_max
       in
-	Printf.printf "%s\n" (Print.IntAstPrinter.block_type inst.block_type) ;
 	if mem inst.block_type new_base_blocks 
 	then 
-	  (assert (fst (gate_of_block inst.block_type device_list) = fst graph.(!n_max)) ;
-	  process_base_block_or_device ["o"] (fun l -> assert (length l = 1)))
+	  ((*Printf.printf "%s\n" (Print.IntAstPrinter.block_type inst.block_type) ;*)
+	   assert (fst (gate_of_block inst.block_type device_list) = fst graph.(!n_max)) ;
+	   process_base_block_or_device ["o"] (fun l -> assert (length l = 1)))
 	else  
 	  if mem inst.block_type new_device_list 
 	  then 
-	    (assert (fst (gate_of_block inst.block_type device_list) = fst graph.(!n_max)) ;
-	    process_base_block_or_device [ "data" ; "interrupt" ] 
+	    ((*Printf.printf "%s\n" (Print.IntAstPrinter.block_type inst.block_type) ;*)
+	     assert (fst (gate_of_block inst.block_type device_list) = fst graph.(!n_max)) ;
+	     process_base_block_or_device [ "data" ; "interrupt" ] 
 	      (fun l -> assert (length l = 33)))
 	  else
 	    let liste = map make_wire inst.input in
@@ -313,4 +347,5 @@ let main (start, block_type_definitions, device_list) =
 
   in
 
-    make_graph start input_list output_map
+    make_graph start input_list output_map ;
+    graph
