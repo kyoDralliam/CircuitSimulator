@@ -1,6 +1,15 @@
-open Typesgraphe
+open AstToGraph
 
-let main (graphe,_,_,_) =
+(** FORMAT DE SORTIE DU GRAPHE :
+    1ere ligne -> nombre de portes
+    puis sur chaque lignes ->
+        nom de la porte ("N", "O", "A", "X", "E", "R", "S")
+        suivit du nombre de portes en sortie
+        puis des numéros de chaque porte 
+*)
+
+
+let main graph =
 
   let string_of_gate = function
     | Gnd -> failwith "0"
@@ -25,7 +34,7 @@ let main (graphe,_,_,_) =
 			      out_list))
   in 
 
-  let string_list = List.map string_of_node (Array.to_list graphe) in
+  let string_list = List.map string_of_node (Array.to_list graph) in
 
-  (string_of_int (Array.length graphe)) ^ "\n" ^
+  (string_of_int (Array.length graph)) ^ "\n" ^
     String.concat "\n" string_list

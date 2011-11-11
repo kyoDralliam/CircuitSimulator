@@ -1,0 +1,35 @@
+HalfAdder ( a, b)
+    Xor X( a, b)
+    And	A( a, b)
+    -> s : X.o, c : A.o ;
+
+FullAdder ( a, b, c)
+    HalfAdder H1( a, b)
+    HalfAdder H2( c, H1.c)
+    And A( H1.c, H2.c)
+    -> s : H2.s, c : A.o ;  
+
+ParallelAdder <1> (a, b)
+    HalfAdder F (a, b) 
+    -> result : F.s, c : F.c ;
+
+ParallelAdder <n> (a[n] , b[n])
+    ParallelAdder<n-1> A (a[0..n-2], b[0..n-2])  
+    FullAdder F (a[n-1], b[n-1], A.c) 
+    -> 
+       result[n] : { A.result, F.s } , 
+       c : F.c ;
+
+ParallelAdder8 (a1,a2,a3,a4,a5,a6,a7,a8,b1,b2,b3,b4,b5,b6,b7,b8)
+    ParallelAdder<8> A({a1,a2,a3,a4,a5,a6,a7,a8}, {b1,b2,b3,b4,b5,b6,b7,b8})
+    -> s1 : A.result[0],
+       s2 : A.result[1],
+       s3 : A.result[2],
+       s4 : A.result[3],
+       s5 : A.result[4],
+       s6 : A.result[5],
+       s7 : A.result[6],
+       s8 : A.result[7],
+       c : A.c ;
+
+start ParallelAdder8

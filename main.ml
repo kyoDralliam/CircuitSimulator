@@ -1,6 +1,12 @@
 open Tools
 open Arg
 
+(** Graph1 -> graphe de Damien 
+    Graph2 -> graphe de Kenji
+ *)
+type graph_style = Graph1 | Graph2
+
+type graph_type = Graph1Type of Typesgraphe.circuit | Graph2Type of AstToGraph.graph
 
 let setup_arg_parsing () =
   let output_lex = ref "" in 
@@ -12,6 +18,7 @@ let setup_arg_parsing () =
   let output_simulatorV2 = ref "" in
   let output_c = ref "" in
   let output_o = ref "" in
+  let graph_style = ref Graph2 in 
 
   let sources = ref [] in
      
@@ -24,7 +31,9 @@ let setup_arg_parsing () =
     "-simulator", Set_string output_simulator, "output the result of compiling as specified in simulator.ml";
     "-simulatorV2", Set_string output_simulatorV2, "output the result of compiling as specified in simulatorV2.ml";
     "-c", Set_string output_c, "output the result of compiling in c";
-    "-o", Set_string output_o, "output the result of compiling"
+    "-o", Set_string output_o, "output the result of compiling" ;
+    "-graph1", Unit (fun () -> graph_style := Graph1), "set the graph setting to graph1 (Damien)" ;
+    "-graph2", Unit (fun () -> graph_style := Graph2), "set the graph setting to graph2 (Kenji)"
   ] in 
     
   let annon_fun s = sources := s::!sources in
@@ -40,7 +49,8 @@ let setup_arg_parsing () =
      !output_simulatorV2, 
      !output_c, 
      !output_o,
-     !sources)
+     !sources,
+     !graph_style)
     
 
 let lex_source source_content output_lex =
@@ -95,29 +105,56 @@ let analyse_ast ast output_analyse =
       analysed_ast
   with e -> analyse_exception e ; exit 3
 
-let create_graph analysed_ast output_graph output_graph_pdf =
-  let graph = AstToGraph.main analysed_ast in
-    begin
-      if output_graph <> ""
-      then output_to_file output_graph (Print.GraphPrinter.graph graph)
-    end;
-    begin 
-      if output_graph_pdf <> ""
-      then ignore (mk_pdf output_graph_pdf (Print.GraphPrinter.graph graph))
-    end;
-    graph
+(* FIXME : implémenter Graph1 *)
+let create_graph graph_style analysed_ast output_graph output_graph_pdf =
+  match graph_style with
+    | Graph1 -> Graph1Type ([||],[],[],[]) 
+    | Graph2 -> 
+	let graph = AstToGraph.main analysed_ast in
+	  begin
+	    if output_graph <> ""
+	    then output_to_file output_graph (Print.GraphPrinter.graph graph)
+	  end;
+	  begin 
+	    if output_graph_pdf <> ""
+	    then ignore (mk_pdf output_graph_pdf (Print.GraphPrinter.graph graph))
+	  end;
+	  Graph2Type graph
+
+(* FIXME : implémenter Graph1 *)
+let create_simulator graph output_simulator = 
+  if output_simulator <> ""
+  then 
+    match graph with
+      | Graph1Type g -> ()
+      | Graph2Type g -> Printf.fprintf (open_out output_simulator) 
+	  "%s" (ToSimulatorGraph2.main g)
+
+(* FIXME : implémenter Graph1 *)
+let create_simulatorV2 graph output_simulatorV2 = 
+  if output_simulatorV2 <> ""
+  then 
+    match graph with
+      | Graph1Type g -> ()
+      | Graph2Type g -> Printf.fprintf (open_out output_simulatorV2) 
+	  "%s" (ToSimulatorV2Graph2.string_of_graphe g)
 
 (* FIXME : à implémenter *)
-let create_simulator graph output_simulator = ()
+let create_c_source graph output_c = 
+  if output_c <> ""
+  then 
+    match graph with
+      | Graph1Type g -> ()
+      | Graph2Type g -> ()
+
 
 (* FIXME : à implémenter *)
-let create_simulatorV2 graph output_simulatorV2 = ()
-
-(* FIXME : à implémenter *)
-let create_c_source graph output_c = ()
-
-(* FIXME : à implémenter *)
-let create_executable graph output_o = ()
+let create_executable graph output_o = 
+  if output_o <> ""
+  then 
+    match graph with
+      | Graph1Type g -> ()
+      | Graph2Type g -> ()
 
 
 let _ =
@@ -131,13 +168,14 @@ let _ =
        output_simulatorV2, 
        output_c, 
        output_o,
-       sources) = setup_arg_parsing () in
+       sources,
+       graph_style) = setup_arg_parsing () in
 
     let source_content = get_files_content sources in
     let lexbuf = lex_source source_content output_lex in
     let ast = parse_lexbuf lexbuf output_parse in
     let analised_ast = analyse_ast ast output_analyse in
-    let graph = create_graph analised_ast output_graph output_graph_pdf in
+    let graph = create_graph graph_style analised_ast output_graph output_graph_pdf in
     let _ = create_simulator graph output_simulator in
     let _ = create_simulatorV2 graph output_simulatorV2 in
     let _ = create_c_source graph output_c in
