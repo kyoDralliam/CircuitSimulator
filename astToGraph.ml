@@ -27,6 +27,12 @@ type node = gate * ((int*int) list) array
  
 type graph = node array
 
+(**                             device index list
+  *              register index list  |
+  *                        |          |
+  *                        v          v     *)
+type circuit = graph * int list * int list
+
 let base_blocks_to_gates = [ 
   "Gnd", Gnd ; "Vdd", Vdd ; 
   "Xor", Xor ; "And", And ; 
@@ -54,19 +60,21 @@ let gate_of_block block device_list =
       Device block , Array.make 33 []
     with Not_found -> raise Not_a_base_block
   
-
-let rec make_base_block_list block_type_definitions device_list block =
-  try 
-    let res = [ gate_of_block block device_list ] in
-      (*Printf.printf "a ::> %s\n" (Print.IntAstPrinter.block_type block) ;*)
-      res
-  with Not_a_base_block -> 
-    let block_def = ConcreteBlockMap.find block block_type_definitions in
-    let map_fun x = make_base_block_list block_type_definitions device_list x.block_type in
-      concat (map map_fun block_def.instantiations)
+let make_base_block_list block_type_definitions device_list block =
+  let rec aux block =
+    try 
+      let res = [ gate_of_block block device_list ] in
+	(*Printf.printf "a ::> %s\n" (Print.IntAstPrinter.block_type block) ;*)
+	res
+    with Not_a_base_block -> 
+      let block_def = ConcreteBlockMap.find block block_type_definitions in
+      let map_fun x = aux x.block_type in
+	concat (map map_fun block_def.instantiations)
+  in
+    aux block
 	 
 
-let rec range ?(acc=[]) a b = if a > b then acc else range ~acc:(b::acc) a (b-1)
+let rec range ?(acc=[]) ?(cmp=(>)) a b = if cmp a b then acc else range ~acc:(b::acc) a (b-1)
 
 let rec collect ?(i=0) min max = function
   | [] -> 
@@ -147,10 +155,18 @@ let main (start, block_type_definitions, device_list) =
   in
 
   let input_gate_list, input_list = make_global_input () in 
+
   let output_gate_list, output_map = make_global_output () in
+
   let base_block_list = make_base_block_list  block_type_definitions device_list start in
   let graph = Array.of_list ( input_gate_list @ output_gate_list @ base_block_list ) in
+
+
+
   let max_size = Array.length graph in
+
+  let register_index_list = ref [] in
+  let device_index_list = ref [] in
 
     (* Printf.printf "-------\n" ; *) 
 
@@ -295,16 +311,20 @@ let main (start, block_type_definitions, device_list) =
       in
 	if mem inst.block_type new_base_blocks 
 	then 
-	  ((*Printf.printf "%s\n" (Print.IntAstPrinter.block_type inst.block_type) ;*)
-	   assert (fst (gate_of_block inst.block_type device_list) = fst graph.(!n_max)) ;
-	   process_base_block_or_device ["o"] (fun l -> assert (length l = 1)))
+	  begin
+	    assert (fst (gate_of_block inst.block_type device_list) = fst graph.(!n_max)) ;
+	    (if fst graph.(!n_max) = Register then register_index_list := !n_max :: !register_index_list);
+	    process_base_block_or_device ["o"] (fun l -> assert (length l = 1))
+	  end
 	else  
 	  if mem inst.block_type new_device_list 
 	  then 
-	    ((*Printf.printf "%s\n" (Print.IntAstPrinter.block_type inst.block_type) ;*)
-	     assert (fst (gate_of_block inst.block_type device_list) = fst graph.(!n_max)) ;
-	     process_base_block_or_device [ "data" ; "interrupt" ] 
-	      (fun l -> assert (length l = 33)))
+	    begin
+	      assert (fst (gate_of_block inst.block_type device_list) = fst graph.(!n_max)) ;
+	      device_index_list := !n_max :: !device_index_list ;
+	      process_base_block_or_device [ "data" ; "interrupt" ] 
+		(fun l -> assert (length l = 33))
+	    end
 	  else
 	    let liste = map make_wire inst.input in
 	      make_graph inst.block_type liste local_map
@@ -348,4 +368,4 @@ let main (start, block_type_definitions, device_list) =
   in
 
     make_graph start input_list output_map ;
-    graph
+    graph, !register_index_list, !device_index_list

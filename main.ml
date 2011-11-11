@@ -6,7 +6,7 @@ open Arg
  *)
 type graph_style = Graph1 | Graph2
 
-type graph_type = Graph1Type of Typesgraphe.circuit | Graph2Type of AstToGraph.graph
+type graph_type = Graph1Type of Typesgraphe.circuit | Graph2Type of AstToGraph.circuit
 
 let setup_arg_parsing () =
   let output_lex = ref "" in 
@@ -110,14 +110,14 @@ let create_graph graph_style analysed_ast output_graph output_graph_pdf =
   match graph_style with
     | Graph1 -> Graph1Type ([||],[],[],[]) 
     | Graph2 -> 
-	let graph = AstToGraph.main analysed_ast in
+	let (g,_,_) as graph = AstToGraph.main analysed_ast in
 	  begin
 	    if output_graph <> ""
-	    then output_to_file output_graph (Print.GraphPrinter.graph graph)
+	    then output_to_file output_graph (Print.GraphPrinter.graph g)
 	  end;
 	  begin 
 	    if output_graph_pdf <> ""
-	    then ignore (mk_pdf output_graph_pdf (Print.GraphPrinter.graph graph))
+	    then ignore (mk_pdf output_graph_pdf (Print.GraphPrinter.graph g))
 	  end;
 	  Graph2Type graph
 
@@ -127,7 +127,7 @@ let create_simulator graph output_simulator =
   then 
     match graph with
       | Graph1Type g -> ()
-      | Graph2Type g -> Printf.fprintf (open_out output_simulator) 
+      | Graph2Type (g,_,_) -> Printf.fprintf (open_out output_simulator) 
 	  "%s" (ToSimulatorGraph2.main g)
 
 (* FIXME : implémenter Graph1 *)
@@ -136,7 +136,7 @@ let create_simulatorV2 graph output_simulatorV2 =
   then 
     match graph with
       | Graph1Type g -> ()
-      | Graph2Type g -> Printf.fprintf (open_out output_simulatorV2) 
+      | Graph2Type (g,_,_) -> Printf.fprintf (open_out output_simulatorV2) 
 	  "%s" (ToSimulatorV2Graph2.string_of_graphe g)
 
 (* FIXME : à implémenter *)
@@ -146,7 +146,7 @@ let create_c_source graph output_c =
     match graph with
       | Graph1Type g -> ()
       | Graph2Type g -> ()
-
+ 
 
 (* FIXME : à implémenter *)
 let create_executable graph output_o = 
