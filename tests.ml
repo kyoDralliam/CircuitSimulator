@@ -34,7 +34,10 @@ struct
 
   let my_ast = Tools.parse_file "../tests/test1"
   let _,instantiations, _ = my_ast
-  let [half_adder ; full_adder ; par_adder_1 ; par_adder_n ] = List.rev instantiations
+  let (half_adder, full_adder, par_adder_1, par_adder_n) = 
+    match List.rev instantiations with
+      | [a;b;c;d] -> a,b,c,d
+      | _ -> failwith "cas impossible"
   let map_test = StringMap.add "n" 5 (StringMap.empty)
   let res = block_type_definition map_test par_adder_n
 end

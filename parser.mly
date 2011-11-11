@@ -116,10 +116,10 @@ end_of_file              EOF
 	  start, block_defs, (fst d, List.length (snd d))::devices
     in 
     let (n,l,l') = List.fold_left f (None,[],[]) l0 in
-      match n with
-	| None -> failwith "Il n'y a pas de point de départ. 
-                  Penser à mettre l'instruction start nomBlock"
-	| Some n' -> n', l, l'
+    let n' = match n with
+      | None -> "", []
+      | Some n' -> n' in
+	  n', l, l'
 %}
 
 /* définition des tokens */

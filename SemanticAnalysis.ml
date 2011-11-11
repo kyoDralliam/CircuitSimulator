@@ -314,17 +314,21 @@ let check_devices_names block_defs devices_names =
 let add_block map s =  
     ConcreteBlockMap.add (s.IntAst.name, []) s map
 
+exception Undefined_start_block
+
 (** point d'entrée de l'analyseur sémantique 
     retourne une paire formée d'un IntAst.block_type
     et d'une IntAst.block_type_definition ConcreteBlockMap.t
 *)
 let analyse_circuit (fst_circuit, circuit_blocks, circuit_devices) = 
+  if fst_circuit = ("",[]) then raise Undefined_start_block ;
   let circuit_start = IntegerToInt.block_type StringMap.empty fst_circuit in
   let concrete_blocks = List.fold_left add_block ConcreteBlockMap.empty base_block in
   let devices_names = List.map fst circuit_devices in
   let abstract_blocks = List.fold_left add_abstract_block StringMap.empty circuit_blocks in
     check_devices_names abstract_blocks devices_names ;
-    let final_blocks = reify_blocks circuit_start abstract_blocks BlockTypeSet.empty concrete_blocks devices_names in
+    let final_blocks = reify_blocks circuit_start abstract_blocks 
+      BlockTypeSet.empty concrete_blocks devices_names in
       check_variables_in_blocks final_blocks circuit_devices;
       circuit_start, final_blocks, (circuit_devices : IntAst.device_type_definition list)
 

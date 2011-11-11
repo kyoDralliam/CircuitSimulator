@@ -77,6 +77,8 @@ let rec analyse_exception = function
   | Bad_sized_wire w -> printf "fil de mauvaise taille : %s" (wire w)
   | Bad_block_definition (s,il,ex) -> printf "problème lors de la définition du block %s %s\n" s
       (mk_string ~b:"< " ~e:" >" ~sep:", " string_of_int il) ; analyse_exception ex
+  | Undefined_start_block -> printf "Il n'y a pas de point de départ. 
+                  Penser à mettre l'instruction start nomBlock dans un des fichiers" 
   | e -> raise e
 
 
