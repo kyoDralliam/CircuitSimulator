@@ -1,7 +1,7 @@
 #include "stdio.h"
 #include "string.h"
 
-char $(gates_outputs_array_name)[$(gates_outputs_array_length)];
+char $(gates_outputs_array_name)[$(gates_outputs_array_length)] = {0};
 char $(registers_array_name)[$(registers_array_length)];
 char $(circuit_outputs_array_name)[$(circuit_outputs_array_length)];
 char $(circuit_inputs_array_name)[$(circuit_inputs_array_length)];

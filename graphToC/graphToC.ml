@@ -1,6 +1,4 @@
-(* #use "typesgraphe.ml";; *)
-(* #load "str.cma";; *)
-open Typesgraphe
+open AstToGraph
 
 (* On choisit les noms qu'auront les différents tableaux utilisés dans le
    code C :
@@ -24,7 +22,7 @@ let circuit_outputs_array_name = "circuit_outputs"
 
 (* Le numéro à partir duquel commence la numérotation
    des entrées d'une porte *)
-let first_input_number = 1
+let first_input_number = 0
 
 let file_slurp name =
   let input_channel = open_in name in
@@ -37,6 +35,12 @@ let file_slurp name =
 (* On charge les fichiers qui contiennent la base du code C que l'on génère *)
 let text_before = file_slurp "text_before"
 let text_after = file_slurp "text_after"
+
+let rec fold_right_for f first last x =
+  if first <= last then
+    fold_right_for f first (last - 1) (f last x)
+  else
+    x
 
 let rec fold_left_for f x first last =
   if first <= last then
@@ -74,16 +78,10 @@ type topological_sort_state =
     Si graph contient un cycle qui n'est pas "coupé" par un registre ou un
     périphérique, la fonction lève une exception.
 *) 
-let topological_sort graph circuit_inputs circuit_outputs =
+let topological_sort graph number_of_circuit_inputs number_of_circuit_outputs =
  
-  let used_space = Array.fold_left 
-    (fun n (gate,_) -> if gate = VideIntersideral then n else n+1)
-    0
-    graph
-  in
-
   let new_num = Array.make (Array.length graph) (-1) in
-  let old_num = Array.make used_space (-1) in
+  let old_num = Array.make (Array.length graph) (-1) in
   let node_state = Array.make (Array.length graph) Not_Processed in  
 
   let rec explore next_num_to_give node_old =
@@ -94,17 +92,21 @@ let topological_sort graph circuit_inputs circuit_outputs =
 	  
 	  let next_num_to_give =
 	    match fst graph.(node_old) with
-	      | Registre | Device _ -> next_num_to_give
+	      | Register | Device _ -> next_num_to_give
 	      | _ ->
-		  List.fold_left
-		    (fun next_num_to_give l ->
+                  (* On traite les sorties du noeud de droite à gauche,
+                     pour que les bits des entrées du circuit apparaissent
+                     dans le bon ordre.
+                  *)
+		  Array.fold_right
+		    (fun target_nodes next_num_to_give ->
                       List.fold_left
-		        (fun next_num_to_give (fils_old,_) ->
-		          explore next_num_to_give fils_old)
+		        (fun next_num_to_give (target_node_old,_) ->
+		          explore next_num_to_give target_node_old)
 		        next_num_to_give
-                        l)
-                    next_num_to_give
+                        target_nodes)
         	    (snd graph.(node_old))
+                    next_num_to_give
 	  in
 	  
 	  new_num.(node_old) <- next_num_to_give;
@@ -115,39 +117,46 @@ let topological_sort graph circuit_inputs circuit_outputs =
 	  next_num_to_give - 1
 	)
       | Being_Processed ->
-        failwith "Cycle !"
+        failwith "Cycle ! (cf graphToC.ml)"
       | Processed -> next_num_to_give
 	
   in
 
-  let explore_list next_num_to_give l =
-    List.fold_left
-      (fun next_num_to_give node_old ->
-        if fst graph.(node_old) <> VideIntersideral then
-	  explore next_num_to_give node_old
-        else
-	  next_num_to_give)
-      next_num_to_give
-      l
+  (* Explore les sorties du cricuit, puis les entrées *)
+  let next_num_to_give = fold_right_for
+    (fun i next_num_to_give ->
+      explore next_num_to_give i)
+    0
+    (number_of_circuit_inputs + number_of_circuit_outputs - 1)    
+    ((Array.length old_num) - 1) 
   in
-
-  let next_num_to_give = explore_list (used_space - 1) 
-    (List.rev circuit_outputs) in
-  let next_num_to_give = explore_list next_num_to_give
-    (List.rev circuit_inputs) in
 
   assert
     (fold_left_for
-       (fun next_num_to_give node_old ->
-         if fst graph.(node_old) <> VideIntersideral then
-	   explore next_num_to_give node_old
-	 else
-	   next_num_to_give)
-       next_num_to_give
-       0
-       (Array.length graph - 1) = -1);
-
+      explore
+      next_num_to_give
+      (number_of_circuit_inputs + number_of_circuit_outputs)
+      (Array.length graph - 1) = -1);
+  
   (new_num,old_num)
+
+(* Indique le nombre d'entrées d'une porte en fonction de sa nature *)
+let expected_number_of_inputs = function
+  | Gnd | Vdd -> 0
+  | Not -> 1
+  | Or | And | Xor -> 2
+  | Input _ -> 0
+  | Multiplexer -> 3
+  | Register -> 1
+  | Output n -> n
+  | Device _ -> 67
+
+(* Indique le nombre de sorties d'une porte en fonction de sa nature *)
+let expected_number_of_outputs = function
+  | Device _ -> 33
+  | Input n -> n
+  | Output _ -> 0
+  | _ -> 1
 
 (* Attribue à chaque porte une plage de positions dans le tableau
    des sorties des portes :
@@ -175,29 +184,20 @@ let gates_outputs_positions graph old_num =
     (* On ne crée pas une sortie pour chaque constante :
        la sortie 0 sert pour tous les Gnd, et la sortie 1 pour tous les Vdd *)
     let (gate, outputs) = graph.(old_num.(i)) in
+    let l = Array.length outputs in
+    (* On vérifie que la porte a le bon nombre de sorties *)
+    assert (l = expected_number_of_outputs gate);
     match gate with
-      | Bit Zero -> 
-	positions.(i) <- (0,1);
-      | Bit Un ->
-	positions.(i) <- (1,1);
+      | Gnd -> 
+	  positions.(i) <- (0,1);
+      | Vdd ->
+	  positions.(i) <- (1,1);
       | _ -> 
-	let l = List.length outputs in
-	positions.(i) <- (!number_of_outputs, l);
-	number_of_outputs := !number_of_outputs + l;        
+	  positions.(i) <- (!number_of_outputs, l);
+	  number_of_outputs := !number_of_outputs + l;        
   done;
   
   (positions, !number_of_outputs)
-
-(* Indique le nombre d'entrées d'une porte en fonction de sa nature *)
-let expected_number_of_inputs = function
-  | Bit _ -> 0
-  | Non | Ou | Et | Xor -> 2
-  | Entree -> 0
-  | Multiplexer -> 3
-  | Registre -> 1
-  | Sortie -> 1
-  | Device _ -> 71 (* cf ast.ml *)
-  | VideIntersideral -> 0
 
 (* Calcule pour chaque porte la position de chacune de ses entrées dans
    le tableau des sorties des portes :
@@ -227,7 +227,7 @@ let gates_inputs_positions graph new_num old_num outputs_positions =
   
   for current_node = 0 to Array.length old_num - 1 do
     ignore
-      (List.fold_left
+      (Array.fold_left
 	(fun output_number output ->
 	  List.iter
 	     (fun (target_node, target_input) ->
@@ -262,15 +262,15 @@ let gates_inputs_positions graph new_num old_num outputs_positions =
    registers_outputs_position.(i) indique la position de la sortie de ce
    registre dans le tableau des sorties des portes.
 *)
-let registers_outputs_positions graph old_num registers outputs_positions =
+let registers_outputs_positions graph old_num number_of_registers outputs_positions =
   
-  let registers_outputs_positions = Array.make (List.length registers) (-1) in
+  let registers_outputs_positions = Array.make number_of_registers (-1) in
 
   let current_register = ref 0 in
   
   for current_node = 0 to Array.length old_num - 1 do
     match fst graph.(old_num.(current_node)) with
-      | Registre ->
+      | Register ->
 	(* On vérifie qu'il n'y a pas plus de registres que prévu *)
 	assert (!current_register < Array.length registers_outputs_positions);
 	registers_outputs_positions.(!current_register)
@@ -284,30 +284,31 @@ let registers_outputs_positions graph old_num registers outputs_positions =
   
   registers_outputs_positions
 
-(* Calcule pour chaque entrée du circuit la position de sa sortie dans
+(* Calcule pour chaque entrée du circuit la position de ses sorties dans
    le tableau des sorties des portes :
 
    Renvoie le tableau circuit_inputs_positions :
 
-   Soit l'entrée en position i dans la liste circuit_inputs,
-   circuit_inputs_positions.(i) indique la position de la sortie de cette
-   entrée dans le tableau des sorties des portes.
+   Soit l'entrée en position i dans la liste circuit_inputs (en partant de la
+   fin), fst circuit_inputs_positions.(i) indique la position de de la sortie
+   0 de cette entrée dans le tableau des sorties des portes,
+   snd circuit_inputs_positions.(i) indique la taille de cette entrée.
 *)
-let circuit_inputs_positions graph old_num circuit_inputs
+let circuit_inputs_positions graph old_num number_of_circuit_inputs
     gates_outputs_positions =
   
-  let circuit_inputs_positions = Array.make (List.length circuit_inputs) (-1) in
+  let circuit_inputs_positions = Array.make number_of_circuit_inputs (0,0) in
   
   let current_circuit_input = ref 0 in
 
   for current_node = 0 to Array.length old_num - 1 do
     match fst graph.(old_num.(current_node)) with
-      | Entree ->
-	(* On vérifie qu'il n'y a pas plus d'entrées que prévu *)
-	assert (!current_circuit_input < Array.length circuit_inputs_positions);
-	circuit_inputs_positions.(!current_circuit_input)
-         <- fst gates_outputs_positions.(current_node);
-        incr current_circuit_input
+      | Input n ->
+	  (* On vérifie qu'il n'y a pas plus d'entrées que prévu *)
+	  assert (!current_circuit_input < Array.length circuit_inputs_positions);
+	  circuit_inputs_positions.(!current_circuit_input)
+           <- gates_outputs_positions.(current_node);
+          incr current_circuit_input
       | _ -> ()
   done;
 
@@ -317,32 +318,33 @@ let circuit_inputs_positions graph old_num circuit_inputs
   circuit_inputs_positions
 
 (* Calcule pour chaque sortie du circuit la case du tableau des sorties
-   des portes où la sortie doit aller chercher sa valeur (c'est-à-dire
-   la position de la sortie à laquelle son entrée est connectée)
+   des portes où cette sortie doit aller chercher ses valeurs (c'est-à-dire
+   les positions des sorties auxquelles ses entrées sont connectées).
 
    Renvoie le tableau circuit_outputs_positions :
 
-   Soit la sortie en position i dans la liste circuit_outputs,
-   circuit_outputs_positions.(i) indique la case du tableau des sorties
-   des portes où cette sortie doit aller chercher sa valeur.
+   Soit la sortie en position i dans la liste circuit_outputs (en partant de la
+   fin), circuit_outputs_positions.(i).(j) indique la case du tableau des
+   sorties des portes où cette sortie doit aller chercher la valeur de son
+   bit j.
  *)
-let circuit_outputs_positions graph old_num circuit_outputs 
+let circuit_outputs_positions graph old_num number_of_circuit_outputs 
     gates_inputs_positions =
 
   let circuit_outputs_positions = 
-    Array.make (List.length circuit_outputs) (-1)
+    Array.make number_of_circuit_outputs [||]
   in
   
   let current_circuit_output = ref 0 in
   
   for current_node = 0 to Array.length old_num - 1 do
     match fst graph.(old_num.(current_node)) with
-      | Sortie ->
+      | Output _ ->
 	(* On vérifie qu'il n'y a pas plus de sorties que prévu *)
 	assert
 	  (!current_circuit_output < Array.length circuit_outputs_positions);
 	circuit_outputs_positions.(!current_circuit_output)
-         <- gates_inputs_positions.(current_node).(0);
+         <- gates_inputs_positions.(current_node);
 	incr current_circuit_output
       | _ -> ()
   done;
@@ -362,20 +364,19 @@ let gate_operation_code gate inputs_codes =
   (* On vérifie que l'on reçoit le bon nombre d'arguments *)
   assert (Array.length inputs_codes = expected_number_of_inputs gate);
   match gate with
-    | Bit Zero -> "0"
-    | Bit Un -> "1"
-    | Non -> "!" ^ inputs_codes.(0)
-    | Et -> inputs_codes.(0) ^ " && " ^ inputs_codes.(1)
-    | Ou -> inputs_codes.(0) ^ " || " ^ inputs_codes.(1)
+    | Gnd -> "0"
+    | Vdd -> "1"
+    | Not -> "!" ^ inputs_codes.(0)
+    | And -> inputs_codes.(0) ^ " && " ^ inputs_codes.(1)
+    | Or -> inputs_codes.(0) ^ " || " ^ inputs_codes.(1)
     | Xor -> inputs_codes.(0) ^ " != " ^ inputs_codes.(1)
-    | Entree -> ""
+    | Input _ -> ""
     | Multiplexer ->
       inputs_codes.(0) ^ " ? " ^ inputs_codes.(2) ^ " : " ^ inputs_codes.(1)
-    | Registre -> inputs_codes.(0)
-    | Sortie -> inputs_codes.(0)
-    | Device _ -> failwith "TSNH 1 in GraphToC.gate_operation_code"
-    | VideIntersideral -> failwith "TSNH 2 in GraphToC.gate_operation_code"
-
+    | Register -> inputs_codes.(0)
+    | Output _ -> ""
+    | Device _ -> ""
+ 
 (* Crée un code qui met à jour les cases du tableau des sorties des portes
    correspondant aux sorties d'une porte donnée (ou qui met à jour sa case
    dans le tableau des registres si cette porte est un registre :
@@ -399,13 +400,13 @@ let node_code graph old_num gates_inputs_positions gates_outputs_positions
   
   let code =
     match gate with
-      | Bit _ -> ""
+      | Gnd | Vdd -> ""
         (* Les constantes sont initialisées au début de la simulation *)
-      | Entree -> ""
+      | Input _ -> ""
         (* Les entrées aussi *)
-      | Sortie -> ""
+      | Output _ -> ""
         (* Les sorties sont traitées à la fin de la simulation *)
-      | Registre ->
+      | Register ->
 	  registers_array_name ^ "[" ^
             (string_of_int next_register) ^ "] = " ^
 	    gate_code
@@ -417,7 +418,7 @@ let node_code graph old_num gates_inputs_positions gates_outputs_positions
 	    gate_code	
   in
   
-  (code, match gate with Registre -> next_register + 1 | _ -> next_register)
+  (code, match gate with Register -> next_register + 1 | _ -> next_register)
 
 (* Crée le code source d'un programme C qui simule l'exécution du cricuit
    passé en argument, en prenant ses entrées sur l'entrée standard (dans
@@ -430,10 +431,20 @@ let node_code graph old_num gates_inputs_positions gates_outputs_positions
          par cycle) plutôt qu'une seule fois, après le dernier cycle
 
     CYCLES : Durée de la simulation, en cycles
+
+   Les entrées du circuit doivent être placées au début du tableau
+   représentant le graphe, immédiatement suivies des sorties du circuit.
+   Entrées et sorties du graphes doivent de plus être placées dans leur ordre
+   d'apparition dans la définition du type du bloc de base.
 *)
-let circuit_code (graph, circuit_inputs, circuit_outputs, registers) =
+let circuit_code (graph, number_of_circuit_inputs, number_of_circuit_outputs,
+    number_of_registers, number_of_devices) =
   
-  let (new_num,old_num) = topological_sort graph circuit_inputs circuit_outputs in
+  ignore(number_of_devices); (* FIXME *)
+
+  let (new_num,old_num) = topological_sort graph 
+    number_of_circuit_inputs number_of_circuit_outputs
+  in
 
   let (gates_outputs_positions, _) =
     gates_outputs_positions graph old_num
@@ -444,17 +455,30 @@ let circuit_code (graph, circuit_inputs, circuit_outputs, registers) =
   in
   
   let registers_outputs_positions =
-    registers_outputs_positions graph old_num registers gates_outputs_positions
+    registers_outputs_positions graph old_num 
+      number_of_registers gates_outputs_positions
   in
   
   let circuit_inputs_positions =
-    circuit_inputs_positions graph old_num circuit_inputs
+    circuit_inputs_positions graph old_num number_of_circuit_inputs
       gates_outputs_positions
   in
   
   let circuit_outputs_positions =
-    circuit_outputs_positions graph old_num circuit_outputs
+    circuit_outputs_positions graph old_num number_of_circuit_outputs
       gates_inputs_positions
+  in
+ 
+  let circuit_outputs_array_size = Array.fold_left 
+    (fun n o -> n + Array.length o)
+    0
+    circuit_outputs_positions
+  in
+
+  let circuit_inputs_array_size = Array.fold_left 
+    (fun n (_,l) -> n + l)
+    0
+    circuit_inputs_positions
   in
   
   let vars_map =
@@ -467,22 +491,32 @@ let circuit_code (graph, circuit_inputs, circuit_outputs, registers) =
     ("registers_array_length",
     string_of_int(Array.length registers_outputs_positions));
     ("circuit_outputs_array_length",
-    string_of_int(Array.length circuit_outputs_positions));
+    string_of_int(circuit_outputs_array_size));
     ("circuit_inputs_array_length",
-    string_of_int(Array.length circuit_inputs_positions));]
+    string_of_int(circuit_inputs_array_size))]
   in
 
   let res = ref (replace_vars text_before vars_map) in
 
   let margin = String.make 4 ' ' in
 
-  for i = 0 to Array.length circuit_inputs_positions - 1 do
-    res := !res ^
-      margin ^ gates_outputs_array_name ^
-      "[" ^ (string_of_int circuit_inputs_positions.(i)) ^ "] = " ^
-      circuit_inputs_array_name ^ "[" ^(string_of_int i) ^ "];\n"
-  done;
-  
+  begin
+    let position_in_circuit_inputs_array = ref 0 in
+    
+    for i = 0 to Array.length circuit_inputs_positions - 1 do
+      for j = 0 to snd circuit_inputs_positions.(i) - 1 do
+        res := !res ^
+          margin ^ gates_outputs_array_name ^
+          "[" ^
+          (string_of_int (fst circuit_inputs_positions.(i) + j)) ^
+          "] = " ^
+          circuit_inputs_array_name ^ 
+          "[" ^(string_of_int (!position_in_circuit_inputs_array)) ^ "];\n";
+          incr position_in_circuit_inputs_array
+      done
+    done
+  end;
+
   res := !res ^ 
     "\n" ^ 
     margin ^ "for (i = 0 ; i <= cycles ; i++ )\n" ^
@@ -519,17 +553,28 @@ let circuit_code (graph, circuit_inputs, circuit_outputs, registers) =
   
   let margin = String.make 12 ' ' in
   
-  for i = 0 to Array.length circuit_outputs_positions - 1 do
-    res := !res ^
-      margin ^ circuit_outputs_array_name ^
-      "[" ^  (string_of_int i) ^ "] = " ^
-      gates_outputs_array_name ^ "[" ^
-      (string_of_int circuit_outputs_positions.(i))  ^ "] ? '1' : '0' ;\n"
-  done;
+  begin
+    let position_in_circuit_outputs_array = ref 0 in
+
+    for i = 0 to Array.length circuit_outputs_positions - 1 do
+      for j = 0 to Array.length circuit_outputs_positions.(i) - 1 do
+        res := !res ^
+          margin ^ circuit_outputs_array_name ^
+          "[" ^
+          (string_of_int (!position_in_circuit_outputs_array)) ^
+          "] = " ^
+          gates_outputs_array_name ^
+          "[" ^
+          (string_of_int circuit_outputs_positions.(i).(j)) ^
+          "] ? '1' : '0' ;\n";
+        incr position_in_circuit_outputs_array
+      done
+    done
+  end;
 
   res := !res ^ "\n" ^ margin ^
     "fwrite (" ^ circuit_outputs_array_name ^ ", 1, " ^ 
-    (string_of_int (Array.length circuit_outputs_positions)) ^
+    (string_of_int circuit_outputs_array_size) ^
     ", stdout);\n\n" ^
     margin ^ "fprintf (stdout, \"\\n\");\n";
   
@@ -546,11 +591,18 @@ let circuit_code (graph, circuit_inputs, circuit_outputs, registers) =
 
 ;;
 
-
-let graph = [| (Sortie, []); (Sortie, []); (Sortie, []);
-            (Xor, [[(1,1);(5,1)]]); (Et, [[(0,1)]]); (Registre, [[(2,1)]]);
-            (Entree, [[(3,1);(4,1)]]); (Entree, [[(3,2);(4,2)]]) |] in
-let inputs = [6;7] in
-let outputs = [0;1;2] in
-let registers = [5] in
-print_string (circuit_code (graph, inputs, outputs, registers));;
+(*
+(* Un test : *)
+let graph = [| ((Input 1), [|[(3,0);(4,0)]|]);
+            ((Input 1), [|[(3,1);(4,1)]|]);
+            ((Output 3), [||]);
+            (Xor, [|[(2,1);(5,0)]|]);
+            (And, [|[(2,0)]|]);
+            (Register, [|[(2,2)]|]) |] in
+let number_of_circuit_inputs = 2 in
+let number_of_circuit_outputs = 1 in
+let number_of_registers = 1 in
+let number_of_devices = 0 in
+print_string (circuit_code (graph, number_of_circuit_inputs, number_of_circuit_outputs,
+    number_of_registers, number_of_devices))
+*)
