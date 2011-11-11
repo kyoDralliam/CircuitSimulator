@@ -109,7 +109,7 @@ let print_int_ast ast = print_string (int_ast_to_string ast)
 module GraphPrinter =
 struct
   open Printf
-  open TestDestruction
+  open AstToGraph
 
   let gate gate_type gate_index = sprintf "%s (%i)" 
     (gate_to_base_block gate_type) gate_index

@@ -2,7 +2,7 @@ open Tools
 open Arg
 
 
-let _ =
+let setup_arg_parsing () =
   let output_lex = ref "" in 
   let output_parse = ref "" in
   let output_analyse = ref "" in
@@ -31,49 +31,118 @@ let _ =
   let usage_msg = "main.native [options] source" in 
 
     parse options annon_fun usage_msg ;
+    (!output_lex, 
+     !output_parse, 
+     !output_analyse, 
+     !output_graph, 
+     !output_graph_pdf,   
+     !output_simulator, 
+     !output_simulatorV2, 
+     !output_c, 
+     !output_o,
+     !sources)
+    
 
-    let source_content = get_files_content !sources in
-    let lexbuf = Lexing.from_string source_content in
+let lex_source source_content output_lex =
+  let lexbuf = Lexing.from_string source_content in
+    begin
+      if output_lex <> "" 
+      then 
+	let lex_result = 
+	  let rec process acc =
+	    try
+	      match Lexer.token lexbuf with
+		| Parser.EOF -> List.rev acc
+		| x -> process (x::acc)
+	    with 
+		Lexer.Lexing_error c ->
+		  localize (Lexing.lexeme_start_p lexbuf);
+		  Printf.printf "Erreur dans l'analyse lexicale: %s." c;
+		  exit 1
+	  in process [] 
+	in
+	let tokens = mk_string ~b:"[" ~e:"]" ~sep:", " 
+	  Print.LexerPrinter.token lex_result in
+	  output_to_file output_lex tokens 
+    end;
+    Lexing.from_string source_content
 
-      try 
 
-	(* FIXME : échec possible durant cet appel à gérer*)
-	(if !output_lex <> "" 
-	 then 
-	   let tokens = mk_string ~b:"[" ~e:"]" ~sep:", " 
-	     Print.LexerPrinter.token (lex_string source_content) in
-	     output_to_file !output_lex tokens );
-	
-	let ast = Parser.circuit Lexer.token lexbuf in
-	  (*
-	  (if !output_parse <> "" 
-	   then Printf.fprintf (open_out !output_parse) "%s" (Print.integer_ast_to_string ast));*) 
-	   
-	  let analysed_ast = SemanticAnalysis.analyse_circuit ast in
-	  
-	    (if !output_analyse <> ""
-	     then Printf.fprintf (open_out !output_parse) "%s" (Print.int_ast_to_string analysed_ast));
-	    
-	    let graph = TestDestruction.main analysed_ast in
+let parse_lexbuf lexbuf output_parse =
+    try
+      let ast = Parser.circuit Lexer.token lexbuf in
+	begin
+	  if output_parse <> "" 
+	  then Printf.fprintf (open_out output_parse) 
+	    "%s" (Print.integer_ast_to_string ast)
+	end;
+	ast
+    with 
+	Parser.Error ->
+	  localize (Lexing.lexeme_start_p lexbuf);
+	  Printf.printf "Erreur dans l'analyse syntaxique.";
+	  exit 2
 
-	      (if !output_graph <> ""
-	       then output_to_file !output_graph (Print.GraphPrinter.graph graph));
 
-	      (if !output_graph_pdf <> ""
-	       then ignore (mk_pdf !output_graph_pdf (Print.GraphPrinter.graph graph)));
+let analyse_ast ast output_analyse = 
+  try
+    let analysed_ast = SemanticAnalysis.analyse_circuit ast in	  
+      begin
+	if output_analyse <> ""
+	then Printf.fprintf (open_out output_analyse) 
+	  "%s" (Print.int_ast_to_string analysed_ast)
+      end;
+      analysed_ast
+  with e -> analyse_exception e ; exit 3
 
-	      ()
+let create_graph analysed_ast output_graph output_graph_pdf =
+  let graph = AstToGraph.main analysed_ast in
+    begin
+      if output_graph <> ""
+      then output_to_file output_graph (Print.GraphPrinter.graph graph)
+    end;
+    begin 
+      if output_graph_pdf <> ""
+      then ignore (mk_pdf output_graph_pdf (Print.GraphPrinter.graph graph))
+    end;
+    graph
 
-      (* FIXME : rajouter simulator, simulatorV2, to_c, to_o, Generationgraphe ... *)
+(* FIXME : à implémenter *)
+let create_simulator graph output_simulator = ()
 
-      with 
-	  Lexer.Lexing_error c ->
-	    localize (Lexing.lexeme_start_p lexbuf);
-	    Printf.printf "Erreur dans l'analyse lexicale: %s." c;
-	    exit 1
-	| Parser.Error ->
-	    localize (Lexing.lexeme_start_p lexbuf);
-	    Printf.printf "Erreur dans l'analyse syntaxique.";
-	    exit 2
-	| e -> analyse_exception e ; exit 3
+(* FIXME : à implémenter *)
+let create_simulatorV2 graph output_simulatorV2 = ()
+
+(* FIXME : à implémenter *)
+let create_c_source graph output_c = ()
+
+(* FIXME : à implémenter *)
+let create_executable graph output_o = ()
+
+
+let _ =
+
+  let (output_lex, 
+       output_parse, 
+       output_analyse, 
+       output_graph, 
+       output_graph_pdf,   
+       output_simulator, 
+       output_simulatorV2, 
+       output_c, 
+       output_o,
+       sources) = setup_arg_parsing () in
+
+    let source_content = get_files_content sources in
+    let lexbuf = lex_source source_content output_lex in
+    let ast = parse_lexbuf lexbuf output_parse in
+    let analised_ast = analyse_ast ast output_analyse in
+    let graph = create_graph analised_ast output_graph output_graph_pdf in
+    let _ = create_simulator graph output_simulator in
+    let _ = create_simulatorV2 graph output_simulatorV2 in
+    let _ = create_c_source graph output_c in
+    let _ = create_executable graph output_o in
+
+      0
+
 	    

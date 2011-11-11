@@ -32,14 +32,6 @@ let lex_file filename =
       | x -> process (x::acc)
   in process []
 
-let lex_string s =
-  let t = Lexing.from_string s in
-  let rec process acc =
-    match Lexer.token t with
-      | Parser.EOF -> List.rev acc
-      | x -> process (x::acc)
-  in process []
-
 
 let mk_pdf pdf_name s =
   let dot_name = pdf_name ^ ".dot" in
