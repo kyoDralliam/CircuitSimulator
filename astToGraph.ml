@@ -27,11 +27,12 @@ type node = gate * ((int*int) list) array
  
 type graph = node array
 
-(**                             device index list
-  *              register index list  |
-  *                        |          |
-  *                        v          v     *)
-type circuit = graph * int list * int list
+(**                                   device count
+  *                       register count  |
+                       output count |     |
+  *             input count   |     |     |
+  *                     v     v     v     v    *)
+type circuit = graph * int * int * int * int
 
 let base_blocks_to_gates = [ 
   "Gnd", Gnd ; "Vdd", Vdd ; 
@@ -165,8 +166,10 @@ let main (start, block_type_definitions, device_list) =
 
   let max_size = Array.length graph in
 
-  let register_index_list = ref [] in
-  let device_index_list = ref [] in
+  let input_count = length block_def.inputs in
+  let output_count = length block_def.outputs in
+  let register_count = ref 0 in
+  let device_count = ref 0 in
 
     (* Printf.printf "-------\n" ; *) 
 
@@ -313,7 +316,7 @@ let main (start, block_type_definitions, device_list) =
 	then 
 	  begin
 	    assert (fst (gate_of_block inst.block_type device_list) = fst graph.(!n_max)) ;
-	    (if fst graph.(!n_max) = Register then register_index_list := !n_max :: !register_index_list);
+	    (if fst graph.(!n_max) = Register then incr device_count);
 	    process_base_block_or_device ["o"] (fun l -> assert (length l = 1))
 	  end
 	else  
@@ -321,7 +324,7 @@ let main (start, block_type_definitions, device_list) =
 	  then 
 	    begin
 	      assert (fst (gate_of_block inst.block_type device_list) = fst graph.(!n_max)) ;
-	      device_index_list := !n_max :: !device_index_list ;
+	      incr device_count ;
 	      process_base_block_or_device [ "data" ; "interrupt" ] 
 		(fun l -> assert (length l = 33))
 	    end
@@ -368,4 +371,4 @@ let main (start, block_type_definitions, device_list) =
   in
 
     make_graph start input_list output_map ;
-    graph, !register_index_list, !device_index_list
+    graph, input_count, output_count, !register_count, !device_count
