@@ -20,4 +20,4 @@ ParallelAdder <n> (a[n] , b[n])
        o[n] : { A.o, F.o } , 
        c : F.c ;
 
-start ParallelAdder < 3 >
+start ParallelAdder < 8 >

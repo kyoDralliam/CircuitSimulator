@@ -316,7 +316,7 @@ let main (start, block_type_definitions, device_list) =
 	then 
 	  begin
 	    assert (fst (gate_of_block inst.block_type device_list) = fst graph.(!n_max)) ;
-	    (if fst graph.(!n_max) = Register then incr device_count);
+	    (if fst graph.(!n_max) = Register then incr register_count);
 	    process_base_block_or_device ["o"] (fun l -> assert (length l = 1))
 	  end
 	else  

@@ -441,12 +441,12 @@ let circuit_code (graph, number_of_circuit_inputs, number_of_circuit_outputs,
     number_of_registers, number_of_devices) =
   
   ignore(number_of_devices); (* FIXME *)
-
+  
   let (new_num,old_num) = topological_sort graph 
     number_of_circuit_inputs number_of_circuit_outputs
   in
 
-  let (gates_outputs_positions, _) =
+  let (gates_outputs_positions, gates_outputs_array_size) =
     gates_outputs_positions graph old_num
   in
   
@@ -487,7 +487,7 @@ let circuit_code (graph, number_of_circuit_inputs, number_of_circuit_outputs,
     ("circuit_outputs_array_name", circuit_outputs_array_name);
     ("circuit_inputs_array_name", circuit_inputs_array_name);
     ("gates_outputs_array_length",
-    string_of_int(Array.length gates_outputs_positions));
+    string_of_int gates_outputs_array_size);
     ("registers_array_length",
     string_of_int(Array.length registers_outputs_positions));
     ("circuit_outputs_array_length",
@@ -590,19 +590,3 @@ let circuit_code (graph, number_of_circuit_inputs, number_of_circuit_outputs,
   !res
 
 ;;
-
-(*
-(* Un test : *)
-let graph = [| ((Input 1), [|[(3,0);(4,0)]|]);
-            ((Input 1), [|[(3,1);(4,1)]|]);
-            ((Output 3), [||]);
-            (Xor, [|[(2,1);(5,0)]|]);
-            (And, [|[(2,0)]|]);
-            (Register, [|[(2,2)]|]) |] in
-let number_of_circuit_inputs = 2 in
-let number_of_circuit_outputs = 1 in
-let number_of_registers = 1 in
-let number_of_devices = 0 in
-print_string (circuit_code (graph, number_of_circuit_inputs, number_of_circuit_outputs,
-    number_of_registers, number_of_devices))
-*)

@@ -6,4 +6,7 @@ pour tester un circuit sur une entrée : ./main.native nom_du_fichier
 les options sont données par : ./main.native -h 
 puis utilisées de la manière suivante : ./main.native -pdf bidule.pdf source
 
+Remarque : si vous utilisez l'option -o sans l'option -c, un fichier c est
+quand-même créé (par exmple, "./main.native -o tmp/a source" crée tmp/a.c et tmp/a)
+
 attention certaines options ne sont que peu ou pas encore implémentées, merci d'y contribuer

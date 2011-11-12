@@ -6,7 +6,7 @@ toplevel:
 	ocamlbuild -use-menhir tools.top
 
 main:
-	ocamlbuild -use-menhir main.native
+	ocamlbuild -use-menhir -lib str main.native
 
 run: all
 	cd _build && ./tools.top

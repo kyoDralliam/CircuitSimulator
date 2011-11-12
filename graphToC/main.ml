@@ -10,10 +10,28 @@ let _ =
   (And, [|[(2,0)]|]);
   (Register, [|[(2,2)]|]) |]
   in
-  let number_of_circuit_inputs = 2 in
-  let number_of_circuit_outputs = 1 in
-  let number_of_registers = 1 in
-  let number_of_devices = 0 in
-  print_string (circuit_code (graph, number_of_circuit_inputs, number_of_circuit_outputs,
-  number_of_registers, number_of_devices))
+
+  let (number_of_circuit_inputs, number_of_circuit_outputs,
+    number_of_registers, number_of_devices) =
+    begin
+      let (number_of_circuit_inputs, number_of_circuit_outputs,
+      number_of_registers, number_of_devices) = (ref 0, ref 0, ref 0, ref 0)
+      in
+
+      Array.iter
+        (function (gate,_) -> match gate with
+          | Input _ -> incr number_of_circuit_inputs
+          | Output _ -> incr number_of_circuit_outputs
+          | Register -> incr number_of_registers
+          | Device _ -> incr number_of_devices
+          | _ -> ())
+        graph;
+      
+      (!number_of_circuit_inputs, !number_of_circuit_outputs,
+      !number_of_registers, !number_of_devices)
+    end
+  in
+  
+  print_string (circuit_code graph)
+
     

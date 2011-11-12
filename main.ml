@@ -139,22 +139,30 @@ let create_simulatorV2 graph output_simulatorV2 =
       | Graph2Type (g,_,_,_,_) -> Printf.fprintf (open_out output_simulatorV2) 
 	  "%s" (ToSimulatorV2Graph2.string_of_graphe g)
 
-(* FIXME : à implémenter *)
 let create_c_source graph output_c = 
   if output_c <> ""
   then 
     match graph with
       | Graph1Type g -> ()
-      | Graph2Type g -> ()
+      | Graph2Type g ->
+          begin
+            let out = open_out output_c in
+            output_string out (GraphToC.circuit_code g);
+            close_out out
+          end
  
-
-(* FIXME : à implémenter *)
-let create_executable graph output_o = 
+let create_executable graph output_c output_o = 
   if output_o <> ""
   then 
-    match graph with
-      | Graph1Type g -> ()
-      | Graph2Type g -> ()
+    let output_c =
+      if output_c <> "" then
+        output_c
+      else
+        (create_c_source graph (output_o ^ ".c");
+        output_o ^ ".c")
+    in
+    ignore (Sys.command ("gcc -o " ^ output_o ^ " " ^ output_c))
+    
 
 
 let _ =
@@ -179,7 +187,7 @@ let _ =
     let _ = create_simulator graph output_simulator in
     let _ = create_simulatorV2 graph output_simulatorV2 in
     let _ = create_c_source graph output_c in
-    let _ = create_executable graph output_o in
+    let _ = create_executable graph output_c output_o in
 
       0
 
