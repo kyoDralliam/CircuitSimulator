@@ -1,0 +1,23 @@
+HalfAdder ( a, b)
+    Xor X( a, b)
+    And	A( a, b)
+    -> o : X.o, c : A.o ;
+
+FullAdder ( a, b, c)
+    HalfAdder H1( a, b)
+    HalfAdder H2( c, H1.o)
+    Or O( H1.c, H2.c)
+    -> o : H2.o, c : O.o ;  
+
+ParallelAdder <1> (a, b)
+    HalfAdder F (a, b) 
+    -> o : F.o, c : F.c ;
+
+ParallelAdder <n> (a[n] , b[n])
+    ParallelAdder<n-1> A (a[0..n-2], b[0..n-2])  
+    FullAdder F (a[n-1], b[n-1], A.c) 
+    -> 
+       o[n] : { A.o, F.o } , 
+       c : F.c ;
+
+start ParallelAdder < 3 >
