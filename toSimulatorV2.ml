@@ -60,6 +60,7 @@ let tri_topologique graphe =
 let string_of_graphe (graphe,_,_,_) =
 
   let string_of_gate = function
+    | VideIntersideral -> failwith "VideIntersideral"
     | Bit Zero -> "0"
     | Bit Un -> "1"
     | Non -> "N"

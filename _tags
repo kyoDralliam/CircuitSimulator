@@ -1,1 +1,3 @@
 <graph2> : include
+<main.{ml,byte,native}> : package(ocamlbuild), package(str)
+<graphToC.{ml,byte,native}> : package(str)

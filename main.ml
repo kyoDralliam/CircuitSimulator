@@ -19,21 +19,23 @@ let setup_arg_parsing () =
   let output_c = ref "" in
   let output_o = ref "" in
   let graph_style = ref Graph2 in 
+  let cc = ref "" in
 
   let sources = ref [] in
      
   let options = [
-    "-lex", Set_string output_lex, "output the result of the lexing in file" ;
-    "-parse", Set_string output_parse, "output the result of the parsing in file";
-    "-analyse", Set_string output_analyse, "output the result of the semantic analysis in file";
-    "-graph", Set_string output_graph, "output the graph in file";
-    "-pdf", Set_string output_graph_pdf, "output the pdf resulting from the graph in file";
-    "-simulator", Set_string output_simulator, "output the result of compiling as specified in simulator.ml";
-    "-simulatorV2", Set_string output_simulatorV2, "output the result of compiling as specified in simulatorV2.ml";
-    "-c", Set_string output_c, "output the result of compiling in c";
-    "-o", Set_string output_o, "output the result of compiling" ;
+    "-lex", Set_string output_lex, "file   output the result of the lexing in file" ;
+    "-parse", Set_string output_parse, "file   output the result of the parsing in file";
+    "-analyse", Set_string output_analyse, "file   output the result of the semantic analysis in file";
+    "-graph", Set_string output_graph, "file   output the graph in file";
+    "-pdf", Set_string output_graph_pdf, "file   output the pdf resulting from the graph in file";
+    "-simulator", Set_string output_simulator, "file   output the result of compiling as specified in simulator.ml in file";
+    "-simulatorV2", Set_string output_simulatorV2, "file   output the result of compiling as specified in simulatorV2.ml in file";
+    "-c", Set_string output_c, "file   output the result of compiling in c in file";
+    "-o", Set_string output_o, "file   output the result of compiling in file" ;
     "-graph1", Unit (fun () -> graph_style := Graph1), "set the graph setting to graph1 (Damien)" ;
-    "-graph2", Unit (fun () -> graph_style := Graph2), "set the graph setting to graph2 (Kenji)"
+    "-graph2", Unit (fun () -> graph_style := Graph2), "set the graph setting to graph2 (Kenji)" ;
+    "-cc", Set_string cc, "val   set the c compiler to val (default $(cc) or, if not found, gcc)"
   ] in 
     
   let annon_fun s = sources := s::!sources in
@@ -50,7 +52,8 @@ let setup_arg_parsing () =
      !output_c, 
      !output_o,
      !sources,
-     !graph_style)
+     !graph_style,
+     !cc)
     
 
 let lex_source source_content output_lex =
@@ -140,30 +143,32 @@ let create_simulatorV2 graph output_simulatorV2 =
 	  "%s" (ToSimulatorV2Graph2.string_of_graphe g)
 
 let create_c_source graph output_c = 
-  if output_c <> ""
-  then 
+  let c_source = 
     match graph with
-      | Graph1Type g -> ()
-      | Graph2Type g ->
-          begin
-            let out = open_out output_c in
-            output_string out (GraphToC.circuit_code g);
-            close_out out
-          end
- 
-let create_executable graph output_c output_o = 
+      | Graph1Type g -> (* Graph1.GraphToC.circuit_code g *) ""
+      | Graph2Type g -> GraphToC.circuit_code g 
+  in
+  let output_c = if output_c <> "" then output_c else Filename.temp_file "output_c" ".c" in
+    output_to_file output_c c_source ;
+    output_c
+
+
+(** emploie le module Command tiré d'Ocamlbuild *)
+let create_executable c_source_file output_o cc = 
   if output_o <> ""
   then 
-    let output_c =
-      if output_c <> "" then
-        output_c
-      else
-        (create_c_source graph (output_o ^ ".c");
-        output_o ^ ".c")
-    in
-    ignore (Sys.command ("gcc -o " ^ output_o ^ " " ^ output_c))
-    
-
+    let open Ocamlbuild_plugin.Command in
+    let cc = 
+      if cc <> ""
+      then cc
+      else 
+	try 
+	  Sys.getenv "cc"
+	with Not_found -> "gcc" 
+    in 
+    let compile = Cmd ( S[ A cc ; A "-o" ; A output_o ; A c_source_file ] ) in
+      Sys.command (to_string compile)
+  else 0
 
 let _ =
 
@@ -177,7 +182,8 @@ let _ =
        output_c, 
        output_o,
        sources,
-       graph_style) = setup_arg_parsing () in
+       graph_style,
+       cc) = setup_arg_parsing () in
 
     let source_content = get_files_content sources in
     let lexbuf = lex_source source_content output_lex in
@@ -186,9 +192,9 @@ let _ =
     let graph = create_graph graph_style analised_ast output_graph output_graph_pdf in
     let _ = create_simulator graph output_simulator in
     let _ = create_simulatorV2 graph output_simulatorV2 in
-    let _ = create_c_source graph output_c in
-    let _ = create_executable graph output_c output_o in
+    let c_source_file = create_c_source graph output_c in
+    let result = create_executable c_source_file output_o cc in
 
-      0
+      result
 
 	    

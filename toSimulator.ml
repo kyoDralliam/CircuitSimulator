@@ -3,6 +3,7 @@ open Typesgraphe
 let main (graphe,_,_,_) =
 
   let string_of_gate = function
+    | VideIntersideral -> failwith "VideIntersideral"
     | Bit Zero -> failwith "0"
     | Bit Un -> failwith "1"
     | Non -> "N"

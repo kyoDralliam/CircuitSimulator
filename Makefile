@@ -3,10 +3,10 @@
 all: toplevel main
 
 toplevel:
-	ocamlbuild -use-menhir tools.top
+	ocamlbuild -use-menhir -use-ocamlfind tools.top
 
 main:
-	ocamlbuild -use-menhir -lib str main.native
+	ocamlbuild -use-menhir -use-ocamlfind main.native
 
 run: all
 	cd _build && ./tools.top
