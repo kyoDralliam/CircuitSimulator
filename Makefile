@@ -9,7 +9,9 @@ main:
 	ocamlbuild -use-menhir -use-ocamlfind main.native
 
 run: all
-	cd _build && ./tools.top
+	cp -R Resources _build/FrontEnd/Resources && \
+	cp -R FrontEnd/tests _build/FrontEnd/tests && \
+	cd _build/FrontEnd && ./tools.top
 
 clean:
 	ocamlbuild -clean

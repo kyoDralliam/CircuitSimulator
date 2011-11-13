@@ -109,7 +109,7 @@ let print_int_ast ast = print_string (int_ast_to_string ast)
 module GraphPrinter =
 struct
   open Printf
-  open AstToGraph
+  open Graph2.AstToGraph
 
   let gate gate_type gate_index = sprintf "%s (%i)" 
     (gate_to_base_block gate_type) gate_index
@@ -139,7 +139,34 @@ end
 module LexerPrinter =
 struct
 
-  (* FIXME : à implémenter *)
-  let token _ = "token"
+  open Parser
+    
+  let token = function
+    | UID s -> Printf.sprintf "uid : %s" s
+    | LID s -> Printf.sprintf "lid : %s" s
+    | INT i -> Printf.sprintf "int : %d" i
+    | LESS -> "<"
+    | GREATER -> ">"
+    | LPAREN -> "("
+    | RPAREN -> ")"
+    | ARROW -> "->"
+    | SEMI -> ";"
+    | COMMA -> ","
+    | LSQBR -> "["
+    | RSQBR -> "]"
+    | START -> "start"
+    | LBRACK -> "{"
+    | RBRACK -> "}"
+    | DOT -> "."
+    | DOTDOT -> ".."
+    | EOF -> "eof"
+    | PLUS -> "+"
+    | MINUS -> "-"
+    | TIMES -> "*"
+    | DIV -> "/"
+    | MOD -> "%"
+    | COLON -> ":"
+    | POWER -> "^"
+    | DEVICE -> "device"
 
 end

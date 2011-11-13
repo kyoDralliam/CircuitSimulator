@@ -67,7 +67,7 @@ let circuitbasique = function
 
 
 
-module CBM = SemanticAnalysis.ConcreteBlockMap
+module CBM = BaseBlocks.ConcreteBlockMap
 
 (* La table qui contient les circuits que l'on connaît déjà *)
 let table = ref CBM.empty

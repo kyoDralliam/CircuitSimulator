@@ -10,3 +10,43 @@ Remarque : si vous utilisez l'option -o sans l'option -c, un fichier c est
 quand-même créé (par exmple, "./main.native -o tmp/a source" crée tmp/a.c et tmp/a)
 
 attention certaines options ne sont que peu ou pas encore implémentées, merci d'y contribuer
+
+
+Organisation du projet :
+
+    - Analisys : fichiers implémentant la phase d'analyse du compilateur
+	ast.ml			
+	baseBlocks.ml		
+	integerToInt.ml		
+	lexer.mll		
+	parser.mly		
+	pattern.ml		
+	semanticAnalysis.ml	
+	wire.ml
+
+    - Synthesis : fichiers implémentant la phase de synthése du compilateur
+        graph1.mlpack & graph2.mlpack -> fichiers de configuration pour la compilation du projet
+	- Graph1
+	    generationgraphe.ml	
+	    graphToC.ml		
+	    toSimulator.ml		
+	    toSimulatorV2.ml	
+	    typesgraphe.ml
+	- Graph2
+	    astToGraph.ml		
+	    graphToC.ml		
+	    toSimulator.ml		
+	    toSimulatorV2.ml
+
+    - FrontEnd : tout ce qui concerne l'interface utilisateur, les tests et le débugage
+        Simulateur  -> intérprète	
+	main.ml	 -> compilo	
+	print.ml  -> utilitaire pour afficher les différents types du projet	
+	tests  -> des tests		
+	tools.ml  -> utilitaires variés	
+	tools.mltop  -> toplevel pour débug	
+	trash.ml  -> fichier qui sert à rien
+
+    - Resources : les resources qu'utilise le compilo
+
+    - Makefile & _tags : pour la compilation

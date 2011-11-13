@@ -34,7 +34,7 @@ let lex_file filename =
 
 
 let mk_pdf pdf_name s =
-  let dot_name = pdf_name ^ ".dot" in
+  let dot_name = Filename.temp_file pdf_name ".dot" in
     output_to_file dot_name s ;
     Sys.command ("dot -Tpdf " ^ dot_name ^ " > " ^ pdf_name)
 

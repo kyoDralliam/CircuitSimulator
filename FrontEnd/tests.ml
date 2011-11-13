@@ -32,7 +32,7 @@ struct
 
   let ints = List.map (try_option (integer myMap)) TestPattern.ints
 
-  let my_ast = Tools.parse_file "../tests/test1"
+  let my_ast = Tools.parse_file "./tests/test1"
   let _,instantiations, _ = my_ast
   let (half_adder, full_adder, par_adder_1, par_adder_n) = 
     match List.rev instantiations with
