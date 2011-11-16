@@ -168,5 +168,6 @@ struct
     | COLON -> ":"
     | POWER -> "^"
     | DEVICE -> "device"
+    | AT -> "@"
 
 end

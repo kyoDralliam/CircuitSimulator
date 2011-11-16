@@ -27,12 +27,14 @@ type node = gate * ((int*int) list) array
  
 type graph = node array
 
-(**                                   device count
-  *                       register count  |
-                       output count |     |
-  *             input count   |     |     |
-  *                     v     v     v     v    *)
-type circuit = graph * int * int * int * int
+
+(**                             device count
+  *                  register count  |
+  *               output count |     |                         device list
+  *        input count   |     |     |     enable list               |
+  *                v     v     v     v            v                  v          *)
+type graph_info = int * int * int * int * (int * int) list * (string * int) list
+type circuit = graph * int * int * int * int * (string * int) list
 
 let base_blocks_to_gates = [ 
   "Gnd", Gnd ; "Vdd", Vdd ; 
@@ -170,6 +172,7 @@ let main (start, block_type_definitions, device_list) =
   let output_count = length block_def.outputs in
   let register_count = ref 0 in
   let device_count = ref 0 in
+  let enable_list = ref [] in
 
     (* Printf.printf "-------\n" ; *) 
 
@@ -312,25 +315,34 @@ let main (start, block_type_definitions, device_list) =
 	  ignore (fold_left (process_output_wire out) 0 output_wires);
 	  incr n_max
       in
-	if mem inst.block_type new_base_blocks 
-	then 
-	  begin
-	    assert (fst (gate_of_block inst.block_type device_list) = fst graph.(!n_max)) ;
-	    (if fst graph.(!n_max) = Register then incr register_count);
-	    process_base_block_or_device ["o"] (fun l -> assert (length l = 1))
-	  end
-	else  
-	  if mem inst.block_type new_device_list 
+      let n_enable = 
+	match inst.enable with
+	  | None -> -1 
+	  | Some w -> !n_max
+      in
+	begin
+	  if mem inst.block_type new_base_blocks 
 	  then 
 	    begin
 	      assert (fst (gate_of_block inst.block_type device_list) = fst graph.(!n_max)) ;
-	      incr device_count ;
-	      process_base_block_or_device [ "data" ; "interrupt" ] 
-		(fun l -> assert (length l = 33))
+	      (if fst graph.(!n_max) = Register then incr register_count);
+	      process_base_block_or_device ["o"] (fun l -> assert (length l = 1))
 	    end
-	  else
-	    let liste = map make_wire inst.input in
-	      make_graph inst.block_type liste local_map
+	  else  
+	    if mem inst.block_type new_device_list 
+	    then 
+	      begin
+		assert (fst (gate_of_block inst.block_type device_list) = fst graph.(!n_max)) ;
+		incr device_count ;
+		process_base_block_or_device [ "data" ; "interrupt" ] 
+		  (fun l -> assert (length l = 33))
+	      end
+	    else
+	      let liste = map make_wire inst.input in
+		make_graph inst.block_type liste local_map
+	end ;
+	if n_enable <> -1 
+	then enable_list := (n_enable,!n_max-1)::!enable_list
     in
 
 
@@ -371,4 +383,4 @@ let main (start, block_type_definitions, device_list) =
   in
 
     make_graph start input_list output_map ;
-    graph, input_count, output_count, !register_count, !device_count
+    graph, (input_count, output_count, !register_count, !device_count, !enable_list, device_list)

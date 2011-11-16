@@ -93,6 +93,7 @@ sig
   type instantiation = 
       {
 	block_type : block_type ;
+	enable : wire option;
 	var_name : id ;
 	input : wire list 
       }
@@ -183,6 +184,7 @@ module Make(IntModule : IntModuleType) =
   type instantiation = 
       {
 	block_type : block_type ;
+	enable : wire option;
 	var_name : id ;
 	input : wire list 
       }

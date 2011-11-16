@@ -129,7 +129,7 @@ end_of_file              EOF
 %token SEMI COMMA LSQBR RSQBR START
 %token LBRACK RBRACK DOT DOTDOT EOF
 %token PLUS MINUS TIMES DIV MOD COLON
-%token POWER DEVICE
+%token POWER DEVICE AT
 
 /* mise en place des priorités et des associativités */
 
@@ -211,8 +211,12 @@ instantiations:
   | l=list( instantiation ) { l }
 
 instantiation:
-  | b=block_type n=UID ws=loption( beslist( LPAREN, RPAREN, COMMA, wire ) )
-    { { block_type = b ; var_name = n ; input = ws } }
+  | b=block_type w=enable?
+    n=UID ws=loption( beslist( LPAREN, RPAREN, COMMA, wire ) )
+    { { block_type = b ; enable = w; var_name = n ; input = ws } }
+
+enable:
+  | AT w=wire { w }
 
 block_type:
   | n=UID ps=loption( beslist(LESS, GREATER, COMMA, integer) )

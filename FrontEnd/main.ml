@@ -115,7 +115,7 @@ let create_graph graph_style analysed_ast output_graph output_graph_pdf =
   match graph_style with
     | Graph1 -> Graph1Type ([||],[],[],[]) 
     | Graph2 -> 
-	let (g,_,_,_,_) as graph = Graph2.AstToGraph.main analysed_ast in
+	let (g,_) as graph = Graph2.AstToGraph.main analysed_ast in
 	  begin
 	    if output_graph <> ""
 	    then output_to_file output_graph (Print.GraphPrinter.graph g)
@@ -133,7 +133,7 @@ let create_simulator graph output_simulator =
     match graph with
       | Graph1Type g -> 
 	  output_to_file output_simulator (Graph1.ToSimulator.main g)
-      | Graph2Type (g,_,_,_,_) -> 
+      | Graph2Type (g,_) -> 
 	  output_to_file output_simulator (Graph2.ToSimulator.main g)
 
 (* FIXME : implémenter Graph1 *)
@@ -143,7 +143,7 @@ let create_simulatorV2 graph output_simulatorV2 =
     match graph with
       | Graph1Type g -> 
 	  output_to_file output_simulatorV2 (Graph1.ToSimulatorV2.string_of_graphe g)
-      | Graph2Type (g,_,_,_,_) -> 
+      | Graph2Type (g,_) -> 
 	  output_to_file output_simulatorV2 (Graph2.ToSimulatorV2.string_of_graphe g)
 
 let create_c_source graph output_c = 

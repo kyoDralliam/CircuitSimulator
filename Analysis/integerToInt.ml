@@ -61,11 +61,18 @@ struct
   let wire_definition m (wd,w) = wire_declaration m wd, wire m w
 
   let instantiation m ins = 
-    IntAst.({
-      block_type = block_type m ins.IntegerAst.block_type ;
-      var_name = ins.IntegerAst.var_name ;
-      input = List.map (wire m) ins.IntegerAst.input
-    })
+    let open IntAst in
+      {
+	block_type = block_type m ins.IntegerAst.block_type ;
+	enable =
+	  begin
+	    match ins.IntegerAst.enable with
+	      | None -> None 
+	      | Some w -> Some (wire m w)
+	  end;
+	var_name = ins.IntegerAst.var_name ;
+	input = List.map (wire m) ins.IntegerAst.input
+      }
 
   let block_type_definition m block =
     let open IntAst in
