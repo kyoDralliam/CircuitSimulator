@@ -437,8 +437,8 @@ let node_code graph old_num gates_inputs_positions gates_outputs_positions
    Entrées et sorties du graphes doivent de plus être placées dans leur ordre
    d'apparition dans la définition du type du bloc de base.
 *)
-let circuit_code (graph, number_of_circuit_inputs, number_of_circuit_outputs,
-    number_of_registers, number_of_devices) =
+let circuit_code (graph, (number_of_circuit_inputs, number_of_circuit_outputs,
+    number_of_registers, number_of_devices, list_of_enable, list_of_device)) =
   
   ignore(number_of_devices); (* FIXME *)
   

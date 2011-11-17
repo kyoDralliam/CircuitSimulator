@@ -30,11 +30,11 @@ type graph = node array
 
 (**                             device count
   *                  register count  |
-  *               output count |     |                         device list
-  *        input count   |     |     |     enable list               |
-  *                v     v     v     v            v                  v          *)
-type graph_info = int * int * int * int * (int * int) list * (string * int) list
-type circuit = graph * int * int * int * int * (string * int) list
+  *               output count |     |                                    device list
+  *        input count   |     |     |               enable list               |
+  *                v     v     v     v                      v                  v             *)
+type graph_info = int * int * int * int * (int * int * (int * int)) list * (string * int) list
+type circuit = graph * graph_info
 
 let base_blocks_to_gates = [ 
   "Gnd", Gnd ; "Vdd", Vdd ; 
@@ -315,10 +315,12 @@ let main (start, block_type_definitions, device_list) =
 	  ignore (fold_left (process_output_wire out) 0 output_wires);
 	  incr n_max
       in
-      let n_enable = 
+      let n_enable,w_enable = 
 	match inst.enable with
-	  | None -> -1 
-	  | Some w -> !n_max
+	  | None -> -1 , ref (None,[])
+	  | Some w -> !n_max, match make_wire w with
+	      | [x] -> x
+	      | _ -> assert false
       in
 	begin
 	  if mem inst.block_type new_base_blocks 
@@ -342,7 +344,7 @@ let main (start, block_type_definitions, device_list) =
 		make_graph inst.block_type liste local_map
 	end ;
 	if n_enable <> -1 
-	then enable_list := (n_enable,!n_max-1)::!enable_list
+	then enable_list := (n_enable,!n_max-1,w_enable)::!enable_list
     in
 
 
@@ -383,4 +385,5 @@ let main (start, block_type_definitions, device_list) =
   in
 
     make_graph start input_list output_map ;
-    graph, (input_count, output_count, !register_count, !device_count, !enable_list, device_list)
+    let res_enable_list = List.map (fun (i,j,w) -> i, j,match fst !w with Some x -> x | None -> assert false) !enable_list in
+    graph, (input_count, output_count, !register_count, !device_count, res_enable_list, device_list)
