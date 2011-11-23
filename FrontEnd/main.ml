@@ -170,8 +170,8 @@ let create_executable c_source_file output_o cc =
 	  Sys.getenv "cc"
 	with Not_found -> "gcc" 
     in 
-    let compile = Cmd ( S[ A cc ; A "-o" ; A output_o ; A c_source_file ] ) in
-      Sys.command (to_string compile)
+    let compile = S[ A cc ; A "-o" ; A output_o ; A c_source_file ] in
+      Sys.command (string_of_command_spec compile)
   else 0
 
 let _ =
