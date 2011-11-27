@@ -3,6 +3,11 @@ let output_to_file filename s =
     output_string chan s;
     close_out chan
 
+let output_buffer_to_file filename b =
+  let chan = open_out filename in
+    Buffer.output_buffer chan b;
+    close_out chan
+
 let file_slurp name =
   let input_channel = open_in name in
   let file_size = in_channel_length input_channel in

@@ -25,12 +25,15 @@ let circuit_outputs_array_name = "circuit_outputs"
 let first_input_number = 0
 
 let file_slurp name =
-  let input_channel = open_in name in
-  let file_size = in_channel_length input_channel in
-  let file_content = String.create file_size in
-  really_input input_channel file_content 0 file_size;
-  close_in input_channel;
-  file_content
+  try
+    let input_channel = open_in name in
+    let file_size = in_channel_length input_channel in
+    let file_content = String.create file_size in
+    really_input input_channel file_content 0 file_size;
+    close_in input_channel;
+    file_content
+  with
+    | _ -> assert false
 
 (* On charge les fichiers qui contiennent la base du code C que l'on génère *)
 let text_before = file_slurp "Resources/text_before"
@@ -47,13 +50,6 @@ let rec fold_left_for f x first last =
     fold_left_for f (f x first) (first + 1) last
   else
     x
-
-(* Renvoie une version modifiée de s, dans laquelle on a remplacé toutes les
-   instances de $(k) par v, pour tout (k,v) dans la liste passée en argument *)
-let rec replace_vars s = function
-  | [] -> s
-  | (k,v)::t -> let r = Str.regexp ("\\$(" ^ k ^ ")") in
-    replace_vars (Str.global_substitute r (fun _ -> v) s) t
 
 type topological_sort_state =
   | Not_Processed
@@ -438,9 +434,11 @@ let node_code graph old_num gates_inputs_positions gates_outputs_positions
    d'apparition dans la définition du type du bloc de base.
 *)
 let circuit_code (graph, (number_of_circuit_inputs, number_of_circuit_outputs,
-    number_of_registers, number_of_devices, list_of_enable, list_of_device)) =
+    number_of_registers, number_of_devices, enables, device_declarations)) =
   
+  ignore(enables); (* FIXME *)
   ignore(number_of_devices); (* FIXME *)
+  ignore(device_declarations); (* FIXME *)
   
   let (new_num,old_num) = topological_sort graph 
     number_of_circuit_inputs number_of_circuit_outputs
@@ -496,7 +494,12 @@ let circuit_code (graph, (number_of_circuit_inputs, number_of_circuit_outputs,
     string_of_int(circuit_inputs_array_size))]
   in
 
-  let res = ref (replace_vars text_before vars_map) in
+  let res = Buffer.create (String.length text_before) in
+  
+  (try
+    Buffer.add_substitute res (fun k -> List.assoc k vars_map) text_before
+  with 
+    | _ -> assert false);
 
   let margin = String.make 4 ' ' in
 
@@ -505,33 +508,33 @@ let circuit_code (graph, (number_of_circuit_inputs, number_of_circuit_outputs,
     
     for i = 0 to Array.length circuit_inputs_positions - 1 do
       for j = 0 to snd circuit_inputs_positions.(i) - 1 do
-        res := !res ^
-          margin ^ gates_outputs_array_name ^
+        Buffer.add_string res
+          (margin ^ gates_outputs_array_name ^
           "[" ^
           (string_of_int (fst circuit_inputs_positions.(i) + j)) ^
           "] = " ^
           circuit_inputs_array_name ^ 
-          "[" ^(string_of_int (!position_in_circuit_inputs_array)) ^ "];\n";
+          "[" ^ (string_of_int (!position_in_circuit_inputs_array)) ^ "];\n");
           incr position_in_circuit_inputs_array
       done
     done
   end;
-
-  res := !res ^ 
-    "\n" ^ 
+  
+  Buffer.add_string res
+    ("\n" ^ 
     margin ^ "for (i = 0 ; i <= cycles ; i++ )\n" ^
-    margin ^ " {\n\n";
+    margin ^ " {\n\n");
 
   let margin = String.make 8 ' ' in
 
   for i = 0 to Array.length registers_outputs_positions - 1 do
-    res := !res ^
-      margin ^ gates_outputs_array_name ^
+    Buffer.add_string res
+      (margin ^ gates_outputs_array_name ^
       "[" ^ (string_of_int registers_outputs_positions.(i)) ^ "] = " ^
-      registers_array_name ^ "[" ^(string_of_int i) ^ "];\n"
+      registers_array_name ^ "[" ^(string_of_int i) ^ "];\n")
   done;
   
-  res := !res ^ "\n";
+  Buffer.add_string res "\n";
 
   ignore
     (fold_left_for
@@ -540,16 +543,17 @@ let circuit_code (graph, (number_of_circuit_inputs, number_of_circuit_outputs,
           node_code graph old_num gates_inputs_positions
             gates_outputs_positions next_register i
         in
-        if code <> "" then res := !res ^ margin ^ code ^ ";\n";
+        if code <> "" then  
+          Buffer.add_string res (margin ^ code ^ ";\n");
         next_register)
       0
       0
       (Array.length old_num - 1));
-
-  res := !res ^ 
-    "\n" ^ 
+  
+  Buffer.add_string res
+    ("\n" ^ 
     margin ^ "if (i == cycles || step_by_step )\n" ^
-    margin ^ " {\n";
+    margin ^ " {\n");
   
   let margin = String.make 12 ' ' in
   
@@ -558,35 +562,40 @@ let circuit_code (graph, (number_of_circuit_inputs, number_of_circuit_outputs,
 
     for i = 0 to Array.length circuit_outputs_positions - 1 do
       for j = 0 to Array.length circuit_outputs_positions.(i) - 1 do
-        res := !res ^
-          margin ^ circuit_outputs_array_name ^
+        Buffer.add_string res
+          (margin ^ circuit_outputs_array_name ^
           "[" ^
           (string_of_int (!position_in_circuit_outputs_array)) ^
           "] = " ^
           gates_outputs_array_name ^
           "[" ^
           (string_of_int circuit_outputs_positions.(i).(j)) ^
-          "] ? '1' : '0' ;\n";
+          "] ? '1' : '0' ;\n");
         incr position_in_circuit_outputs_array
       done
     done
   end;
 
-  res := !res ^ "\n" ^ margin ^
+  Buffer.add_string res
+    (margin ^
     "fwrite (" ^ circuit_outputs_array_name ^ ", 1, " ^ 
     (string_of_int circuit_outputs_array_size) ^
     ", stdout);\n\n" ^
-    margin ^ "fprintf (stdout, \"\\n\");\n";
+    margin ^ "fprintf (stdout, \"\\n\");\n");
   
   let margin = String.make 8 ' ' in
   
-  res := !res ^ margin ^ " }\n\n";
+  Buffer.add_string res (margin ^ " }\n\n");
 
   let margin = String.make 4 ' ' in
   
-  res := !res ^ margin ^ " }\n\n" ^
-    (replace_vars text_after vars_map);
+  Buffer.add_string res (margin ^ " }\n\n");
 
-  !res
+  (try
+    Buffer.add_substitute res (fun k -> List.assoc k vars_map) text_after
+  with 
+    | _ -> assert false);
+
+  res
 
 ;;

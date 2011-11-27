@@ -149,11 +149,12 @@ let create_simulatorV2 graph output_simulatorV2 =
 let create_c_source graph output_c = 
   let c_source = 
     match graph with
-      | Graph1Type g -> (* FIXME : Graph1.GraphToC.circuit_code g *) "" 
+      | Graph1Type g -> failwith "Graph1.GraphToC.circuit_code not implemented"
+          (* FIXME : Graph1.GraphToC.circuit_code g *) 
       | Graph2Type g -> Graph2.GraphToC.circuit_code g
   in
   let output_c = if output_c <> "" then output_c else Filename.temp_file "output_c" ".c" in
-    output_to_file output_c c_source ;
+    output_buffer_to_file output_c c_source ;
     output_c
 
 
