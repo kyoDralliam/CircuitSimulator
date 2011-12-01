@@ -8,6 +8,9 @@ toplevel:
 main:
 	ocamlbuild -use-menhir -use-ocamlfind main.native
 
+debug:
+	ocamlbuild -use-menhir -use-ocamlfind main.d.byte
+
 run: all
 	cp -R Resources _build/FrontEnd/Resources && \
 	cp -R FrontEnd/tests _build/FrontEnd/tests && \
@@ -17,4 +20,4 @@ clean:
 	ocamlbuild -clean
 
 
-.PHONY: all clean run toplevel main
+.PHONY: all clean run toplevel main debug

@@ -1,5 +1,5 @@
 <Analysis> or <Synthesis> or <FrontEnd> : include
-<FrontEnd/main.{ml,byte,native}> : package(ocamlbuild), package(str)
+<FrontEnd/main.{ml,byte,native,d.byte}> : package(ocamlbuild), package(str)
 <**/graphToC.*> : package(str)
 <Synthesis/Graph1/*.cmx> : for-pack(Graph1)
 <Synthesis/Graph2/*.cmx> : for-pack(Graph2)
