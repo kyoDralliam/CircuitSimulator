@@ -177,9 +177,9 @@ let check_variables block block_definitions devices =
     try 
       let i = assoc (fst inst.block_type) devices in
 	if i <> length (snd inst.block_type) then failwith "" ;
-	for_all (fun (x,y) -> x = y) 
-	  (combine (map (wire_size variables) inst.input) 
-	     [32;32;4;1;1;1])
+	for_all2 (=)
+	  (map (wire_size variables) inst.input) 
+	  (map snd device_prototype_.inputs)  
     with 
 	Not_found -> failwith ("Cas impossible -> tous les blocks " ^ 
 	  "concrets et les devices ont aytéèss checkés" )

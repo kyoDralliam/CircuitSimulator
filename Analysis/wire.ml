@@ -44,7 +44,7 @@ let get_wire_identifier_map_size block block_definitions devices =
       with Not_found -> 
 	try 
 	  ignore (assoc (fst inst.block_type) devices) ;
-	  fold_left (add inst.var_name) acc [ (("data",32),""); (("interrupt",1),"")]
+	  fold_left (add inst.var_name) acc device_prototype_.outputs
 	with Not_found -> acc
   in
 

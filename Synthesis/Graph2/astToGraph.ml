@@ -46,6 +46,7 @@ let base_blocks_to_gates = [
 let gate_to_base_block = function
     Input _ -> "Input"
   | Output _ -> "Output"
+  | Device (s,_) -> "Device " ^ s
   | g -> 
       let get r (s,g') = if g = g' then Some s else r in
       let res = fold_left get None base_blocks_to_gates in
@@ -70,7 +71,11 @@ let make_base_block_list block_type_definitions device_list block =
 	(*Printf.printf "a ::> %s\n" (Print.IntAstPrinter.block_type block) ;*)
 	res
     with Not_a_base_block -> 
-      let block_def = ConcreteBlockMap.find block block_type_definitions in
+      let block_def = 
+	try 
+	  ConcreteBlockMap.find block block_type_definitions 
+	with Not_found -> assert false
+      in
       let map_fun x = aux x.block_type in
 	concat (map map_fun block_def.instantiations)
   in
@@ -99,7 +104,11 @@ let main (start, block_type_definitions, device_list) =
   let new_device_list = map (fun (x,_) -> (x,[])) device_list in
   let new_base_blocks = map (fun x -> x.name, x.parameters) base_block in
 
-  let block_def = ConcreteBlockMap.find start block_type_definitions in
+  let block_def = 
+    try
+      ConcreteBlockMap.find start block_type_definitions 
+    with Not_found -> assert false
+  in
 
   let make_simple_wire () = None, [] in
   let rec make_complex_wire ?(acc=[]) = function
@@ -195,7 +204,11 @@ let main (start, block_type_definitions, device_list) =
   *)
   let rec make_graph block_type liste wire_map0 =
     
-    let block_def = ConcreteBlockMap.find block_type block_type_definitions in
+    let block_def = 
+      try
+	ConcreteBlockMap.find block_type block_type_definitions 
+      with Not_found -> assert false
+    in
 
 (* inutile à posteriori
     let wi_size_map = Wire.get_wire_identifier_map_size 
@@ -224,14 +237,27 @@ let main (start, block_type_definitions, device_list) =
 	@return IntAst.instantiation * complex_wire WMap.t
     *)
     let add_output_instantiation inst =
-      let inst_outputs = (ConcreteBlockMap.find inst.block_type
-			    block_type_definitions).outputs in 
+      let inst_outputs = 
+	try
+	  let block = 
+	    ConcreteBlockMap.find inst.block_type block_type_definitions in 
+	    block.outputs
+	with Not_found ->
+	  try 
+	    ignore (assoc (fst inst.block_type) device_list) ;
+	    device_prototype_.outputs
+	  with Not_found -> assert false
+      in
       let add_to_map ((s,i),_) =
 	wire_map := WMap.add (Some inst.var_name, s) (make_complex_wire i) !wire_map
       in
 	iter add_to_map inst_outputs ;
 	let add_to_local_map local_map ((id,_),_) =
-	  let indexes = WMap.find (Some inst.var_name, id) !wire_map in
+	  let indexes =
+	    try
+	      WMap.find (Some inst.var_name, id) !wire_map
+	    with Not_found -> assert false
+	  in
 	  WMap.add (Some "sortie", id) indexes local_map
 	in
 	let local_map = fold_left add_to_local_map WMap.empty inst_outputs in
@@ -245,9 +271,15 @@ let main (start, block_type_definitions, device_list) =
 	correspondant et le retoune 
     *)
     let rec make_wire = function
-      | Named_Wire wi -> WMap.find wi !wire_map 
+      | Named_Wire wi -> 
+	  (try WMap.find wi !wire_map 
+	  with Not_found -> assert false)
       | Merge wl -> (concat (map make_wire wl))
-      | Slice s -> collect s.min s.max (WMap.find s.wire !wire_map)
+      | Slice s -> 
+	  let wire = 
+	    try WMap.find s.wire !wire_map 
+	    with Not_found -> assert false in
+	  collect s.min s.max wire
     in
 
 
@@ -268,7 +300,7 @@ let main (start, block_type_definitions, device_list) =
       forme ((Some (i0,k0)), [| [ .. ] ; ...|])
       ^ case n° k0
       soit de la forme (None, [| [ .. ] ; ...|])
-      que l'on trasnforme respectivement en 
+      que l'on transforme respectivement en 
       ((Some (i0,k0)), [| ... ; [ ..; (i,k) ;.. ] ; ...|])
       ou en
       (None, [| ... ; [ ..; (i,k) ;.. ] ; ...|])
@@ -276,24 +308,21 @@ let main (start, block_type_definitions, device_list) =
     *)
       
     let call_instantiation (inst,local_map) = 
-      let get_simple_wire w = 
-	assert (length w = 1) ;
-	match w with
-	  | [w'] -> w'
-	  | _ -> failwith "cas impossible"
-      in
       let process_input_wire i w =
-	let w' = get_simple_wire (make_wire w) in
-	  (match fst !w' with
-	     | Some (input_index, output_num) ->
-		 assert ( input_index < max_size) ;
-		 let gate,output_array = graph.(input_index) in
-		   (* Printf.printf "%s : %d\n" (gate_to_base_block gate) input_index ;*)
-		   assert ( output_num < Array.length output_array ) ;
-		   output_array.(output_num) <- (!n_max,i)::output_array.(output_num) 
-	     | None -> ());
+	let plug j w' =
+	  begin
+	    match fst !w' with
+	      | Some (input_index, output_num) ->
+		  assert ( input_index < max_size) ;
+		  let gate,output_array = graph.(input_index) in
+		    assert ( output_num < Array.length output_array ) ;
+		    output_array.(output_num) <- (!n_max,i)::output_array.(output_num) 
+	      | None -> ()
+	  end ;
 	  w' := fst !w', (!n_max,i)::(snd !w') ;
-	  i + 1
+	  j+1
+	in
+	  fold_left plug i (make_wire w)
       in
       let process_output_wire out i output_wire =
 	  output_wire := (Some (!n_max,i)), snd !output_wire ;
@@ -307,7 +336,9 @@ let main (start, block_type_definitions, device_list) =
 	let output_wires = 
 	  let open List in
 	  let block_name = Some inst.var_name in
-	  let find_block s = WMap.find (block_name,s) !wire_map in
+	  let find_block s = 
+	    try WMap.find (block_name,s) !wire_map 
+	    with Not_found -> assert false in
 	    concat (map find_block output_names) 
 	in
 	  ignore (fold_left process_input_wire 0 inst.input );
@@ -357,7 +388,9 @@ let main (start, block_type_definitions, device_list) =
 	en mettant à jour le graphe
     *)
     let plug_outputs wire_def =
-      let extern_wire = WMap.find (Some "sortie", fst (fst wire_def)) !wire_map in 
+      let extern_wire = 
+	try WMap.find (Some "sortie", fst (fst wire_def)) !wire_map 
+	with Not_found -> assert false in 
       let intern_wire = make_wire (snd wire_def) in
       let plug_simple_wire intern_wire extern_wire =
 	let new_outputs = snd !extern_wire in

@@ -1,7 +1,45 @@
 open Ast
 open IntAst
 
-let ground_ = {
+
+
+
+
+(**     Prototype pour un device
+ *  un device étant par définition 
+ *  un bloc dont la définition est 
+ *  externe ce bloc ne sert à rien si  
+ *  ce n'est à faire office de substitut
+ *  à certains endroit 
+ *) 
+
+let device_prototype_ = {
+  name = "DevicePrototype" ; 
+  parameters = [] ; (* peut varier *)
+  inputs = [
+    "data", 32 ;
+    "adress", 32 ;
+    "byte_enable", 4 ;
+    "write_enable", 1 ;
+    "interrupt_enable", 1 ;
+    "interrupt_processed", 1
+  ] ;
+  instantiations = [] ;
+  outputs = [ 
+    ("data",32), Named_Wire (None,""); 
+    ("interrupt",1), Named_Wire (None, "")]
+}
+
+
+
+
+
+(**  Définitions des portes de bases
+ *
+ *
+ *) 
+
+let ground_ = { 
   name = "Gnd" ;
   parameters = [] ;
   inputs = [] ;
