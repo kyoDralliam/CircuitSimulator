@@ -30,7 +30,7 @@ let device_prototype_ = {
     ("interrupt",1), Named_Wire (None, "")]
 }
 
-
+let device_prototype_input_number = List.fold_left (fun acc x -> acc + (snd x)) 0 device_prototype_.inputs
 
 
 
