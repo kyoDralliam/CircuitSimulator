@@ -61,7 +61,7 @@ let gate_of_block block device_list =
   with Not_found -> 
     try 
       ignore (assoc (fst block) device_list) ;
-      Device block , Array.make 33 []
+      Device block , Array.make device_prototype_input_number []
     with Not_found -> raise Not_a_base_block
   
 let make_base_block_list block_type_definitions device_list block =
@@ -101,7 +101,7 @@ module WMap = Wire.WireIdentMap
 
 let main (start, block_type_definitions, device_list) =
 
-  let new_device_list = map (fun (x,_) -> (x,[])) device_list in
+  let new_device_list = map fst device_list in
   let new_base_blocks = map (fun x -> x.name, x.parameters) base_block in
 
   let block_def = 
@@ -207,7 +207,7 @@ let main (start, block_type_definitions, device_list) =
     let block_def = 
       try
 	ConcreteBlockMap.find block_type block_type_definitions 
-      with Not_found -> assert false
+      with Not_found -> failwith ("ast_to_graph error make_graph " ^ (fst block_type)) 
     in
 
 (* inutile à posteriori
@@ -362,7 +362,7 @@ let main (start, block_type_definitions, device_list) =
 	      process_base_block_or_device ["o"] (fun l -> assert (length l = 1))
 	    end
 	  else  
-	    if mem inst.block_type new_device_list 
+	    if mem (fst inst.block_type) new_device_list 
 	    then 
 	      begin
 		assert (fst (gate_of_block inst.block_type device_list) = fst graph.(!n_max)) ;
