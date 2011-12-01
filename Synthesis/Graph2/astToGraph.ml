@@ -316,7 +316,7 @@ let main (start, block_type_definitions, device_list) =
 		  assert ( input_index < max_size) ;
 		  let gate,output_array = graph.(input_index) in
 		    assert ( output_num < Array.length output_array ) ;
-		    output_array.(output_num) <- (!n_max,i)::output_array.(output_num) 
+		    output_array.(output_num) <- (!n_max,j)::output_array.(output_num) 
 	      | None -> ()
 	  end ;
 	  w' := fst !w', (!n_max,i)::(snd !w') ;

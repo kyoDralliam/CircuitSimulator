@@ -12,6 +12,11 @@ int main (int argc, char ** argv)
     int cycles;
     int i;
     int step_by_step;
+    
+    $(address_var_type) $(address_var_name);
+    $(data_var_type) $(data_var_name);
+    $(byte_enables_var_type) $(byte_enables_var_name);
+
    
     if (argc < 2 || argc > 3 || (argc == 3 && strcmp(argv[1],"-s")))
      {

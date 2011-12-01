@@ -146,20 +146,20 @@ let create_simulatorV2 graph output_simulatorV2 =
       | Graph2Type (g,_) -> 
 	  output_to_file output_simulatorV2 (Graph2.ToSimulatorV2.string_of_graphe g)
 
-let create_c_source graph output_c = 
-  let c_source = 
+let create_cpp_source graph output_cpp = 
+  let cpp_source = 
     match graph with
-      | Graph1Type g -> failwith "Graph1.GraphToC.circuit_code not implemented"
-          (* FIXME : Graph1.GraphToC.circuit_code g *) 
-      | Graph2Type g -> Graph2.GraphToC.circuit_code g
+      | Graph1Type g -> failwith "Graph1.GraphToCpp.circuit_code not implemented"
+          (* FIXME : Graph1.GraphToCpp.circuit_code g *) 
+      | Graph2Type g -> Graph2.GraphToCpp.circuit_code g
   in
-  let output_c = if output_c <> "" then output_c else Filename.temp_file "output_c" ".c" in
-    output_buffer_to_file output_c c_source ;
-    output_c
+  let output_cpp = if output_cpp <> "" then output_cpp else Filename.temp_file "output_cpp" ".cpp" in
+    output_buffer_to_file output_cpp cpp_source ;
+    output_cpp
 
 
 (** emploie le module Command tiré d'Ocamlbuild *)
-let create_executable c_source_file output_o cc = 
+let create_executable cpp_source_file output_o cc = 
   if output_o <> ""
   then 
     let open Ocamlbuild_plugin.Command in
@@ -169,9 +169,9 @@ let create_executable c_source_file output_o cc =
       else 
 	try 
 	  Sys.getenv "cc"
-	with Not_found -> "gcc" 
+	with Not_found -> "g++" 
     in 
-    let compile = S[ A cc ; A "-o" ; A output_o ; A c_source_file ] in
+    let compile = S[ A cc ; A "-o" ; A output_o ; A cpp_source_file ] in
       Sys.command (string_of_command_spec compile)
   else 0
 
@@ -184,7 +184,7 @@ let _ =
        output_graph_pdf,   
        output_simulator, 
        output_simulatorV2, 
-       output_c, 
+       output_cpp, 
        output_o,
        sources,
        graph_style,
@@ -193,12 +193,12 @@ let _ =
     let source_content = get_files_content sources in
     let lexbuf = lex_source source_content output_lex in
     let ast = parse_lexbuf lexbuf output_parse in
-    let analised_ast = analyse_ast ast output_analyse in
-    let graph = create_graph graph_style analised_ast output_graph output_graph_pdf in
+    let analysed_ast = analyse_ast ast output_analyse in
+    let graph = create_graph graph_style analysed_ast output_graph output_graph_pdf in
     let _ = create_simulator graph output_simulator in
     let _ = create_simulatorV2 graph output_simulatorV2 in
-    let c_source_file = create_c_source graph output_c in
-    let result = create_executable c_source_file output_o cc in
+    let cpp_source_file = create_cpp_source graph output_cpp in
+    let result = create_executable cpp_source_file output_o cc in
 
       result
 
