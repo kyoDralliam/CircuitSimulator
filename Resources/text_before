@@ -1,39 +1,100 @@
 #include "stdio.h"
 #include "string.h"
+#include "sys/time.h"
 
-char $(gates_outputs_array_name)[$(gates_outputs_array_length)] = {0};
-char $(registers_array_name)[$(registers_array_length)];
+char $(gates_outputs_array_name)[$(gates_outputs_array_length)]$(init_gates_outputs_array);
+char $(registers_array_name)[$(registers_array_length)]$(init_registers_array);
 char $(circuit_outputs_array_name)[$(circuit_outputs_array_length)];
 char $(circuit_inputs_array_name)[$(circuit_inputs_array_length)];
+
+char usage_information[] = "\
+Usage: %s <options> <cycles>\n\
+Options are:\n\
+  -s  Print outputs on every cycle\n\
+  -c <frequency>  Set the clock speed at <frequency> cycles per second\n";
+
+void add_time (struct timeval * time, unsigned int add_usec)
+ {
+    unsigned int x = time->tv_usec + add_usec;
+    while (x >= 1000000)
+     {
+        time->tv_sec++;
+        x -= 1000000;
+     }
+    time->tv_usec = x;
+ }
+
+bool time_gt (struct timeval * a, struct timeval * b)
+ {
+   return (a->tv_sec > b->tv_sec)
+     || ((a->tv_sec == b->tv_sec) && (a->tv_usec > b->tv_usec));
+ }
 
 int main (int argc, char ** argv)
  {
     int read_bytes;
     int cycles;
     int i;
-    int step_by_step;
+    int j;
     
+    bool step_by_step = false;
+    bool clocked = false;
+    unsigned int clock_period;
+
+    struct timeval current_time;
+    struct timeval simulated_time;    
+
     $(address_var_type) $(address_var_name);
     $(data_var_type) $(data_var_name);
     $(byte_enables_var_type) $(byte_enables_var_name);
-
    
-    if (argc < 2 || argc > 3 || (argc == 3 && strcmp(argv[1],"-s")))
+    for (i = 1; i < argc - 1; i++)
      {
-        fprintf (stderr, "Usage: %s [-s] CYCLES\n", argv[0]);
+       if (strcmp(argv[i],"-s") == 0)
+        {
+          step_by_step = true;
+        }
+       else if (strcmp(argv[i],"-c") == 0)
+        {
+          clocked = true;
+          i++;
+          
+          if (i >= argc) fprintf (stderr, usage_information, argv[0]);
+
+          for (j = 0 ; argv[i][j] ; j++)
+           {
+              if ( argv[i][j] < '0' || argv[i][j] > '9' )
+               {
+                 fprintf (stderr, usage_information, argv[0]);
+                 return -1;
+               }
+           }
+
+          sscanf (argv[i], "%d", &clock_period);
+          clock_period = 1000000 / clock_period;
+        }
+       else
+        {
+          fprintf (stderr, usage_information, argv[0]);
+          return -1;
+        }
+     }
+
+    if (i != argc - 1)
+     {
+        fprintf (stderr, usage_information, argv[0]);
         return -1;
      }
-    for (i = 0 ; argv[argc-1][i] ; i++)
+
+    for (j = 0 ; argv[i][j] ; j++)
      {
-        if ( argv[argc-1][i] < '0' || argv[argc-1][i] > '9' )
+        if ( argv[i][j] < '0' || argv[i][j] > '9' )
          {
-            fprintf (stderr, "Usage: %s [-s] CYCLES\n", argv[0]);
+            fprintf (stderr, usage_information, argv[0]);
             return -1;
          }
      }
-    sscanf (argv[argc-1], "%d", &cycles);
-
-    step_by_step = argc == 3;
+    sscanf (argv[i], "%d", &cycles);
 
     read_bytes = fread (circuit_inputs,1, $(circuit_inputs_array_length), stdin);
     if (read_bytes != $(circuit_inputs_array_length))

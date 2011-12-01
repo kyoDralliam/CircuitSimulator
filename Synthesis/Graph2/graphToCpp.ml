@@ -462,7 +462,7 @@ let add_device_definitions buffer device_definitions =
             (if i = 0 then "" else ", ") ^
               constructor_argument_type ^ " " ^
               constructor_argument_prefix ^
-              string_of_int i ^ "\n" ^
+              string_of_int i ^
               s)
           0
           (number_of_parameters - 1)
@@ -662,7 +662,11 @@ let circuit_code (graph, (number_of_circuit_inputs, number_of_circuit_outputs,
 
   let vars_map =
     [("gates_outputs_array_name", gates_outputs_array_name);
+    ("init_gates_outputs_array",
+    if gates_outputs_array_size > 0 then " = {0}" else "");
     ("registers_array_name", registers_array_name);
+    ("init_registers_array",
+    if Array.length registers_outputs_positions > 0 then " = {0}" else "");
     ("circuit_outputs_array_name", circuit_outputs_array_name);
     ("circuit_inputs_array_name", circuit_inputs_array_name);
     ("gates_outputs_array_length",
@@ -710,8 +714,15 @@ let circuit_code (graph, (number_of_circuit_inputs, number_of_circuit_outputs,
   
   Buffer.add_string res
     ("\n" ^ 
-    margin ^ "for (i = 0 ; i <= cycles ; i++ )\n" ^
-    margin ^ " {\n\n");
+    margin ^ "gettimeofday (&simulated_time, NULL);\n" ^
+    margin ^ "gettimeofday (&current_time, NULL);\n" ^
+    "\n" ^
+    margin ^ "for (i = 0 ; i <= cycles ; i++)\n" ^
+    margin ^ " {\n" ^
+    "\n" ^
+    margin ^ "while (clocked && time_gt (&simulated_time, &current_time))\n" ^
+    margin ^ "  gettimeofday (&current_time, NULL);\n" ^
+    "\n");
 
   let margin = String.make 8 ' ' in
 
@@ -774,8 +785,12 @@ let circuit_code (graph, (number_of_circuit_inputs, number_of_circuit_outputs,
     ", stdout);\n\n" ^
     margin ^ "fprintf (stdout, \"\\n\");\n");
   
-  let margin = String.make 8 ' ' in
+  Buffer.add_string res 
+    ("\n" ^
+      margin ^ "add_time (&simulated_time, clock_period);\n");
   
+  let margin = String.make 8 ' ' in
+
   Buffer.add_string res (margin ^ " }\n\n");
 
   let margin = String.make 4 ' ' in

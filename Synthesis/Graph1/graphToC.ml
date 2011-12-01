@@ -546,7 +546,7 @@ let circuit_code (graph, circuit_inputs, circuit_outputs, registers) =
 
 ;;
 
-
+(*
 let graph = [| (Sortie, []); (Sortie, []); (Sortie, []);
             (Xor, [[(1,1);(5,1)]]); (Et, [[(0,1)]]); (Registre, [[(2,1)]]);
             (Entree, [[(3,1);(4,1)]]); (Entree, [[(3,2);(4,2)]]) |] in
@@ -554,3 +554,4 @@ let inputs = [6;7] in
 let outputs = [0;1;2] in
 let registers = [5] in
 print_string (circuit_code (graph, inputs, outputs, registers));;
+*)
