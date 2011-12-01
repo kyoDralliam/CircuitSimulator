@@ -40,7 +40,7 @@ let setup_arg_parsing () =
     "-graph1", Unit (fun () -> graph_style := Graph1), "set the graph setting to graph1 (Damien)" ;
     "-graph2", Unit (fun () -> graph_style := Graph2), "set the graph setting to graph2 (Kenji)" ;
     "-cc", Set_string cc, "val   set the c compiler to val (default $(cc) or, if not found, gcc)" ;
-    "-susucre", Set_int (ref 0), "n   set the number of sugar put in your tea or coffee"
+    "-susucre", Set_int (ref 16), "n   set the number of sugar put in your tea or coffee"
   ] in 
     
   let annon_fun s = sources := s::!sources in

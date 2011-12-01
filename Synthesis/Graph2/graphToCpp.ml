@@ -785,14 +785,14 @@ let circuit_code (graph, (number_of_circuit_inputs, number_of_circuit_outputs,
     ", stdout);\n\n" ^
     margin ^ "fprintf (stdout, \"\\n\");\n");
   
+  let margin = String.make 8 ' ' in
+
+  Buffer.add_string res (margin ^ " }\n\n");
+  
   Buffer.add_string res 
     ("\n" ^
       margin ^ "add_time (&simulated_time, clock_period);\n");
   
-  let margin = String.make 8 ' ' in
-
-  Buffer.add_string res (margin ^ " }\n\n");
-
   let margin = String.make 4 ' ' in
   
   Buffer.add_string res (margin ^ " }\n\n");
