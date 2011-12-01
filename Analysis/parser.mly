@@ -190,10 +190,13 @@ wire_declaration:
   | n=LID LSQBR i=integer RSQBR  { n, i }
 
 integer:
+  | n1=integer op=binary_op n2=integer { Binary_Op (op,n1,n2) }
+  | n=integer_atom                     { n }
+
+integer_atom:
   | n=INT                              { Int n }
   | n=LID                              { Var n }
-  | n1=integer op=binary_op n2=integer { Binary_Op (op,n1,n2) }
-  | op=unary_op n=integer              { Unary_Op (op, n) }
+  | op=unary_op n=integer_atom         { Unary_Op (op, n) }
   | LPAREN n=integer RPAREN            { n }
 
 %inline binary_op:
