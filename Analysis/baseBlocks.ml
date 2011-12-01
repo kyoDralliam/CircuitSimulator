@@ -31,6 +31,7 @@ let device_prototype_ = {
 }
 
 let device_prototype_input_number = List.fold_left (fun acc x -> acc + (snd x)) 0 device_prototype_.inputs
+let device_prototype_output_number = List.fold_left (fun acc x -> acc + (snd (fst x))) 0 device_prototype_.outputs
 
 
 
