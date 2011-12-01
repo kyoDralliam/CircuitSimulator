@@ -34,7 +34,7 @@ Organisation du projet :
 	    typesgraphe.ml
 	- Graph2
 	    astToGraph.ml		
-	    graphToC.ml		
+	    graphToCpp.ml		
 	    toSimulator.ml		
 	    toSimulatorV2.ml
 
