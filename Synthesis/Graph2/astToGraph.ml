@@ -61,7 +61,7 @@ let gate_of_block block device_list =
   with Not_found -> 
     try 
       ignore (assoc (fst block) device_list) ;
-      Device block , Array.make device_prototype_input_number []
+      Device block , Array.make device_prototype_output_number []
     with Not_found -> raise Not_a_base_block
   
 let make_base_block_list block_type_definitions device_list block =
@@ -368,7 +368,7 @@ let main (start, block_type_definitions, device_list) =
 		assert (fst (gate_of_block inst.block_type device_list) = fst graph.(!n_max)) ;
 		incr device_count ;
 		process_base_block_or_device [ "data" ; "interrupt" ] 
-		  (fun l -> assert (length l = 33))
+		  (fun l -> assert (length l = device_prototype_output_number ))
 	      end
 	    else
 	      let liste = map make_wire inst.input in
