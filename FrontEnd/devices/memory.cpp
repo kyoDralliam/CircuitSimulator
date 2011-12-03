@@ -1,14 +1,18 @@
 #include <cstdlib>
 //#include <cstdio>
 
-class Memory
+#include "device.h"
+
+class Memory : device
 {
 public :
   Memory(int size);
-  ~Memory();
-  unsigned int cycle (unsigned int address, unsigned int data,
-                      char byte_enables, bool write_enable,
-                      bool interrupt_enable, bool iack, char * irq);
+  virtual ~Memory();
+  virtual unsigned int cycle (unsigned int address, unsigned int data,
+                              char byte_enables, bool write_enable,
+                              bool interrupt_enable, bool iack, char * irq);
+  static device * make(int size);
+
 private :
   char * mem;
   unsigned int mem_size;
@@ -28,6 +32,11 @@ Memory::Memory(int size)
 Memory::~Memory()
 {
   delete mem;
+}
+
+device * Memory::make(int size)
+{
+  return dynamic_cast<device *> (new Memory(size));
 }
 
 unsigned int Memory::cycle (unsigned int address, unsigned int data,

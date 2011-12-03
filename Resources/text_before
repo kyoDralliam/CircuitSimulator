@@ -6,6 +6,7 @@ char $(gates_outputs_array_name)[$(gates_outputs_array_length)]$(init_gates_outp
 char $(registers_array_name)[$(registers_array_length)]$(init_registers_array);
 char $(circuit_outputs_array_name)[$(circuit_outputs_array_length)];
 char $(circuit_inputs_array_name)[$(circuit_inputs_array_length)];
+char $(devices_array_name)[$(devices_array_length)]$(init_devices_array);
 
 char usage_information[] = "\
 Usage: %s <options> <cycles>\n\

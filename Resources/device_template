@@ -1,9 +1,9 @@
-class $(device_class_name)
+class $(device_name) : public $(device_class_name)
  {
     public :
-    $(device_class_name)($(device_constructor_parameters));
-    ~$(device_class_name)();
-    $(data_var_type) $(device_method_name) ($(address_var_type) address,
+    static $(device_class_name) * make($(device_constructor_parameters));
+    ~$(device_name)();
+    $(data_var_type) $(device_cycle_method_name) ($(address_var_type) address,
       $(data_var_type) data, $(byte_enables_var_type) byte_enables,
       bool write_enable, bool interrupt_enable, bool iack, char * irq);
  };

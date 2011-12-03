@@ -11,6 +11,8 @@ let gates_outputs_array_name = "gates_outputs"
    à jour en fonction de ce tableau)
 *)
 let registers_array_name = "registers"
+(* Idem pour les sorties des périphériques *)
+let devices_array_name = "devices"
 (* Le tableau dans lequel on stocke les entrées du circuit, au moment où
    l'on les lit depuis l'entrée standard
 *)
@@ -27,7 +29,9 @@ let device_prefix = "device_"
 (* Le nom de la méthode des périquériques que l'on doit appeler
    à chaque cycle
 *)
-let device_method_name = "cycle"
+let device_cycle_method_name = "cycle"
+let device_make_method_name = "make"
+let device_class_name = "device"
 
 (* Ces variables servent à stocker les versions "compressées" des entrées
    et des sorties des périphériques
@@ -63,6 +67,7 @@ let file_slurp name =
 let text_before = file_slurp "Resources/text_before"
 let text_after = file_slurp "Resources/text_after"
 let device_template = file_slurp "Resources/device_template"
+let device_class = file_slurp "Resources/device_class"
 
 let rec fold_right_for f first last x =
   if first <= last then
@@ -448,14 +453,15 @@ let node_code graph old_num gates_inputs_positions gates_outputs_positions
 let add_device_definitions buffer device_definitions =
   
   List.iter
-    (fun (device_class_name, number_of_parameters) ->
+    (fun (device_name, number_of_parameters) ->
       
       let vars_map =
         [("data_var_type", data_var_type);
         ("address_var_type", address_var_type);
         ("byte_enables_var_type", byte_enables_var_type);
-        ("device_method_name", device_method_name);
+        ("device_cycle_method_name", device_cycle_method_name);
         ("device_class_name", device_class_name);
+        ("device_name", device_name);
         ("device_constructor_parameters",
         fold_right_for
           (fun i s -> 
@@ -496,8 +502,9 @@ let add_device_declarations buffer graph old_num device_definitions =
               ((=) (name, number_of_parameters))
               device_definitions);
           Buffer.add_string buffer
-            (margin ^ name ^ " * " ^ device_prefix ^ (string_of_int i) ^
-              " = new " ^ name ^ "(");
+            (margin ^ device_class_name ^ " * " ^ device_prefix ^
+              (string_of_int i) ^ " = " ^ name ^ "::" ^
+              device_make_method_name ^ "(");
           (match parameters with
             | [] -> ()
             | h::t ->
@@ -515,6 +522,7 @@ let add_device_codes buffer graph old_num gates_inputs_positions
     gates_outputs_positions =
 
   let margin = String.make 8 ' ' in
+  let device_number = ref 0 in
   
   for i = 0 to Array.length old_num - 1 do
     match fst graph.(old_num.(i)) with
@@ -548,7 +556,7 @@ let add_device_codes buffer graph old_num gates_inputs_positions
           Buffer.add_string buffer
             (margin ^ data_var_name ^ " = " ^
               device_prefix ^ (string_of_int i) ^
-              "->" ^ device_method_name ^ "(" ^
+              "->" ^ device_cycle_method_name ^ "(" ^
               address_var_name ^ ", " ^
               data_var_name ^ ", " ^
               byte_enables_var_name ^ ", \n" ^
@@ -559,27 +567,47 @@ let add_device_codes buffer graph old_num gates_inputs_positions
               (string_of_int gates_inputs_positions.(i).(69)) ^ "], " ^
               gates_outputs_array_name ^ "[" ^
               (string_of_int gates_inputs_positions.(i).(70)) ^ "], " ^
-              gates_outputs_array_name ^ "+" ^
-              (string_of_int (fst gates_outputs_positions.(i) + 32)) ^ ");\n");
-
-          Buffer.add_string buffer
-            (margin ^ gates_outputs_array_name ^ "[" ^
-              (string_of_int (fst gates_outputs_positions.(i) + 32)) ^ "] = " ^
-              "!!" ^ gates_outputs_array_name ^ "[" ^
-              (string_of_int (fst gates_outputs_positions.(i) + 32)) ^ "];\n");
+              devices_array_name ^ "+" ^
+              (string_of_int (!device_number * 33 + 32)) ^ ");\n");
             
           for j = 0 to 31 do
             Buffer.add_string buffer
-              (margin ^ gates_outputs_array_name ^ "[" ^
-                (string_of_int (fst gates_outputs_positions.(i) + j)) ^ "] = (" ^
+              (margin ^ devices_array_name ^ "[" ^
+                (string_of_int 
+                  (!device_number * 33 + j)) ^
+                "] = (" ^
                 data_var_name ^ " & 0b1" ^ (String.make j '0') ^
                 ") ? 1 : 0;\n")
           done;
 
+          incr device_number;
+          
           Buffer.add_string buffer "\n"
+      | _ -> ()
+  done;
 
+  device_number := 0;
+  Buffer.add_string buffer "\n";
+
+  for i = 0 to Array.length old_num - 1 do
+    match fst graph.(old_num.(i)) with
+      | Device (name, parameters) ->
+
+          for j = 0 to 32 do
+            Buffer.add_string buffer
+              (margin ^ gates_outputs_array_name ^ "[" ^
+                (string_of_int (fst gates_outputs_positions.(i) + j)) ^
+                "] = " ^ (if j = 32 then "!!" else "") ^
+                devices_array_name ^ "[" ^
+                (string_of_int (!device_number * 33 + j)) ^ "];\n");
+          done;
+          
+          incr device_number;
+
+          Buffer.add_string buffer "\n"
       | _ -> ()
   done
+    
 
 (* Ajoute le code qui détruit les périphériques. *)
 let add_device_deletions buffer graph old_num =
@@ -656,7 +684,14 @@ let circuit_code (graph, (number_of_circuit_inputs, number_of_circuit_outputs,
     circuit_inputs_positions
   in
 
-  let res = Buffer.create (String.length text_before) in
+  let res = Buffer.create (String.length device_class) in
+  
+  let vars_map = [("device_class_name", device_class_name)] in
+  (try
+    Buffer.add_substitute res (fun k -> List.assoc k vars_map) device_class
+  with 
+    | _ -> assert false);
+  Buffer.add_string res "\n";
   
   add_device_definitions res device_definitions;
 
@@ -682,7 +717,11 @@ let circuit_code (graph, (number_of_circuit_inputs, number_of_circuit_outputs,
     ("data_var_type", data_var_type);
     ("data_var_name", data_var_name);
     ("byte_enables_var_type", byte_enables_var_type);
-    ("byte_enables_var_name", byte_enables_var_name);]
+    ("byte_enables_var_name", byte_enables_var_name);
+    ("devices_array_name", devices_array_name);
+    ("devices_array_length", string_of_int (number_of_devices * 33));
+    ("init_devices_array",
+    if number_of_devices > 0 then " = {0}" else "")]
   in
   
   (try
