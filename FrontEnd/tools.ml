@@ -80,6 +80,8 @@ let rec analyse_exception = function
   | Slice_incorrect wi -> printf "slice incorrecte : %s\n" (wire_identifier wi)
   | Number_of_arguments inst -> printf "nombre d'arguments : %s\n" inst.Ast.IntAst.var_name
   | Bad_sized_wire w -> printf "fil de mauvaise taille : %s" (wire w)
+  | Device_bad_input_wire s -> printf "Les fils en entrées du device %s %s" s
+      "ne sont pas de la bonne taille ou pas en quantité sufisante" 
   | Bad_block_definition (s,il,ex) -> printf "problème lors de la définition du block %s %s\n" s
       (mk_string ~b:"< " ~e:" >" ~sep:", " string_of_int il) ; analyse_exception ex
   | Undefined_start_block -> printf "Il n'y a pas de point de départ. 

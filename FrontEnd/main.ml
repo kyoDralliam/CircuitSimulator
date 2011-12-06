@@ -24,7 +24,8 @@ let setup_arg_parsing () =
   let cc = ref "" in
   let label = ref false in
 
-  let sources = ref [] in
+  let rock_sources = ref [] in
+  let object_files = ref [] in
      
   let options = [
     "-lex", Set_string output_lex, "file   output the result of the lexing in file" ;
@@ -35,7 +36,7 @@ let setup_arg_parsing () =
     "-label", Set label, "switch on the label on the pdf's arrows";
     "-simulator", Set_string output_simulator, "file   output the result of compiling as specified in simulator.ml in file";
     "-simulatorV2", Set_string output_simulatorV2, "file   output the result of compiling as specified in simulatorV2.ml in file";
-    "-c", Set_string output_c, "file   output the result of compiling in c in file";
+    "-c", Set_string output_c, "file   output the result of compiling in c++ in file";
     "-o", Set_string output_o, "file   output the result of compiling in file" ;
     "-graph1", Unit (fun () -> graph_style := Graph1), "set the graph setting to graph1 (Damien)" ;
     "-graph2", Unit (fun () -> graph_style := Graph2), "set the graph setting to graph2 (Kenji)" ;
@@ -43,7 +44,12 @@ let setup_arg_parsing () =
     "-susucre", Set_int (ref 16), "n   set the number of sugar put in your tea or coffee"
   ] in 
     
-  let annon_fun s = sources := s::!sources in
+  let (@:=) l x = l := x::!l in
+  let annon_fun s = 
+    if Filename.check_suffix s ".o" 
+    then object_files @:= s
+    else rock_sources @:= s 
+  in
   let usage_msg = "main.native [options] source" in 
 
     parse options annon_fun usage_msg ;
@@ -56,7 +62,8 @@ let setup_arg_parsing () =
      !output_simulatorV2, 
      !output_c, 
      !output_o,
-     !sources,
+     !rock_sources,
+     !object_files,
      !graph_style,
      !cc,
      !label)
@@ -165,7 +172,7 @@ let create_cpp_source graph output_cpp =
 
 
 (** emploie le module Command tiré d'Ocamlbuild *)
-let create_executable cpp_source_file output_o cc = 
+let create_executable cpp_source_file output_o cc object_files = 
   if output_o <> ""
   then 
     let open Ocamlbuild_plugin.Command in
@@ -177,7 +184,9 @@ let create_executable cpp_source_file output_o cc =
 	  Sys.getenv "cc"
 	with Not_found -> "g++" 
     in 
-    let compile = S[ A cc ; A "-o" ; A output_o ; A cpp_source_file ] in
+    let compile_object = List.map (fun s -> A s) object_files in
+    let compile = S([ A cc ; A "-o" ; A output_o ; A cpp_source_file ] 
+		    @ compile_object) in
       Sys.command (string_of_command_spec compile)
   else 0
 
@@ -192,12 +201,13 @@ let _ =
        output_simulatorV2, 
        output_cpp, 
        output_o,
-       sources,
+       rock_sources,
+       object_files,
        graph_style,
        cc,
        label) = setup_arg_parsing () in
 
-    let source_content = get_files_content sources in
+    let source_content = get_files_content rock_sources in
     let lexbuf = lex_source source_content output_lex in
     let ast = parse_lexbuf lexbuf output_parse in
     let analysed_ast = analyse_ast ast output_analyse in
@@ -205,7 +215,7 @@ let _ =
     let _ = create_simulator graph output_simulator in
     let _ = create_simulatorV2 graph output_simulatorV2 in
     let cpp_source_file = create_cpp_source graph output_cpp in
-    let result = create_executable cpp_source_file output_o cc in
+    let result = create_executable cpp_source_file output_o cc object_files in
 
       result
 

@@ -150,6 +150,7 @@ include Wire
 exception Number_of_arguments of IntAst.instantiation
 
 exception Bad_sized_wire of IntAst.wire
+exception Device_bad_input_wire of string
 
 exception Bad_block_definition of string * int list * exn
 exception Bad_size_enable of (IntAst.block_type) * string
