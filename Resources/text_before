@@ -2,6 +2,8 @@
 #include "string.h"
 #include "sys/time.h"
 
+namespace {
+
 char $(gates_outputs_array_name)[$(gates_outputs_array_length)]$(init_gates_outputs_array);
 char $(registers_array_name)[$(registers_array_length)]$(init_registers_array);
 char $(circuit_outputs_array_name)[$(circuit_outputs_array_length)];
@@ -13,6 +15,11 @@ Usage: %s <options> <cycles>\n\
 Options are:\n\
   -s  Print outputs on every cycle\n\
   -c <frequency>  Set the clock speed at <frequency> cycles per second\n";
+
+bool stopping = false;
+
+void add_time (struct timeval * time, unsigned int add_usec);
+bool time_gt (struct timeval * a, struct timeval * b);
 
 void add_time (struct timeval * time, unsigned int add_usec)
  {
@@ -30,6 +37,16 @@ bool time_gt (struct timeval * a, struct timeval * b)
    return (a->tv_sec > b->tv_sec)
      || ((a->tv_sec == b->tv_sec) && (a->tv_usec > b->tv_usec));
  }
+
+}
+
+namespace circuit
+{
+  void stop()
+  {
+    stopping = true;
+  }
+}
 
 int main (int argc, char ** argv)
  {

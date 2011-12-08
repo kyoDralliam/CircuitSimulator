@@ -1,9 +1,8 @@
 #include <cstdlib>
-//#include <cstdio>
 
 #include "device.h"
 
-class Memory : device
+class Memory : public device
 {
 public :
   Memory(int size);

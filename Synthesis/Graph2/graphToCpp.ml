@@ -732,8 +732,7 @@ let circuit_code (graph, (number_of_circuit_inputs, number_of_circuit_outputs,
   let margin = String.make 4 ' ' in
 
   add_device_declarations res graph old_num device_definitions;
-  Buffer.add_string res "\n";
-
+  
   begin
     let position_in_circuit_inputs_array = ref 0 in
     
@@ -756,14 +755,16 @@ let circuit_code (graph, (number_of_circuit_inputs, number_of_circuit_outputs,
     margin ^ "gettimeofday (&simulated_time, NULL);\n" ^
     margin ^ "gettimeofday (&current_time, NULL);\n" ^
     "\n" ^
-    margin ^ "for (i = 0 ; i <= cycles ; i++)\n" ^
+    margin ^ "for (i = 0 ; i <= cycles && !stopping ; i++)\n" ^
     margin ^ " {\n" ^
-    "\n" ^
-    margin ^ "while (clocked && time_gt (&simulated_time, &current_time))\n" ^
-    margin ^ "  gettimeofday (&current_time, NULL);\n" ^
     "\n");
 
   let margin = String.make 8 ' ' in
+  
+  Buffer.add_string res  
+    (margin ^ "while (clocked && time_gt (&simulated_time, &current_time))\n" ^
+      margin ^ "  gettimeofday (&current_time, NULL);\n" ^
+      "\n");
 
   for i = 0 to Array.length registers_outputs_positions - 1 do
     Buffer.add_string res

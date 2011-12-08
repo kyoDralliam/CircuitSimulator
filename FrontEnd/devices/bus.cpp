@@ -5,21 +5,19 @@
 #include <time.h>
 #include <pthread.h>
 #include <string.h>
+#include <csignal>
 
 #include "device.h"
 
-class Bus;
-class bus_cons;
+namespace circuit
+{
+  void stop();
+}
 
-class bus_cons
- {
- public:
-   Bus * bus;
-   bus_cons * next;
-   
-   bus_cons (Bus * bus);
-   ~bus_cons ();
- };
+namespace
+{
+  class bus_cons;
+}
 
 class Bus : public device
 {
@@ -43,100 +41,39 @@ private :
   bus_cons * cons;
 };
 
-bool ncurses_started = false;
-bool stopping = false;
-
-bus_cons * buses_list = NULL;
-
-pthread_t input_thread;
-pthread_mutex_t ncurses_mutex;
-void * input_function(void * arg);
-
-void start_ncurses ();
-void end_ncurses ();
-void stop ();
-void fatal ();
-
-void switch_window (bool backwards);
-
-void wprint_config (WINDOW * w, int y, int x, bool a, bool b, bool c,
-                    bool d, bool e, bool f, bool g);
-
-device * Bus::make(int size, int number_of_displays)
+namespace
 {
-  return dynamic_cast<device *>(new Bus(size, number_of_displays));
+
+  class bus_cons
+  {
+  public:
+    Bus * bus;
+    bus_cons * next;
+    
+    bus_cons (Bus * bus);
+    ~bus_cons ();
+  };
+
+  bool ncurses_started = false;
+  bool stopping = false;
+  
+  bus_cons * buses_list = NULL;
+  
+  pthread_t input_thread;
+  pthread_mutex_t ncurses_mutex;
+  void * input_function(void * arg);
+  
+  void start_ncurses ();
+  void end_ncurses ();
+  void stop ();
+  void fatal ();
+  
+  void switch_window (bool backwards);
+  
+  void wprint_config (WINDOW * w, int y, int x, bool a, bool b, bool c,
+                      bool d, bool e, bool f, bool g);
+  
 }
-
-/*
-int main(void) {
-
-  Bus * b;
-  Bus * c;
-  
-  b = new Bus(5, 1);
-  
-  c = new Bus(5, 1);
-  
-  sleep(1);
-
-  b->cycle(0x80000000, 0x00FF0000, 15, false, false, false, 0);
-  c->cycle(0x80000000, 0x0000FF, 7, false, false, false, 0);
-
-  sleep(5);
-
-  delete b;
-  delete c;
-
-  sleep(2);
-
-  b = new Bus(5, 1);
-
-  sleep(2);
-
-  b->cycle(0x80000000, 0xFFFFFF00, 15, false, false, false, 0);
-
-  sleep(2);
-
-  delete b;
-
-  return EXIT_SUCCESS;
-}
-*/
-void * input_function(void * arg)
- {
-   int c;
-
-   while (!stopping)
-    {
-      c = getch();
-      
-      if (c != ERR)
-       {
-         pthread_mutex_lock(&ncurses_mutex);
-         if (!stopping)
-          {
-            if (c == 'q')
-             {
-               fatal();
-             }
-            else if (c == KEY_LEFT)
-             {
-               switch_window(false);
-             }
-          }
-         pthread_mutex_unlock(&ncurses_mutex);
-       }
-      
-      pthread_mutex_lock(&ncurses_mutex);
-      if (!stopping) 
-        {
-          if (buses_list && buses_list->bus)
-            buses_list->bus->draw(stdscr);
-          wrefresh(stdscr);
-        }
-      pthread_mutex_unlock(&ncurses_mutex);
-   }
- }
 
 Bus::Bus(int size, int number_of_displays)
 {
@@ -169,6 +106,11 @@ Bus::~Bus()
   delete[] mem;
   delete[] displays_mem;
   delete cons;
+}
+  
+device * Bus::make(int size, int number_of_displays)
+{
+  return dynamic_cast<device *>(new Bus(size, number_of_displays));
 }
 
 unsigned int Bus::cycle (unsigned int address, unsigned int data,
@@ -222,8 +164,9 @@ void Bus::draw(WINDOW * window)
        }
     }
  }
-
-bus_cons::bus_cons(Bus * bus)
+namespace
+{
+  bus_cons::bus_cons(Bus * bus)
   {
     if (!ncurses_started) start_ncurses();
     
@@ -236,7 +179,7 @@ bus_cons::bus_cons(Bus * bus)
     pthread_mutex_unlock(&ncurses_mutex);
   }
 
-bus_cons::~bus_cons() 
+  bus_cons::~bus_cons() 
   {
     bool was_the_last;
     bus_cons ** ref;
@@ -253,35 +196,35 @@ bus_cons::~bus_cons()
     if (was_the_last) stop();
   }
 
-void switch_window (bool backwards)
- {
-   bus_cons * current = NULL;
-   bus_cons * saved = NULL;
-   bus_cons ** ref = NULL;
-
-   if (!buses_list) return;
-   
-   if (backwards)
-    {
-      ref = &buses_list;
-      for (current = buses_list; current->next; current = current->next)
-        ref = &current->next;
-
-      *ref = NULL;
-      current->next = buses_list;
-      buses_list = current;
-    }
-   else
-    {
-      saved = buses_list;
-      buses_list = saved->next;
-      saved->next = NULL;
-      for (ref = &buses_list; *ref; ref = &(*ref)->next) {}
-      
-      *ref = saved;
-    }
- }
-
+  void switch_window (bool backwards)
+  {
+    bus_cons * current = NULL;
+    bus_cons * saved = NULL;
+    bus_cons ** ref = NULL;
+    
+    if (!buses_list) return;
+    
+    if (backwards)
+      {
+        ref = &buses_list;
+        for (current = buses_list; current->next; current = current->next)
+          ref = &current->next;
+        
+        *ref = NULL;
+        current->next = buses_list;
+        buses_list = current;
+      }
+    else
+      {
+        saved = buses_list;
+        buses_list = saved->next;
+        saved->next = NULL;
+        for (ref = &buses_list; *ref; ref = &(*ref)->next) {}
+        
+        *ref = saved;
+      }
+  }
+  
 /*
  ___     
 |   |      A
@@ -291,86 +234,118 @@ void switch_window (bool backwards)
 |___|      D
 */
 
-void start_ncurses ()
- {
-   if (ncurses_started) return;
-   
-   /* Start curses mode */
-   initscr();
-   clear();
-   refresh();
-
-   halfdelay(1);            /* Line buffering disabled;
-                               getch() returns ERR after 1/10s
-                               if no character is typed */
-   keypad(stdscr, TRUE);    /* We get F1, F2 etc..*/
-   noecho();                /* Don't echo() while we do getch */
-   curs_set(0);
+  void start_ncurses ()
+  {
+    if (ncurses_started) return;
+    
+    /* Start curses mode */
+    initscr();
+    clear();
+    refresh();
+    
+    halfdelay(1);            /* Line buffering disabled;
+                                getch() returns ERR after 1/10s
+                                if no character is typed */
+    keypad(stdscr, TRUE);    /* We get F1, F2 etc..*/
+    noecho();                /* Don't echo() while we do getch */
+    curs_set(0);
+    
+    ncurses_started = true;
+    
+    pthread_mutex_init(&ncurses_mutex, NULL);
+    pthread_create (&input_thread, NULL, input_function, NULL);
+  }
   
-   ncurses_started = true;
-
-   pthread_mutex_init(&ncurses_mutex, NULL);
-   pthread_create (&input_thread, NULL, input_function, NULL);
- }
-
-void end_ncurses ()
- {
-   if (!ncurses_started) return;
-   pthread_mutex_destroy(&ncurses_mutex);
-   while (buses_list)
-    {
-      fatal();
-      //delete buses_list;
-    }
-   curs_set(1);
-   clear();
-   refresh();
-   endwin();
-   ncurses_started = false;
- }
-
-void stop ()
- {
-   pthread_mutex_lock(&ncurses_mutex);
-   stopping = true;
-   pthread_mutex_unlock(&ncurses_mutex);
-
-   pthread_join (input_thread, NULL);
-   stopping = false;
-
-   end_ncurses();
- }
-
-void fatal ()
- {
-   throw 1;
- }
-
-void wprint_config (WINDOW * w, int y, int x, bool a, bool b, bool c,
-                   bool d, bool e, bool f, bool g)
-{
-  if (a) mvwaddstr(w, y, x, " ___ ");
-  else mvwaddstr(w, y, x, "     ");
+  void end_ncurses ()
+  {
+    if (!ncurses_started) return;
+    pthread_mutex_destroy(&ncurses_mutex);
+    curs_set(1);
+    clear();
+    refresh();
+    endwin();
+    ncurses_started = false;
+  }
   
-  if (f) {mvwaddstr(w, y+1, x, "|"); mvwaddstr(w, y+2, x, "|");}
-  else {mvwaddstr(w, y+1, x, " "); mvwaddstr(w, y+2, x, " ");}
+  void stop ()
+  {
+    pthread_mutex_lock(&ncurses_mutex);
+    stopping = true;
+    pthread_mutex_unlock(&ncurses_mutex);
+    
+    pthread_join (input_thread, NULL);
+    stopping = false;
+    
+    end_ncurses();
+  }
   
-  mvwaddstr(w, y+1, x+1, "   ");
-  mvwaddstr(w, y+2, x+1, "   ");
-
-  if (b) {mvwaddstr(w, y+1, x+4, "|"); mvwaddstr(w, y+2, x+4, "|");}
-  else {mvwaddstr(w, y+1, x+4, " "); mvwaddstr(w, y+2, x+4, " ");}
-  if (g) mvwaddstr(w, y+3, x, " --- ");
-  else mvwaddstr(w, y+3, x, "     ");
+  void fatal ()
+  {
+    raise(SIGINT);
+  }
   
-  if (e) {mvwaddstr(w, y+4, x, "|"); mvwaddstr(w, y+5, x, "|");}
-  else {mvwaddstr(w, y+4, x, " "); mvwaddstr(w, y+5, x, " ");}
+  void wprint_config (WINDOW * w, int y, int x, bool a, bool b, bool c,
+                      bool d, bool e, bool f, bool g)
+  {
+    if (a) mvwaddstr(w, y, x, " ___ ");
+    else mvwaddstr(w, y, x, "     ");
+    
+    if (f) {mvwaddstr(w, y+1, x, "|"); mvwaddstr(w, y+2, x, "|");}
+    else {mvwaddstr(w, y+1, x, " "); mvwaddstr(w, y+2, x, " ");}
+    
+    mvwaddstr(w, y+1, x+1, "   ");
+    mvwaddstr(w, y+2, x+1, "   ");
+    
+    if (b) {mvwaddstr(w, y+1, x+4, "|"); mvwaddstr(w, y+2, x+4, "|");}
+    else {mvwaddstr(w, y+1, x+4, " "); mvwaddstr(w, y+2, x+4, " ");}
+    if (g) mvwaddstr(w, y+3, x, " --- ");
+    else mvwaddstr(w, y+3, x, "     ");
+    
+    if (e) {mvwaddstr(w, y+4, x, "|"); mvwaddstr(w, y+5, x, "|");}
+    else {mvwaddstr(w, y+4, x, " "); mvwaddstr(w, y+5, x, " ");}
+    
+    mvwaddstr(w, y+4, x+1, "   ");
+    
+    if (c) {mvwaddstr(w, y+4, x+4, "|"); mvwaddstr(w, y+5, x+4, "|");}
+    else {mvwaddstr(w, y+4, x+4, " "); mvwaddstr(w, y+5, x+4, " ");}
+    
+    if (d) mvwaddstr(w, y+5, x+1, "___");
+    else mvwaddstr(w, y+5, x+1, "   ");
+  }
   
-  mvwaddstr(w, y+4, x+1, "   ");
-
-  if (c) {mvwaddstr(w, y+4, x+4, "|"); mvwaddstr(w, y+5, x+4, "|");}
-  else {mvwaddstr(w, y+4, x+4, " "); mvwaddstr(w, y+5, x+4, " ");}
-
-  if (d) mvwaddstr(w, y+5, x+1, "___");
-  else mvwaddstr(w, y+5, x+1, "   ");
+  void * input_function(void * arg)
+  {
+    int c;
+    
+    while (!stopping)
+      {
+        c = getch();
+        
+        if (c != ERR)
+          {
+            pthread_mutex_lock(&ncurses_mutex);
+            if (!stopping)
+              {
+                if (c == 'q')
+                  {
+                    circuit::stop();
+                  }
+                else if (c == KEY_LEFT)
+                  {
+                    switch_window(false);
+                  }
+              }
+            pthread_mutex_unlock(&ncurses_mutex);
+          }
+        
+        pthread_mutex_lock(&ncurses_mutex);
+        if (!stopping) 
+          {
+            if (buses_list && buses_list->bus)
+              buses_list->bus->draw(stdscr);
+            wrefresh(stdscr);
+          }
+        pthread_mutex_unlock(&ncurses_mutex);
+      }
+  }
 }
