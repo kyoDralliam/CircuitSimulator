@@ -173,5 +173,5 @@ struct
     | POWER -> "^"
     | DEVICE -> "device"
     | AT -> "@"
-
+    | CONST s -> "$"^s
 end

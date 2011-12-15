@@ -92,7 +92,7 @@ rule token = parse
   | "^"                     { POWER }  
   | "@"                     { AT }
   | eof                     { EOF }  
-  | "$" (['0' '1']*) as r   { CONST r }
+  | "$" ((['0' '1']*) as r) { CONST r }
   | one_line_comment        { token lexbuf }
   | "(*"                    { comment lexbuf ; token lexbuf }
   | _ as c  { raise (Lexing_error ("illegal character: " ^ String.make 1 c)) }

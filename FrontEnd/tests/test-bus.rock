@@ -79,20 +79,24 @@ Mux_wide <a,d> (selector[a], input[d*2^a])
 
 Seven_segments_decoder (number[4])
     Gnd_vect<7> G7
-    Gnd G
-    Vdd V
-    Mux_wide<4,7> M (number,
-                    {V.o, V.o, V.o, V.o, V.o, V.o, G.o,
+#   Gnd G
+#   Vdd V
+    Mux_wide<4,7> M (number, {$1111110, $0110000, $1101101, 
+                              $1111001, $0110011, $1011011,
+			      $1011111, $1110000, $1111111,
+			      $1111011, G7.o, G7.o, 
+			      G7.o, G7.o, G7.o, G7.o})
+(*                  {V.o, V.o, V.o, V.o, V.o, V.o, G.o,
                      G.o, V.o, V.o, G.o, G.o, G.o, G.o,
                      V.o, V.o, G.o, V.o, V.o, G.o, V.o,
                      V.o, V.o, V.o, V.o, G.o, G.o, V.o,
-                     G.o, V.o, V.o, G.o, G.o, V.o, V.o,
+                     G.o, V.o, V.o, G.o, G.o, V.o, V.o,  
                      V.o, G.o, V.o, V.o, G.o, V.o, V.o,
                      V.o, G.o, V.o, V.o, V.o, V.o, V.o,
                      V.o, V.o, V.o, G.o, G.o, G.o, G.o,
                      V.o, V.o, V.o, V.o, V.o, V.o, V.o,
                      V.o, V.o, V.o, V.o, G.o, V.o, V.o,
-                     G7.o, G7.o, G7.o, G7.o, G7.o, G7.o})
+                     G7.o, G7.o, G7.o, G7.o, G7.o, G7.o} *)
     -> o[7] : M.output;
 
 Start ()

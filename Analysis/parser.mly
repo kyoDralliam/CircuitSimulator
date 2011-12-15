@@ -116,6 +116,31 @@ end_of_file              EOF
 	  start, block_defs, (fst d, List.length (snd d))::devices
     in 
       List.fold_left f (None,[],[]) l0 
+
+  let adapt_wire f w = f (fst w), snd w
+
+  let adapt_wire_list f ws = 
+    let l0, l1 = List.split ws in
+    let must_add_vdd_gnd = List.exists (fun x -> x) l1 in
+      f l0, must_add_vdd_gnd 
+
+  let vdd = { block_type = "Vdd", [] ; enable = None ; var_name = "__Vdd" ; input = [] } 
+  let gnd = { block_type = "Gnd", [] ; enable = None ; var_name = "__Gnd" ; input = [] }
+
+  let add_vdd_gnd b l = 
+    if b 
+    then vdd::gnd::l
+    else l
+
+  let create_vdd_gnd_wires s =
+    let l = ref [] in
+    let create_wire = function
+      | '0' -> l := (Named_Wire (Some "__Gnd", "o"))::!l
+      | '1' -> l := (Named_Wire (Some "__Vdd", "o"))::!l
+      | _ -> assert false
+    in
+      String.iter create_wire s ;
+      Merge (List.rev !l) , true
 %}
 
 /* définition des tokens */
@@ -173,7 +198,9 @@ circuit_element:
 
 definition:
   | n=UID p=parameters inp=inputs ins=instantiations o=output 
-    { { name = n ; parameters = p ; inputs = inp ; instantiations = ins ; outputs = o } }
+    { { name = n ; parameters = p ; inputs = inp ; 
+	instantiations = add_vdd_gnd ((snd ins)||(snd o)) (fst ins) ; 
+	outputs = fst o } }
 
 parameters:
   | l=loption( beslist(LESS, GREATER, COMMA, integer) ) { l }
@@ -207,12 +234,19 @@ unary_op:
   | MINUS { Neg }
 
 instantiations:
-  | l=list( instantiation ) { l }
+  | l=list( instantiation ) 
+    { adapt_wire_list (fun x -> x) l }
 
 instantiation:
   | b=block_type w=enable?
     n=UID ws=loption( beslist( LPAREN, RPAREN, COMMA, wire ) )
-    { { block_type = b ; enable = w; var_name = n ; input = ws } }
+    { 
+      let w, b1 = match w with Some w -> Some (fst w), snd w | None -> None, false in 
+      let ins, b2 = adapt_wire_list 
+	(fun x -> { block_type = b ; enable = w; var_name = n ; input = x }) ws in
+	ins, (b1||b2)
+    }
+
 
 enable:
   | AT w=wire { w }
@@ -222,9 +256,10 @@ block_type:
     { n, ps }
 
 wire:
-  | wi=wire_identifier                     { Named_Wire wi }
-  | LBRACK ws=snlist( COMMA, wire ) RBRACK { Merge ws }
-  | s=slice                                { Slice s }
+  | wi=wire_identifier                     { Named_Wire wi, false }
+  | LBRACK ws=snlist( COMMA, wire ) RBRACK { adapt_wire_list (fun ws -> Merge ws) ws }
+  | s=slice                                { Slice s, false }
+  | s=CONST                                { create_vdd_gnd_wires s }
 
 %inline wire_identifier:
   | n1=UID DOT n2=LID { Some n1, n2 }
@@ -237,10 +272,11 @@ slice:
     { { wire = w ; min = m1 ; max = m2 } }
 
 output:
-  | l=beslist( ARROW, SEMI, COMMA, wire_definition) { l }
+  | l=beslist( ARROW, SEMI, COMMA, wire_definition) 
+    { adapt_wire_list (fun x -> x) l }
 
 %inline wire_definition:
-  | wd=wire_declaration COLON w=wire { wd, w } 
+  | wd=wire_declaration COLON w=wire { adapt_wire (fun x -> (wd, x)) w } 
 
 
 %%
