@@ -79,10 +79,14 @@ end
 module IntAstPrinter = AstPrinter(IntPrinter)
 module IntegerAstPrinter = AstPrinter(IntegerPrinter)
 
-let integer_ast_to_string (start,list,devices) =
+let get_start = function
+  | None -> "", []
+  | Some x -> x
+
+let integer_ast_to_string (start,list,devices) = 
   let open IntegerAstPrinter in
   let open Printf in
-  let s1 = sprintf "start %s\n\n\n" (block_type start) in
+  let s1 = sprintf "start %s\n\n\n" (block_type (get_start start)) in
   let s2 = sprintf "%s" (String.concat "\n" (List.map block_type_definition list)) in
   let device_to_string (id,n) = sprintf "> %s -> %s" id (string_of_int n) in
   let s3 = sprintf "%s" (mk_string ~b:"device list :\n" ~sep:"\n" 

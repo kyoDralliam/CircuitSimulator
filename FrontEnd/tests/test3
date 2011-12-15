@@ -1,5 +1,0 @@
-And_scalar <1> (a, b[1])
-    And A(a,b)
-    -> o : A.o;
-
-start And_scalar<1>

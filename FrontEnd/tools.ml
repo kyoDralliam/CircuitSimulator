@@ -37,8 +37,15 @@ let lex_file filename =
       | x -> process (x::acc)
   in process []
 
+let merge_ast (f1, (start1, blocks_def1, devices_def1)) (f2,(start2, blocks_def2, devices_def2)) =
+  let start = match start1, start2 with
+    | None, None -> None
+    | Some x, None | None, Some x -> Some x
+    | _ -> Printf.printf "Les deux fichiers %s et %s ont chacun un point d'entrée. Un seul point d'entrée est accepté.\n" f1 f2 ; exit (1)
+  in
+    ("mix", (start, blocks_def1@blocks_def2, devices_def1@devices_def2))
 
-let mk_pdf pdf_name s =
+let mk_pdf pdf_name s = 
   let dot_name = Filename.temp_file pdf_name ".dot" in
     output_to_file dot_name s ;
     Sys.command ("dot -Tpdf " ^ dot_name ^ " > " ^ pdf_name)
@@ -51,11 +58,11 @@ let mk_string ?(b="") ?(e="") ?(sep="") f l =
 let dump_file filename = Print.print_integer_ast (parse_file filename)
 
 
-let localize pos =
+let localize pos ?(f=pos.Lexing.pos_fname) () =
   let open Lexing in
   let open Printf in
   let car_pos = pos.pos_cnum - pos.pos_bol + 1 in
-    printf "fichier %s : ligne %d, caractères %d-%d:\n" pos.pos_fname pos.pos_lnum (car_pos-1) car_pos
+    printf "fichier %s : ligne %d, caractères %d-%d:\n" f pos.pos_lnum (car_pos-1) car_pos
 
 open Printf
 open Pattern
@@ -101,11 +108,11 @@ let main filename =
 	analized_ast
     with 
 	Lexer.Lexing_error c ->
-	  localize (Lexing.lexeme_start_p buf);
+	  localize (Lexing.lexeme_start_p buf) ();
 	  printf "Erreur dans l'analyse lexicale: %s." c;
 	  exit 1
       | Parser.Error ->
-	  localize (Lexing.lexeme_start_p buf);
+	  localize (Lexing.lexeme_start_p buf) ();
 	  printf "Erreur dans l'analyse syntaxique.";
 	  exit 1
       | e -> analyse_exception e ; failwith ""

@@ -261,7 +261,10 @@ exception Undefined_start_block
     et d'une IntAst.block_type_definition ConcreteBlockMap.t
 *)
 let analyse_circuit (fst_circuit, circuit_blocks, circuit_devices) = 
-  if fst_circuit = ("",[]) then raise Undefined_start_block ;
+  let fst_circuit = match fst_circuit with
+    | None -> raise Undefined_start_block 
+    | Some x -> x
+  in
   let circuit_start = IntegerToInt.block_type StringMap.empty fst_circuit in
   let concrete_blocks = List.fold_left add_block ConcreteBlockMap.empty base_block in
   let devices_names = List.map fst circuit_devices in

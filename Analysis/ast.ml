@@ -132,7 +132,7 @@ sig
      - un identifiant correspondant au bloc global
      - une liste des blocs définis dans le code
   *)
-  type circuit = block_type * block_type_definition list * device_type_definition list
+  type circuit = block_type option * block_type_definition list * device_type_definition list
       (* block_type * block_type_definition ConcreteBlockMap.t *)
 
 end
@@ -223,7 +223,7 @@ module Make(IntModule : IntModuleType) =
      - un identifiant correspondant au bloc global
      - une liste des blocs définis dans le code
   *)
-  type circuit = block_type * block_type_definition list * device_type_definition list
+  type circuit = block_type option * block_type_definition list * device_type_definition list
       (* block_type * block_type_definition ConcreteBlockMap.t *)
 
  end : AstModuleType with type integer = IntModule.integer )

@@ -52,6 +52,9 @@ let alphaNum = ['A'-'Z' 'a'-'z' '_' '0'-'9']
 let upperCase = ['A'-'Z']
 let lowerCase = ['a'-'z']
 let int = ['0'-'9' '_'] + 
+let one_line_comment = "#" [^ '\r' '\n']*
+let multi_line_comment_begin = "(*"
+
 (* si on veut rajouter les hexadécimaux, octals ou binaires
    ( extrait de l'exemple de cédric pasteur)
    | '0' ['x' 'X'] ['0'-'9' 'A'-'F' 'a'-'f']+
@@ -89,4 +92,12 @@ rule token = parse
   | "^"                     { POWER }  
   | "@"                     { AT }
   | eof                     { EOF }  
+  | one_line_comment        { token lexbuf }
+  | "(*"                    { comment lexbuf ; token lexbuf }
   | _ as c  { raise (Lexing_error ("illegal character: " ^ String.make 1 c)) }
+
+and comment = parse
+  | "(*"                    { comment lexbuf ; comment lexbuf }
+  | "*)"                    { () }
+  | one_line_comment        { comment lexbuf }
+  | _                       { comment lexbuf }

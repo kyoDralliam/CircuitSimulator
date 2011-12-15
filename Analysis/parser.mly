@@ -115,11 +115,7 @@ end_of_file              EOF
       | Device d ->
 	  start, block_defs, (fst d, List.length (snd d))::devices
     in 
-    let (n,l,l') = List.fold_left f (None,[],[]) l0 in
-    let n' = match n with
-      | None -> "", []
-      | Some n' -> n' in
-	  n', l, l'
+      List.fold_left f (None,[],[]) l0 
 %}
 
 /* définition des tokens */

@@ -40,13 +40,16 @@ Organisation du projet :
 
     - FrontEnd : tout ce qui concerne l'interface utilisateur, les tests et le débugage
         Simulateur  -> intérprète	
-	main.ml	 -> compilo	
+	main.ml	 -> compilateur	
 	print.ml  -> utilitaire pour afficher les différents types du projet	
-	tests  -> des tests		
+	tests  -> des tests
+	tests.ml -> des tests utilisés lors du débuggage
 	tools.ml  -> utilitaires variés	
 	tools.mltop  -> toplevel pour débug	
 	trash.ml  -> fichier qui sert à rien
 
-    - Resources : les resources qu'utilise le compilo
+    - Resources : les resources qu'utilise le compilateur
 
     - Makefile & _tags : pour la compilation
+
+    - compiled-tests et _build contiennent respectivement les resultats de la compilation des tests et les fichiers intermédiaires pour la compilation du compilateur

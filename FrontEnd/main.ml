@@ -19,13 +19,16 @@ let setup_arg_parsing () =
   let output_simulator = ref "" in
   let output_simulatorV2 = ref "" in
   let output_c = ref "" in
-  let output_o = ref "" in
+  let output_o = ref "a.out" in
   let graph_style = ref Graph2 in 
   let cc = ref "" in
   let label = ref false in
+  let ccflags = ref [] in
 
   let rock_sources = ref [] in
   let object_files = ref [] in
+
+  let (@:=) l x = l := x::!l in
      
   let options = [
     "-lex", Set_string output_lex, "file   output the result of the lexing in file" ;
@@ -41,10 +44,12 @@ let setup_arg_parsing () =
     "-graph1", Unit (fun () -> graph_style := Graph1), "set the graph setting to graph1 (Damien)" ;
     "-graph2", Unit (fun () -> graph_style := Graph2), "set the graph setting to graph2 (Kenji)" ;
     "-cc", Set_string cc, "val   set the c compiler to val (default $(cc) or, if not found, gcc)" ;
+    "-ccflags", String (fun s -> ccflags := (Str.split (Str.regexp_string ",") s)), 
+    "flag1,flag2,..,flagn    pass these flags to the c++ compiler" ;
     "-susucre", Set_int (ref 16), "n   set the number of sugar put in your tea or coffee"
   ] in 
     
-  let (@:=) l x = l := x::!l in
+ 
   let annon_fun s = 
     if Filename.check_suffix s ".o" 
     then object_files @:= s
@@ -66,48 +71,73 @@ let setup_arg_parsing () =
      !object_files,
      !graph_style,
      !cc,
-     !label)
-    
+     !label,
+     !ccflags
+    )
 
-let lex_source source_content output_lex =
-  let lexbuf = Lexing.from_string source_content in
-    begin
-      if output_lex <> "" 
-      then 
-	let lex_result = 
-	  let rec process acc =
-	    try
-	      match Lexer.token lexbuf with
-		| Parser.EOF -> List.rev acc
-		| x -> process (x::acc)
-	    with 
-		Lexer.Lexing_error c ->
-		  localize (Lexing.lexeme_start_p lexbuf);
-		  Printf.printf "Erreur dans l'analyse lexicale: %s." c;
-		  exit 1
-	  in process [] 
-	in
-	let tokens = mk_string ~b:"[" ~e:"]" ~sep:", " 
-	  Print.LexerPrinter.token lex_result in
-	  output_to_file output_lex tokens 
-    end;
-    Lexing.from_string source_content
+let check_sources rock_sources = 
+  let filter_fun f = 
+    if Sys.file_exists f 
+    then true 
+    else (Printf.printf "Warning fichier non trouvé : %s \n" f ; false)
+  in
+  let sources = List.filter filter_fun rock_sources in
+    match sources with
+      | [] -> Printf.printf "Au moins un fichier valide doit être présent.\n" ; exit 42
+      | l -> l
+
+let lex_source rock_sources output_lex =
+  let lex_result f lexbuf = 
+    let rec process acc =
+      try
+	match Lexer.token lexbuf with
+	  | Parser.EOF -> List.rev acc
+	  | x -> process (x::acc)
+      with 
+	  Lexer.Lexing_error c ->
+	    localize (Lexing.lexeme_start_p lexbuf) ~f ();
+	    Printf.printf "Erreur dans l'analyse lexicale: %s." c;
+	    exit 1
+    in process [] 
+  in
+  let aux src = 
+    let content = file_slurp src in
+    let lexbuf = Lexing.from_string content in
+    let res = lex_result src lexbuf in
+      (src, Lexing.from_string content), (src ,res)
+  in
+  let lexbufs, lex_res = List.split (List.map aux rock_sources) in
+    (if output_lex <> "" 
+    then 
+      let name (filename, lex_content) = 
+	let tokens = mk_string ~b:"[" ~e:"]" ~sep:", "
+	  Print.LexerPrinter.token lex_content in
+	  "fichier " ^ filename ^ ":\n\n" ^ tokens 
+      in
+	output_to_file output_lex (String.concat "\n\n\n\n" (List.map name lex_res))) ;
+    lexbufs
 
 
-let parse_lexbuf lexbuf output_parse =
-    try
-      let ast = Parser.circuit Lexer.token lexbuf in
-	begin
-	  if output_parse <> "" 
-	  then Printf.fprintf (open_out output_parse) 
-	    "%s" (Print.integer_ast_to_string ast)
-	end;
-	ast
+let parse_lexbuf lexbufs output_parse =
+  let parse (f, lexbuf) =
+    try 
+      f, Parser.circuit Lexer.token lexbuf
     with 
 	Parser.Error ->
-	  localize (Lexing.lexeme_start_p lexbuf);
+	  localize (Lexing.lexeme_start_p lexbuf) ~f ();
 	  Printf.printf "Erreur dans l'analyse syntaxique.";
 	  exit 2
+  in
+  let asts = List.map parse lexbufs in
+    begin
+      if output_parse <> "" 
+      then 
+	let name (filename, parse_content) = "(* fichier " ^ filename ^ " *)\n\n" ^ 
+	  (Print.integer_ast_to_string parse_content) in
+	  output_to_file output_parse (String.concat "\n\n\n\n" (List.map name asts))
+    end;
+    List.fold_left merge_ast (List.hd asts) (List.tl asts)
+    
 
 
 let analyse_ast ast output_analyse = 
@@ -172,21 +202,19 @@ let create_cpp_source graph output_cpp =
 
 
 (** emploie le module Command tiré d'Ocamlbuild *)
-let create_executable cpp_source_file output_o cc object_files = 
+let create_executable cpp_source_file output_o cc object_files ccflags = 
   if output_o <> ""
   then 
     let open Ocamlbuild_plugin.Command in
     let cc = 
       if cc <> ""
       then cc
-      else 
-	try 
-	  Sys.getenv "cc"
-	with Not_found -> "g++" 
+      else "g++" 
     in 
+    let flags = List.map (fun x -> A x) ccflags in
     let compile_object = List.map (fun s -> A s) object_files in
-    let compile = S([ A cc ; A "-o" ; A output_o ; A cpp_source_file ] 
-		    @ compile_object) in
+    let compile = S( [ A cc ; A "-o" ; A output_o ; A cpp_source_file ] @
+		    flags @ compile_object) in
       Sys.command (string_of_command_spec compile)
   else 0
 
@@ -205,18 +233,20 @@ let _ =
        object_files,
        graph_style,
        cc,
-       label) = setup_arg_parsing () in
+       label,
+       ccflags
+      ) = setup_arg_parsing () in
 
-    let source_content = get_files_content rock_sources in
-    let lexbuf = lex_source source_content output_lex in
-    let ast = parse_lexbuf lexbuf output_parse in
-    let analysed_ast = analyse_ast ast output_analyse in
-    let graph = create_graph graph_style analysed_ast output_graph output_graph_pdf label in
-    let _ = create_simulator graph output_simulator in
-    let _ = create_simulatorV2 graph output_simulatorV2 in
-    let cpp_source_file = create_cpp_source graph output_cpp in
-    let result = create_executable cpp_source_file output_o cc object_files in
+  let sources = check_sources rock_sources in
+  let lexbufs = lex_source sources output_lex in
+  let _, ast = parse_lexbuf lexbufs output_parse in
+  let analysed_ast = analyse_ast ast output_analyse in
+  let graph = create_graph graph_style analysed_ast output_graph output_graph_pdf label in
+  let _ = create_simulator graph output_simulator in
+  let _ = create_simulatorV2 graph output_simulatorV2 in
+  let cpp_source_file = create_cpp_source graph output_cpp in
+  let result = create_executable cpp_source_file output_o cc object_files ccflags in
 
-      result
+    exit result
 
 	    
