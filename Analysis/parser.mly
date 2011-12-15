@@ -119,7 +119,7 @@ end_of_file              EOF
 %}
 
 /* définition des tokens */
-%token<string> UID LID
+%token<string> UID LID CONST
 %token<int> INT 
 %token LESS GREATER LPAREN RPAREN ARROW
 %token SEMI COMMA LSQBR RSQBR START
