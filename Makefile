@@ -3,14 +3,14 @@ GPP=g++-mp-4.5
 all: main
 
 toplevel:
-	ocamlbuild -use-menhir -use-ocamlfind tools.top
+	ocamlbuild -use-menhir -lib str tools.top
 
 main:
-	ocamlbuild -use-menhir -use-ocamlfind main.native
+	ocamlbuild -use-menhir -lib str main.native
 	@cp _build/FrontEnd/main.native obsidian
 
 debug:
-	ocamlbuild -use-menhir -use-ocamlfind main.d.byte
+	ocamlbuild -use-menhir -lib str main.d.byte
 
 run: all
 	cp -R Resources _build/FrontEnd/Resources && \

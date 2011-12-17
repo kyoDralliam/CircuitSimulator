@@ -201,7 +201,7 @@ let create_cpp_source graph output_cpp =
     output_cpp
 
 
-(** emploie le module Command tiré d'Ocamlbuild *)
+
 let create_executable cpp_source_file output_o cc object_files ccflags = 
   let cmd = Printf.sprintf "%s -o '%s' '%s' '%s' '%s'" 
     cc  (String.escaped output_o)
