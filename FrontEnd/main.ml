@@ -21,7 +21,7 @@ let setup_arg_parsing () =
   let output_c = ref "" in
   let output_o = ref "a.out" in
   let graph_style = ref Graph2 in 
-  let cc = ref "" in
+  let cc = ref "g++" in
   let label = ref false in
   let ccflags = ref [] in
 
@@ -203,20 +203,13 @@ let create_cpp_source graph output_cpp =
 
 (** emploie le module Command tiré d'Ocamlbuild *)
 let create_executable cpp_source_file output_o cc object_files ccflags = 
-  if output_o <> ""
-  then 
-    let open Ocamlbuild_plugin.Command in
-    let cc = 
-      if cc <> ""
-      then cc
-      else "g++" 
-    in 
-    let flags = List.map (fun x -> A x) ccflags in
-    let compile_object = List.map (fun s -> A s) object_files in
-    let compile = S( [ A cc ; A "-o" ; A output_o ; A cpp_source_file ] @
-		    flags @ compile_object) in
-      Sys.command (string_of_command_spec compile)
-  else 0
+  let cmd = Printf.sprintf "%s -o '%s' '%s' '%s' '%s'" 
+    cc  (String.escaped output_o)
+    cpp_source_file
+    (String.concat "' '" object_files)
+    (String.concat "' '" ccflags) in
+    Printf.printf "%s" cmd ;
+    Sys.command cmd
 
 let _ =
 

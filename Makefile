@@ -1,6 +1,6 @@
 GPP=g++-mp-4.5
 
-all: toplevel main
+all: main
 
 toplevel:
 	ocamlbuild -use-menhir -use-ocamlfind tools.top

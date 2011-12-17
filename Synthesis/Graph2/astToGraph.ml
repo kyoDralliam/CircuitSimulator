@@ -183,8 +183,7 @@ let main (start, block_type_definitions, device_list) =
   let device_count = ref 0 in
   let enable_list = ref [] in
 
-    (* Printf.printf "-------\n" ; *) 
-
+   
   (** Fabrique récursivement le graphe en 3 étapes :
 
       1) ajoute les fils en entrée du bloc et les fils 
