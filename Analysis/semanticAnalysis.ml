@@ -88,39 +88,38 @@ exception Bad_recursion of IntAst.block_type list * string
     concrete_blocks : IntAst.block_definition ConcreteBlockMap.t
 *)
 let rec reify_blocks block_type abstract_blocks encountered_blocks concrete_blocks devices_names =
-  if ConcreteBlockMap.mem block_type concrete_blocks
-  then concrete_blocks
-  else
+  if not (ConcreteBlockMap.mem block_type concrete_blocks) &&
+    not ( List.mem (fst block_type) devices_names )
+  then
     let id = fst block_type in
-      if List.mem id devices_names
-      then concrete_blocks
-      else
-	let patterns = 
-	  try StringMap.find id abstract_blocks 
-	  with Not_found -> raise (Instance_not_found block_type) in
-	let parameters = snd block_type in
-	  if not (for_all ((<=) 0) parameters)
-	  then raise (Bad_recursion( [ block_type ], "paramètre(s) négatif(s)" )) ;
-	  let block_def,map = 
-	    try 
-	      get_block_type_definition parameters patterns 
-	    with Instance_not_found _ -> raise (Instance_not_found block_type)
-	  in
-	  let int_block_def = IntegerToInt.block_type_definition map block_def in
-	  let new_encountered_blocks = BlockTypeSet.add block_type encountered_blocks in
-	  let next_call map (x : IntAst.instantiation) = 
-	    let x_block = x.IntAst.block_type in
-	      if BlockTypeSet.mem x_block new_encountered_blocks 
-	      then raise (Bad_recursion( [ block_type ; x_block ], "block déja rencontré" ))
-	      else 
-		if fst x_block = id && (snd x_block) >= parameters
-		then raise (Bad_recursion ( [ block_type ; x_block ], "paramètres non décroissant" ))
-		else 
-		  try
-		    reify_blocks x.IntAst.block_type abstract_blocks new_encountered_blocks map devices_names
-		  with Bad_recursion (l,s) -> raise (Bad_recursion (block_type::l,s))
-	  in ConcreteBlockMap.add block_type int_block_def
-	       (List.fold_left next_call concrete_blocks int_block_def.IntAst.instantiations)
+    let patterns = 
+      try StringMap.find id abstract_blocks 
+      with Not_found -> raise (Instance_not_found block_type) in
+    let parameters = snd block_type in
+      if not (for_all ((<=) 0) parameters)
+      then raise (Bad_recursion( [ block_type ], "paramètre(s) négatif(s)" )) ;
+      let block_def,map = 
+	try 
+	  get_block_type_definition parameters patterns 
+	with Instance_not_found _ -> raise (Instance_not_found block_type)
+      in
+      let int_block_def = IntegerToInt.block_type_definition map block_def in
+      let new_encountered_blocks = BlockTypeSet.add block_type encountered_blocks in
+      let next_call map (x : IntAst.instantiation) = 
+	let x_block = x.IntAst.block_type in
+	  if BlockTypeSet.mem x_block new_encountered_blocks 
+	  then raise (Bad_recursion( [ block_type ; x_block ], "block déja rencontré" ))
+	  else 
+	    if fst x_block = id && (snd x_block) >= parameters
+	    then raise (Bad_recursion ( [ block_type ; x_block ], "paramètres non décroissant" ))
+	    else 
+	      try
+		reify_blocks x.IntAst.block_type abstract_blocks new_encountered_blocks map devices_names
+	      with Bad_recursion (l,s) -> raise (Bad_recursion (block_type::l,s))
+      in ConcreteBlockMap.add block_type int_block_def
+	   (List.fold_left next_call concrete_blocks int_block_def.IntAst.instantiations)
+  else
+    concrete_blocks
 
 
 (** levée lorsque deux blocks du même nom
@@ -259,6 +258,11 @@ exception Undefined_start_block
 (** point d'entrée de l'analyseur sémantique 
     retourne une paire formée d'un IntAst.block_type
     et d'une IntAst.block_type_definition ConcreteBlockMap.t
+
+    A cause d'un fold_left l'odre des blocks est inversé au départ.
+    L'ordre des blocs importe seulement au niveau des pattern : 
+    ceux ci sont réempilés dans le bon ordre lors de la construction
+    de abstract_blocks
 *)
 let analyse_circuit (fst_circuit, circuit_blocks, circuit_devices) = 
   let fst_circuit = match fst_circuit with
