@@ -156,7 +156,14 @@ let create_graph graph_style analysed_ast output_graph output_graph_pdf label =
   match graph_style with
     | Graph1 -> Graph1Type ([||],[],[],[]) 
     | Graph2 -> 
-	let (g,_) as graph = Graph2.AstToGraph.main analysed_ast in
+	let open Graph2.AstToGraph in
+	let (g,_) as graph = 
+	  try main analysed_ast 
+	  with Plug_out map ->
+	    Printf.printf "présence de cycles :\n%s" 
+	      (Print.AstToGraphPrinter.complex_wire_map map) ;
+	    exit 1
+	in
 	  begin
 	    if output_graph <> ""
 	    then output_to_file output_graph (Print.GraphPrinter.graph g)

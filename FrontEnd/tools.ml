@@ -71,7 +71,6 @@ open IntegerToInt
 open Print
 open IntAstPrinter
 
-
 let rec analyse_exception = function
   | Free_Variable s -> printf "variable libre : %s\n" s
   | Zero_Sized_Wire s -> printf "fil de taille nulle %s\n" s

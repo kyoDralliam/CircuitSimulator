@@ -175,3 +175,27 @@ struct
     | AT -> "@"
     | CONST s -> "$"^s
 end
+
+
+module AstToGraphPrinter =
+struct
+
+  open Graph2.AstToGraph
+  open Printf
+
+  let node_location (n,p,o) =
+    sprintf "%s -> %s" (IntAstPrinter.block_type (n,p)) o
+  
+
+  let simple_wire_ref x = 
+    match fst !x with
+      | Unplug l ->
+	  mk_string ~b:"[ " ~e:" ]" ~sep:" ; " node_location l
+      | Plug _ -> ""
+
+  let complex_wire_map map =
+    let aux _ x acc = sprintf "%s\n%s" acc 
+      (mk_string ~sep:"\n" simple_wire_ref x) in
+    WMap.fold aux map "" 
+
+end

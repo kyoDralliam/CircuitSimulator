@@ -3,8 +3,32 @@ open List
 open Ast
 open IntAst
 
-type simple_wire = (int*int) option * (int*int) list
+
+module WMap = Wire.WireIdentMap 
+
+(* repère la position d'un branchement entre deux fil
+ * permet de repérer certaines erreurs de circuits cycliques
+ * identifiant du bloc contenant ce fil en sortie
+ *                     | params de ce bloc
+ *                     |     |    nom du fil en sortie
+ *                     v     v        v             *)
+type node_location = id * int list * id
+(* 
+ *    numéro de la porte ds graph 
+ *                      |     numéro de la sortie
+ *                      v     v    *)
+type origin_location = int * int
+
+
+type wire_origin =
+    Unplug of node_location list
+  | Plug of origin_location
+
+type simple_wire = wire_origin * (int*int) list
 type complex_wire = simple_wire ref list
+
+exception Plug_out of complex_wire WMap.t
+
 
 (** Portes de base *)
 type gate = 
@@ -97,8 +121,6 @@ let rec collect ?(i=0) min max = function
 	then []
 	else collect ~i:(i+1) min max xs
 
-module WMap = Wire.WireIdentMap 
-
 let main (start, block_type_definitions, device_list) =
 
   let new_device_list = map fst device_list in
@@ -110,7 +132,7 @@ let main (start, block_type_definitions, device_list) =
     with Not_found -> assert false
   in
 
-  let make_simple_wire () = None, [] in
+  let make_simple_wire () = Unplug [], [] in
   let rec make_complex_wire ?(acc=[]) = function
     | 0 -> acc
     | n -> make_complex_wire ~acc:((ref (make_simple_wire ()))::acc) (n-1)
@@ -123,7 +145,7 @@ let main (start, block_type_definitions, device_list) =
     let plug_to_input complex_wire =
       let wire_count = ref 0 in
       let aux simple_wire_ref =
-	simple_wire_ref := Some (!n_max,!wire_count) , snd !simple_wire_ref ;
+	simple_wire_ref := Plug (!n_max,!wire_count) , snd !simple_wire_ref ;
 	incr wire_count 
       in
 	iter aux complex_wire ; 
@@ -297,7 +319,7 @@ let main (start, block_type_definitions, device_list) =
       
       le fil n° k en entrée du bloc B est soit de la 
       forme ((Some (i0,k0)), [| [ .. ] ; ...|])
-      ^ case n° k0
+                                  ^ case n° k0
       soit de la forme (None, [| [ .. ] ; ...|])
       que l'on transforme respectivement en 
       ((Some (i0,k0)), [| ... ; [ ..; (i,k) ;.. ] ; ...|])
@@ -311,12 +333,12 @@ let main (start, block_type_definitions, device_list) =
 	let plug j w' =
 	  begin
 	    match fst !w' with
-	      | Some (input_index, output_num) ->
+	      | Plug (input_index, output_num) ->
 		  assert ( input_index < max_size) ;
 		  let gate,output_array = graph.(input_index) in
 		    assert ( output_num < Array.length output_array ) ;
 		    output_array.(output_num) <- (!n_max,j)::output_array.(output_num) 
-	      | None -> ()
+	      | Unplug _ -> ()
 	  end ;
 	  w' := fst !w', (!n_max,i)::(snd !w') ;
 	  j+1
@@ -324,9 +346,9 @@ let main (start, block_type_definitions, device_list) =
 	  fold_left plug i (make_wire w)
       in
       let process_output_wire out i output_wire =
-	  output_wire := (Some (!n_max,i)), snd !output_wire ;
+	  output_wire := (Plug (!n_max,i)), snd !output_wire ;
 	    assert ( i < Array.length out) ;
-	    out.(i) <- (snd !output_wire) @ out.(i) ;
+	    out.(i) <- (snd !output_wire) @ out.(i) ; 
 	    i + 1
       in
       let process_base_block_or_device output_names assertion =
@@ -347,7 +369,7 @@ let main (start, block_type_definitions, device_list) =
       in
       let n_enable,w_enable = 
 	match inst.enable with
-	  | None -> -1 , ref (None,[])
+	  | None -> -1 , ref (Unplug [],[])
 	  | Some w -> !n_max, match make_wire w with
 	      | [x] -> x
 	      | _ -> assert false
@@ -387,21 +409,28 @@ let main (start, block_type_definitions, device_list) =
 	en mettant à jour le graphe
     *)
     let plug_outputs wire_def =
+      let wire_name = fst (fst wire_def) in
       let extern_wire = 
-	try WMap.find (Some "sortie", fst (fst wire_def)) !wire_map 
+	try WMap.find (Some "sortie", wire_name) !wire_map 
 	with Not_found -> assert false in 
       let intern_wire = make_wire (snd wire_def) in
       let plug_simple_wire intern_wire extern_wire =
 	let new_outputs = snd !extern_wire in
 	let input = fst !intern_wire in
-	  (match input with
-	     | None -> () (* assert false *)
-	     | Some (input_index,output_num) -> 
+	let new_input = 
+	  match input with
+	    | Unplug l -> 
+		let x = block_def.name, block_def.parameters, wire_name in
+		  Unplug (x::l)
+	    | (Plug (input_index,output_num)) as input-> 
 		 assert ( input_index < max_size ) ;
 		 let _,output_array = graph.(input_index) in
-		    assert ( output_num < Array.length output_array ) ;
-		   output_array.(output_num) <- new_outputs @ output_array.(output_num)) ;
-	  extern_wire := input, (snd !intern_wire) @ new_outputs
+		   assert ( output_num < Array.length output_array ) ;
+		   let res = new_outputs @ output_array.(output_num) in
+		   output_array.(output_num) <- res ;
+		   input
+	in
+	  extern_wire := new_input, (snd !intern_wire) @ new_outputs
       in
 	assert (length extern_wire = length intern_wire) ;
 	iter2 plug_simple_wire intern_wire extern_wire
@@ -416,6 +445,24 @@ let main (start, block_type_definitions, device_list) =
 
   in
 
+  let check_output output_map =
+    let exists_unplugged x = 
+      match fst !x with 
+	| Unplug _ -> true 
+	| Plug _ -> false 
+    in
+    let map_fun = filter exists_unplugged in
+    let unplugged_map = WMap.filter (fun _ l -> l <> []) 
+      (WMap.map map_fun output_map) in
+      if unplugged_map <> WMap.empty
+      then raise (Plug_out unplugged_map)
+  in
+
     make_graph start input_list output_map ;
-    let res_enable_list = List.map (fun (i,j,w) -> i, j,match fst !w with Some x -> x | None -> assert false) !enable_list in
-    graph, (input_count, output_count, !register_count, !device_count, res_enable_list, device_list)
+    check_output output_map ;
+    let map_fun (i,j,w) = i, j,
+      match fst !w with Plug x -> x | Unplug _ -> assert false 
+    in
+    let res_enable_list = List.map map_fun !enable_list in
+      graph, (input_count, output_count, !register_count, !device_count, res_enable_list, device_list)
+	
