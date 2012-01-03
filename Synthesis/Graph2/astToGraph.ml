@@ -395,7 +395,7 @@ let main (start, block_type_definitions, device_list) =
 	let new_outputs = snd !extern_wire in
 	let input = fst !intern_wire in
 	  (match input with
-	     | None -> assert false
+	     | None -> () (* assert false *)
 	     | Some (input_index,output_num) -> 
 		 assert ( input_index < max_size ) ;
 		 let _,output_array = graph.(input_index) in
