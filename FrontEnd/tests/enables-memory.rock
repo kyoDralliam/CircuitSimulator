@@ -1,0 +1,220 @@
+And_scalar <1> (a, b[1])
+	And A(a,b)
+	-> o : A.o;
+
+And_scalar <n> (a, b[n])
+	And_scalar<n-1> Low(a, b[0..n-2])
+	And High(a, b[n-1])
+	-> o[n] : {Low.o, High.o};
+
+And_vector <1> (a[1], b[1])
+	And A(a,b)
+	-> o : A.o;
+And_vector <n> (a[n], b[n])
+	And_vector<n-1> Low(a[0..n-2], b[0..n-2])
+	And High(a[n-1], b[n-1])
+	-> o[n] : { Low.o , High.o }  ;
+
+
+Not_vector <1> (a[1])
+	Not N(a)
+	-> o : N.o;
+Not_vector <n> (a[n])
+	Not_vector<n-1> Low(a[0..n-2])
+	Not High(a[n-1])
+	-> o[n] : { Low.o , High.o };
+
+And_fold <1> (a[1])
+	-> o : a;
+And_fold <n> (a[n])
+	And_fold<n-1> Tail(a[0..n-2])
+	And Head(a[n-1], Tail.o)
+	-> o : Head.o;
+
+Or_vector <1> (a[1], b[1])
+	Or O(a,b)
+	-> o : O.o;
+Or_vector <n> (a[n], b[n])
+	Or_vector<n-1> Low(a[0..n-2], b[0..n-2])
+	Or High(a[n-1], b[n-1])
+	-> o[n] : {Low.o, High.o};
+
+Or_scalar <1> (a, b[1])
+	Or O(a,b)
+	-> o : O.o;
+
+Or_scalar <n> (a, b[n])
+	Or_scalar<n-1> Low(a, b[0..n-2])
+	Or High(a, b[n-1])
+	-> o[n] : {Low.o, High.o};
+
+Mux_scalar <1> (selector, input0[1], input1[1])
+	Mux M(selector, input0, input1)
+	-> o : M.o;
+Mux_scalar <n> (selector, input0[n], input1[n])
+	Mux_scalar<n-1> Low(selector, input0[0..n-2], input1[0..n-2])
+	Mux High(selector, input0[n-1], input1[n-1])
+	-> o[n] : {Low.o, High.o};
+
+
+Demux <1,d> (selector[1], input[d])
+	Not Not_selector(selector)
+	And_scalar<d> Out0(Not_selector.o, input)
+	And_scalar<d> Out1(selector, input)
+	-> output[2*d] : {Out0.o, Out1.o};
+
+Demux <a,d> (selector[a], input[d])
+	Demux<a-1,d> Sub(selector[0..a-2], input)
+	Not Not_selector_msb(selector[a-1])
+	And_scalar<d*2^(a-1)> Low(Not_selector_msb.o, Sub.output)
+	And_scalar<d*2^(a-1)> High(selector[a-1], Sub.output)
+	-> output[2^a*d] : {Low.o, High.o};
+
+
+Sub_demux2 <1,d> (selector[1], not_selector[1], input[d])
+	And_scalar<d> Out0(not_selector, input)
+	And_scalar<d> Out1(selector, input)
+	-> output[2*d] : {Out0.o, Out1.o};
+
+Sub_demux2 <a,d> (selector[a], not_selector[a], input[d])
+	And_scalar<d> Link_low(not_selector[a-1], input)
+	And_scalar<d> Link_high(selector[a-1], input)
+	Sub_demux2<a-1,d> Low(selector[0..a-2], not_selector[0..a-2], Link_low.o)
+	Sub_demux2<a-1,d> High(selector[0..a-2], not_selector[0..a-2], Link_high.o)
+	-> output[2^a*d] : {Low.output, High.output};
+
+Demux2 <a,d> (selector[a], input[d])
+	Not_vector<a> Not_selector(selector)
+	Sub_demux2<a,d> Sub(selector, Not_selector.o, input)
+	-> output[2^a*d] : Sub.output;
+
+
+Mux_wide <1,d> (selector[1], input[d*2^1])
+	Mux_scalar<d> M(selector, input[0..d-1], input[d..2*d-1])
+	-> output[d] : M.o;
+Mux_wide <a,d> (selector[a], input[d*2^a])
+	Mux_wide<a-1,d> Low(selector[0..a-2], input[0..d*2^(a-1)-1])
+	Mux_wide<a-1,d> High(selector[0..a-2], input[d*2^(a-1)..d*2^a-1])
+	Mux_scalar<d> M(selector[a-1], Low.output, High.output)
+	-> output[d] : M.output;
+
+
+Ram <0,1> (data[1], write)
+	Mux M(write, R.o, data[0])
+	Reg R(M.o)	
+	-> data[1] : R.o;
+
+Ram <0,d> (data[d], write)
+	Ram<0,d-1> Low(data[0..d-2], write)
+	Ram<0,1> High(data[d-1], write)
+	-> data[d] : {Low.data, High.data};
+
+Ram <1,d> (address[1], data[d], write)
+        Not N(address[0])
+	Ram<0,d> @ address[0] Low(data, write)
+	Ram<0,d> @ N.o High(data, write)
+	Mux_scalar<d> M(address, Low.data, High.data)
+	-> data[d] : M.o;
+
+Ram <a,d> (address[a], data[d], write)
+        Not N(address[a-1])        
+	Ram<a-1,d> @ N.o Low(address[0..a-2], data, write)
+	Ram<a-1,d> @ address[a-1] High(address[0..a-2], data, write)
+	Mux_scalar<d> M(address[a-1], Low.data, High.data)
+	-> data[d] : M.o;
+
+Vdd_vect<1>
+    Vdd V
+    -> o : V.o;
+
+Vdd_vect<n>
+    Vdd_vect<n-1> V
+    -> o[n] : { V.o[0], V.o };
+
+Gnd_vect<1>
+    Gnd G
+    -> o : G.o;
+
+Gnd_vect<n>
+    Gnd_vect<n-1> G
+    -> o[n] : { G.o[0], G.o };
+
+Pulse
+    Reg R(V.o)
+    Vdd V
+    Not N(R.o)
+    -> o : N.o;
+
+Delay<1,1> (x[1])
+    Reg R(x)
+    -> o[1] : R.o;
+Delay<w+1,1> (x[w+1])
+    Reg R(x[0])
+    Delay<w,1> D(x[1..w])
+    -> o[w+1] : {R.o, D.o};
+Delay<w,n+1> (x[w])
+    Delay<w,n> D(x)
+    Delay<w,1> R(D.o)
+    -> o[w] : R.o;
+
+Binary<1,0>
+    Gnd G
+    ->o : G.o;
+Binary<1,1>
+    Vdd V
+    ->o : V.o;
+Binary<b+1,0>
+    Binary<b,0> B
+    Gnd G
+    ->o[b+1] : {G.o, B.o};
+Binary<b+1,2*n>
+    Binary<b,n> B
+    Gnd G
+    ->o[b+1] : {G.o, B.o};
+Binary<b+1,2*n+1>
+    Binary<b,n> B
+    Vdd V
+    ->o[b+1] : {V.o, B.o};
+
+Serial<w,1> (data[w])
+    Pulse P
+    And_scalar<w> A(P.o, data)
+    -> o[w] : A.o;
+
+Serial<w,l+1> (data[w*(l+1)])
+    Serial<w,l> H(data[w..w*(l+1)-1])
+    Delay<w,1> D(H.o)
+    Serial<w,1> L(data[0..w-1])
+    Or_vector<w> O(D.o,L.o)
+    -> o[w] : O.o;
+
+Start<a,d> ()
+    Ram<a,d> M(Address.o, Data.o, Write.o)
+
+    Binary<a,0> A0
+    Binary<a,0> A1
+    Binary<a,0> A2
+    Binary<a,1> A3
+    Binary<a,0> A4
+    Binary<a,1> A5
+    Serial<a,6> Address({A0.o, A1.o, A2.o, A3.o, A4.o, A5.o})
+
+    Binary<d,0> D0
+    Binary<d,42> D1
+    Binary<d,0> D2
+    Binary<d,37> D3
+    Binary<d,0> D4
+    Binary<d,0> D5
+    Serial<d,6> Data({D0.o, D1.o, D2.o, D3.o, D4.o, D5.o})
+    
+    Binary<1,0> W0
+    Binary<1,1> W1
+    Binary<1,0> W2
+    Binary<1,1> W3
+    Binary<1,0> W4
+    Binary<1,0> W5
+    Serial<1,6> Write({W0.o, W1.o, W2.o, W3.o, W4.o, W5.o})
+
+    -> o[8] : M.data;
+    
+start Start<8,8>
