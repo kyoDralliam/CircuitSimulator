@@ -8,6 +8,7 @@ toplevel:
 main:
 	ocamlbuild -use-menhir -lib str main.native
 	@cp _build/FrontEnd/main.native obsidian
+	rm main.native
 
 debug:
 	ocamlbuild -use-menhir -lib str main.d.byte
@@ -36,6 +37,6 @@ FrontEnd/tests/test-bus.rock -ccflags "-lncurses,-lpthread"
 clean:
 	ocamlbuild -clean
 	rm -rf compiled-tests
-
+	rm -f obsidian
 
 .PHONY: all clean run toplevel main debug tests

@@ -1,6 +1,7 @@
 #include "stdio.h"
 #include "string.h"
 #include "sys/time.h"
+#include <cstdlib>
 
 namespace {
 
@@ -9,6 +10,11 @@ char $(registers_array_name)[$(registers_array_length)]$(init_registers_array);
 char $(circuit_outputs_array_name)[$(circuit_outputs_array_length)];
 char $(circuit_inputs_array_name)[$(circuit_inputs_array_length)];
 char $(devices_array_name)[$(devices_array_length)]$(init_devices_array);
+
+int * $(active_registers_array_name);
+int * $(active_registers_gates_array_name);
+int $(active_registers_array_length) = $(active_registers_array_default_length);
+int $(active_registers_list_length) = 0;
 
 char usage_information[] = "\
 Usage: %s <options> <cycles>\n\
@@ -48,6 +54,23 @@ namespace circuit
   }
 }
 
+void $(add_active_register_function_name)(int register_number, int gate_output_number)
+ {
+    if ($(active_registers_list_length) == $(active_registers_array_length))
+     {
+        $(active_registers_array_length) *= 2;
+        $(active_registers_array_name)
+        = reinterpret_cast<int*> (realloc($(active_registers_array_name),
+        $(active_registers_array_length) * sizeof(*$(active_registers_array_name))));
+        $(active_registers_gates_array_name)
+        = reinterpret_cast<int*> (realloc($(active_registers_gates_array_name),
+        $(active_registers_array_length) * sizeof(*$(active_registers_gates_array_name))));
+     }
+    $(active_registers_list_length)++;
+    $(active_registers_array_name)[$(active_registers_list_length)-1] = register_number;
+    $(active_registers_gates_array_name)[$(active_registers_list_length)-1] = gate_output_number;
+ }
+ 
 int main (int argc, char ** argv)
  {
     int read_bytes;
@@ -61,6 +84,11 @@ int main (int argc, char ** argv)
 
     struct timeval current_time;
     struct timeval simulated_time;    
+
+    $(active_registers_array_name) = reinterpret_cast<int*>
+    (malloc($(active_registers_array_length) * sizeof(*$(active_registers_array_name))));
+    $(active_registers_gates_array_name) = reinterpret_cast<int*>
+    (malloc($(active_registers_array_length) * sizeof(*$(active_registers_gates_array_name))));
 
     $(address_var_type) $(address_var_name);
     $(data_var_type) $(data_var_name);

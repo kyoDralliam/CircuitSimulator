@@ -203,11 +203,17 @@ let create_cpp_source graph output_cpp =
 
 
 let create_executable cpp_source_file output_o cc object_files ccflags = 
-  let cmd = Printf.sprintf "%s -o '%s' '%s' '%s' '%s'" 
+  let rec quote_list =
+    List.fold_left
+      (fun strings string -> strings ^ " '" ^ string ^ "'")
+      ""
+  in
+  
+  let cmd = Printf.sprintf "%s -o '%s' '%s' %s %s" 
     cc  (String.escaped output_o)
     cpp_source_file
-    (String.concat "' '" object_files)
-    (String.concat "' '" ccflags) in
+    (quote_list object_files)
+    (quote_list ccflags) in
     Printf.printf "%s" cmd ;
     Sys.command cmd
 

@@ -1,36 +1,48 @@
 On prend :
 
-add
-addi
-and
-andi
-beg
-bne
-j
-jal
-jr
-lui
-lb
-lh
-lw
-mult
-nor
-xor
-or
-ori
-sb
-sh
-slt/home/isma/CircuitSimulator/Rapport/rapport1.tex
-slti
-sll
-srl -> voir sra
-sub
-sw
+   ArithmÃ©tique :
+   add
+   addi
+   sub
+   subi
+   mult
 
+   Logique :
+   and
+   andi
+   or
+   ori
+   xor
+   nor
 
+   Branchement :
+   beq
+   bne
+   j
+   jal
+   jr
 
+   Transfert :
+   lb
+   lh
+   lw
+   sw
+   sh
+   sb
+   lui
+   mflo
+   mfhi
+
+   Comparaison :
+   slt
+   slti
+
+   DÃ©calage :
+   sll
+   srl
+   sra
 
 On prend pas :
 
-Les opérations sur unsigned
-les divisions
+   Les operations sur unsigned
+   les divisions
