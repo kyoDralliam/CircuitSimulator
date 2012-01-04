@@ -1,0 +1,36 @@
+On prend :
+
+add
+addi
+and
+andi
+beg
+bne
+j
+jal
+jr
+lui
+lb
+lh
+lw
+mult
+nor
+xor
+or
+ori
+sb
+sh
+slt/home/isma/CircuitSimulator/Rapport/rapport1.tex
+slti
+sll
+srl -> voir sra
+sub
+sw
+
+
+
+
+On prend pas :
+
+Les opérations sur unsigned
+les divisions
