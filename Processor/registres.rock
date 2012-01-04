@@ -649,7 +649,7 @@ Cycleur <a,b,c> ()
 
 # R format
   
-DecodeurR (opcode[6], rs[5], rt[5], rd[5], shift[5], funct[6], alu[32], gestReg[32]) #rd est l'adresse du resultat
+DecodeurR<b> (opcode[6], rs[5], rt[5], rd[5], shift[5], funct[6], alu[32], gestReg[32], pc[b]) #rd est l'adresse du resultat
    Cycleur<1,0,0> CRS ()
    Cycleur<0,1,0> CRT ()
    Cycleur<0,0,1> CRD ()
@@ -661,53 +661,120 @@ DecodeurR (opcode[6], rs[5], rt[5], rd[5], shift[5], funct[6], alu[32], gestReg[
    Ou <5> SortieAdresseReg(O.o, FRD.o)
  
    Cycleur<0,0,1> FALU()
-   Delai <32> ValRS(gestReg[0..31])  
+   Delai <32> ValpreRS(gestReg[0..31])
+   Delai <32> ValRS(ValpreRS.o)
+   Delai <32> ValRT(gestReg[0..31])  
    FiltreSel <32> ValOp1(ValRS.o, FALU.o) 
-   FiltreSel <32> ValOp2(gestReg[0..31], FALU.o)
+   FiltreSel <32> ValOp2(ValRT.o, FALU.o)
 
-   -> versGestReg[38] : {CycleLectEcr.o, SortieAdresseReg.o, alu[0..31]},
-      versAlu[68] : {ValOp1.o, ValOp2.o, $1010};  #On ne met que l'addition pour l'instant
-
-# I format
-
-DecodeurI (opcode[6], rs[5], rt[5], imm[16], alu[32], gestReg[32]) #rt est l'adresse de resultat
-   Cycleur<1,0,0> CRS ()
-   Cycleur<0,0,1> CRT ()
-   Cycleur<0,0,1> CycleLectEcr()
-   FiltreSel <5> FRS(rs[0..4], CRS.o)  
-   FiltreSel <5> FRT(rt[0..4], CRT.o)   
-   Ou <5> SortieAdresseReg(FRS.o, FRT.o)
- 
-   Cycleur<0,0,1> FALU()
-   Delai <32> ValRS(gestReg[0..31])  
-   FiltreSel <32> ValOp1(ValRS.o, FALU.o) 
-   FiltreSel <32> ValOp2({imm[0..15], $0000000000000000}, FALU.o)
+   Cycleur<0,0,1> CPC()
+   Entier <1,b> Un()
+   FiltreSel <b> Ajout(Un.o, CPC.o)
+   Adder <b> NouvPC(pc[0..b-1], Ajout.o) 
 
    -> versGestRegModeEcr :  CycleLectEcr.o,
       versGestRegAd[5] : SortieAdresseReg.o, 
       versGestRegVal[32] :  alu[0..31],
       versAluOp1[32] : ValOp1.o, 
       versAluOp2[32] : ValOp2.o,
-      versAluTypeOp[4] : $1010;  #On ne met que l'addition pour l'instant        
+      versAluTypeOp[4] : $1010,  #On ne met que l'addition pour l'instant 
+      versPC[b] : NouvPC.o,
+      sortieConc[1+5+32+32+32+4+b] : 
+      {CycleLectEcr.o, SortieAdresseReg.o, alu[0..31], ValOp1.o, ValOp2.o, $1010, NouvPC.o};
+
+# I format
+
+DecodeurI <b> (opcode[6], rs[5], rt[5], imm[16], alu[32], gestReg[32], pc[b]) #rt est l'adresse de resultat
+   Cycleur<0,1,0> CRS () # a revoir
+   Cycleur<0,0,1> CRT ()
+   Cycleur<0,0,1> CycleLectEcr()
+   FiltreSel <5> FRS(rs[0..4], CRS.o)  
+   FiltreSel <5> FRT(rt[0..4], CRT.o)   
+   Ou <5> SortieAdresseReg(FRS.o, FRT.o) 
+
+   Cycleur<0,0,1> FALU()
+   Delai <32> ValRS(gestReg[0..31])  
+   FiltreSel <32> ValOp1(ValRS.o, FALU.o) 
+   FiltreSel <32> ValOp2({imm[0..15], $0000000000000000}, FALU.o)
+
+   Cycleur<0,0,1> CPC()
+   Entier <1,b> Un()
+   FiltreSel <b> Ajout(Un.o, CPC.o)
+   Adder <b> NouvPC(pc[0..b-1], Ajout.o) 
+
+   -> versGestRegModeEcr :  CycleLectEcr.o,
+      versGestRegAd[5] : SortieAdresseReg.o, 
+      versGestRegVal[32] :  alu[0..31],
+      versAluOp1[32] : ValOp1.o, 
+      versAluOp2[32] : ValOp2.o,
+      versAluTypeOp[4] : $1010,  #On ne met que l'addition pour l'instant 
+      versPC[b] : NouvPC.o,        
+      sortieConc[1+5+32+32+32+4+b] : 
+      {CycleLectEcr.o, SortieAdresseReg.o, alu[0..31], ValOp1.o, ValOp2.o, $1010, NouvPC.o};
+
+#Decodeur J
+
+DecodeurJ <b> (opcode[6], nouvAdresse[26], pc[b])
+   Cycleur<0,0,1> CNPC()
+   Cycleur<1,1,0> CPC()
+   FiltreSel <b> NouvPC(nouvAdresse[0..b-1], CNPC.o)
+   FiltreSel <b> PC(pc[0..b-1], CPC.o) 
+   Ou <b> ProchValPC(NouvPC.o, PC.o) 
+
+   -> versGestRegModeEcr :  $0,
+      versGestRegAd[5] : $00000, 
+      versGestRegVal[32] :  $00000000000000000000000000000000,
+      versAluOp1[32] : $00000000000000000000000000000000, 
+      versAluOp2[32] : $00000000000000000000000000000000,
+      versAluTypeOp[4] : $0000,
+      versPC[b] : ProchValPC.o,        
+      sortieConc[1+5+32+32+32+4+b] : 
+      {$0, $00000, $00000000000000000000000000000000, $00000000000000000000000000000000, $00000000000000000000000000000000, $0000, ProchValPC.o};  
+
+
+#Decodeur
+
+Controleur <b> (instr[32], alu[32], gestReg[32], pc[b])
+    Egal <6> OpcodeR(instr[0..5], $000000)
+    Egal <6> OpcodeJ(instr[0..5], $010000)
+    Nou  <1> OpcodeI(OpcodeR.o, OpcodeJ.o)
+    
+    DecodeurR <b> DR(instr[0..5], instr[6..10], instr[11..15], instr[16..20], instr[21..25], instr[26..31], alu[0..31], gestReg[0..31], pc[0..b-1])
+    FiltreSel <1+5+32+32+32+4+b> SortieR(DR.sortieConc, OpcodeR.o)
+    DecodeurI <b> DI(instr[0..5], instr[6..10], instr[11..15], instr[16..31], alu[0..31], gestReg[0..31], pc[0..b-1])
+    FiltreSel <1+5+32+32+32+4+b> SortieI(DI.sortieConc, OpcodeI.o)
+    DecodeurJ <b> DJ(instr[0..5], instr[6..31], pc[0..b-1])
+    FiltreSel <1+5+32+32+32+4+b> SortieJ(DJ.sortieConc, OpcodeJ.o) 
+
+    Ou <1+5+32+32+32+4+b> O(SortieR.o, SortieI.o)
+    Ou <1+5+32+32+32+4+b> Res(O.o, SortieJ.o)        
+
+    ->versGestRegModeEcr :  Res.o[0],
+      versGestRegAd[5] : Res.o[1..5], 
+      versGestRegVal[32] :  Res.o[6..37],
+      versAluOp1[32] : Res.o[38..69], 
+      versAluOp2[32] : Res.o[70..101],
+      versAluTypeOp[4] : $1010,  #On ne met que l'addition pour l'instant 
+      versPC[b] : Res.o[106..106+b-1];
 
 #Mini-Micro
 
-ProgCounter <b> ()  #Version très primitive
-   Zero <b> Z
-   -> o[b] : Z.o;
+ProgCounter <b> (nouvVal[b])  #Version primitive
+   Delai<b> Res(nouvVal[0..b-1])
+   -> o[b] : Res.o;
 
 #n designe le nombre d'instructions, b le nombre de bits d'adressage d'une instruction
 
 MiniMicro <n,b> (prog[n*32])
-   ProgCounter <b> PC()
+   ProgCounter <b> PC(C.versPC[0..b-1])
    Executeur <n,32,b> I(prog[0..n*32-1], PC.o)
-   FiltreSel<32> F(D.versAluOp1[0..31], $1)
-   Alu <32> ALU(F.o[0..31], D.versAluOp2[0..31], D.versAluTypeOp[0..3])
-   Gestionnaire <32,32> GR(D.versGestRegModeEcr, D.versGestRegAd[0..4], D.versGestRegVal[0..31])
-   DecodeurI D(I.o[0..5], I.o[6..10], I.o[11..15], I.o[16..31], ALU.o, GR.o)
-   -> o[32] : ALU.o;
+   FiltreSel<32> F(C.versAluOp1[0..31], $1)
+   Alu <32> ALU(F.o[0..31], C.versAluOp2[0..31], C.versAluTypeOp[0..3])
+   Gestionnaire <32,32> GR(C.versGestRegModeEcr, C.versGestRegAd[0..4], C.versGestRegVal[0..31])
+   Controleur <b> C(I.o[0..31], ALU.o, GR.o, PC.o)
+   -> o[32] : ALU.o;     
 
-start MiniMicro<1,1>
+start MiniMicro<8,5>
 
 
 
