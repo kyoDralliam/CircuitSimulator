@@ -1,5 +1,7 @@
 open AstToGraph
 
+module MapInt = Map.Make(struct type t = int let compare = Pervasives.compare end)
+
 (* On choisit les noms qu'auront les différents tableaux utilisés dans le
    code C++ :
 *)
@@ -32,6 +34,16 @@ let device_prefix = "device_"
 let device_cycle_method_name = "cycle"
 let device_make_method_name = "make"
 let device_class_name = "device"
+
+(* Le tableau où l'on suvegardera la valeur des registres qui on été activés
+   à ce cycle
+*)
+let active_registers_array_name = "active_registers"
+let active_registers_gates_array_name = "active_registers_gates"
+let active_registers_array_length = "active_registers_array_length"
+let active_registers_list_length = "active_registers_list_length"
+let active_registers_array_default_length = 0x10000
+let add_active_register_function_name = "add_active_register"
 
 (* Ces variables servent à stocker les versions "compressées" des entrées
    et des sorties des périphériques
@@ -81,10 +93,188 @@ let rec fold_left_for f x first last =
   else
     x
 
+type enables_tree =
+  | Enables_Tree_Node of ( (int * int * (int * int) option) * enables_tree list )
+
+let make_enables_tree graph enables_list =
+  let rec make_enables_subtree (first, last) brothers = function
+    | [] -> (brothers, [])
+    | ((first',last',enable)::t) as l when first' > last || last' < first ->
+        (brothers, l)
+    | ((first',last',enable)::t) ->
+        assert (last' <= last);
+        let (sons, t) = make_enables_subtree (first', last') [] t in
+        make_enables_subtree
+          (first, last)
+          ((Enables_Tree_Node ((first',last',Some enable), sons)) :: brothers)
+          t
+  in
+
+  let first = 0 in
+  let last = Array.length graph - 1 in
+  let (sons, t) = make_enables_subtree (first, last) [] enables_list in
+  assert (t = []);
+
+  Enables_Tree_Node ((first, last, None), sons)
+
 type topological_sort_state =
   | Not_Processed
   | Being_Processed
   | Processed
+
+let rec explore_grouping_enables graph enables_tree
+    simple_explore next_num_to_give =
+  
+  let ((top_first, top_last, _), macronodes) = match enables_tree with
+    | Enables_Tree_Node x -> x
+  in
+
+  let number_of_macronodes = List.length macronodes in
+
+  let macronode_state = Array.make number_of_macronodes Not_Processed in
+
+  let node_state = Array.make (top_last - top_first + 1) Not_Processed in
+ 
+  let find_macronode node_old =
+    (* TODO : Utiliser une méthode plus efficace ? *) 
+    let rec find macronode_number = function
+      | [] -> None
+      | Enables_Tree_Node ( ((first, last, _), _) as m )::t ->
+        if first <= node_old && node_old <= last then
+          Some (macronode_number, m)
+        else
+          find (macronode_number + 1) t
+    in
+    find 0 macronodes
+  in
+  
+  let rec explore next_num_to_give
+      (macronode_number, (((first, last, _), _) as macronode)) =
+
+    match macronode_state.(macronode_number) with
+      | Not_Processed ->
+          begin
+            macronode_state.(macronode_number) <- Being_Processed;
+            
+            let next_num_to_give = fold_left_for
+              (fun next_num_to_give i -> match fst graph.(i) with
+                | Register | Device _ -> next_num_to_give
+                | _ ->
+                    Array.fold_right
+		      (fun target_nodes next_num_to_give ->
+                        List.fold_left
+		          (fun next_num_to_give (target_node_old,_) ->
+		            if target_node_old >= top_first &&
+                              target_node_old <= top_last then
+                                match find_macronode target_node_old with
+                                  | None ->
+                                      explore_from_node
+                                        next_num_to_give
+                                        target_node_old
+                                  | Some m -> explore next_num_to_give m
+                            else
+                              next_num_to_give)
+		          next_num_to_give
+                          target_nodes)
+        	      (snd graph.(i))
+                      next_num_to_give)
+              next_num_to_give
+              first
+              last
+            in
+            
+            let next_num_to_give = fold_left_for
+              (fun next_num_to_give i -> match fst graph.(i) with
+                | Register | Device _ -> next_num_to_give
+                | _ ->
+                    Array.fold_right
+		      (fun target_nodes next_num_to_give ->
+                        List.fold_left
+		          (fun next_num_to_give (target_node_old,_) ->
+		            if target_node_old < first
+                              || target_node_old > last then
+                                simple_explore next_num_to_give target_node_old
+                            else
+                              next_num_to_give)
+		          next_num_to_give
+                          target_nodes)
+        	      (snd graph.(i))
+                      next_num_to_give)
+              next_num_to_give
+              first
+              last
+            in
+            
+            let next_num_to_give = explore_grouping_enables
+              graph
+              (Enables_Tree_Node macronode)
+              simple_explore
+              next_num_to_give
+            in            
+
+            macronode_state.(macronode_number) <- Processed;
+            
+            next_num_to_give
+          end
+      | Being_Processed -> next_num_to_give
+          (* TODO : Essayer de trouver un ordre pas trop mauvais dans le
+                    cas où on rencontre un cycle *)
+      | Processed -> next_num_to_give
+          
+  and explore_from_node next_num_to_give node_old =
+
+    match node_state.(node_old - top_first) with
+      | Not_Processed ->
+          node_state.(node_old - top_first) <- Being_Processed;
+
+          let next_num_to_give =
+            match fst graph.(node_old) with
+              | Register | Device _ -> next_num_to_give
+              | _ ->
+                  Array.fold_right
+		    (fun target_nodes next_num_to_give ->
+                      List.fold_left
+		        (fun next_num_to_give (target_node_old,_) ->
+		          if target_node_old >= top_first &&
+                            target_node_old <= top_last then
+                              match find_macronode target_node_old with
+                                | None ->
+                                    explore_from_node
+                                      next_num_to_give
+                                      target_node_old
+                                | Some m -> explore next_num_to_give m
+                          else
+                            next_num_to_give)
+		        next_num_to_give
+                        target_nodes)
+        	    (snd graph.(node_old))
+                    next_num_to_give
+          in
+
+          node_state.(node_old - top_first) <- Processed;
+
+          next_num_to_give
+
+      | Being_Processed -> next_num_to_give
+          (* TODO : Essayer de trouver un ordre pas trop mauvais dans le
+                    cas où on rencontre un cycle *)
+      | Processed -> next_num_to_give
+          
+  in
+
+  let (next_num_to_give, _) =
+    List.fold_left
+      (fun (next_num_to_give, macronode_number) (Enables_Tree_Node m) ->
+        (explore next_num_to_give (macronode_number, m), macronode_number+1))
+      (next_num_to_give, 0)
+      macronodes
+  in
+
+  fold_left_for
+    simple_explore
+    next_num_to_give
+    top_first
+    top_last
 
 (* Effectue un tri topologique sur graph :
 
@@ -95,15 +285,16 @@ type topological_sort_state =
     new_num.(i) donne la position du noeud i dans le tri topologique, et
      old_num.(j) donne le numéro du noeud en position j dans le tri topologique.
 
-    Dans graph, les premières cases doivent correspondre aux sorties du circuit,
-    les suivantes aux entrées du circuit, et les autres portes doivent être
+    Dans graph, les premières cases doivent correspondre aux entrées du circuit,
+    les suivantes aux sorties du circuit, et les autres portes doivent être
     placées ensuite. On garantit alors que l'ordre relatif des entrées et celui
     des sorties sont préservés par le tri topologique.
     
     Si graph contient un cycle qui n'est pas "coupé" par un registre ou un
     périphérique, la fonction lève une exception.
 *) 
-let topological_sort graph number_of_circuit_inputs number_of_circuit_outputs =
+let topological_sort graph number_of_circuit_inputs 
+    number_of_circuit_outputs enables_tree =
  
   let new_num = Array.make (Array.length graph) (-1) in
   let old_num = Array.make (Array.length graph) (-1) in
@@ -147,13 +338,26 @@ let topological_sort graph number_of_circuit_inputs number_of_circuit_outputs =
 	
   in
 
-  (* Explore les sorties du cricuit, puis les entrées *)
+  (* Explore les sorties du cricuit *)
+  let next_num_to_give = fold_right_for
+    (fun i next_num_to_give ->
+      explore next_num_to_give i)
+    number_of_circuit_inputs
+    (number_of_circuit_inputs + number_of_circuit_outputs - 1)    
+    ((Array.length old_num) - 1) 
+  in
+
+  let next_num_to_give =
+    explore_grouping_enables graph enables_tree explore next_num_to_give
+  in
+
+  (* Explore les entrées du cricuit *)
   let next_num_to_give = fold_right_for
     (fun i next_num_to_give ->
       explore next_num_to_give i)
     0
-    (number_of_circuit_inputs + number_of_circuit_outputs - 1)    
-    ((Array.length old_num) - 1) 
+    (number_of_circuit_inputs - 1)    
+    next_num_to_give
   in
 
   assert
@@ -432,7 +636,10 @@ let node_code graph old_num gates_inputs_positions gates_outputs_positions
       | Output _ -> ""
         (* Les sorties sont traitées à la fin de la simulation *)
       | Register ->
-	  registers_array_name ^ "[" ^
+          add_active_register_function_name ^
+            "(" ^ string_of_int next_register ^ ", " ^
+            string_of_int (fst gates_outputs_positions.(node_new)) ^ ");\n" ^
+	    registers_array_name ^ "[" ^
             (string_of_int next_register) ^ "] = " ^
 	    gate_code
       | Device _ -> ""
@@ -518,8 +725,9 @@ let add_device_declarations buffer graph old_num device_definitions =
   done
 
 (* Ajoute le code qui met à jour les sorties des périphériques. *)
-let add_device_codes buffer graph old_num gates_inputs_positions
-    gates_outputs_positions =
+let add_device_codes buffer graph old_num
+    move_in_enables_tree move_to_root_in_enables_tree
+    gates_inputs_positions gates_outputs_positions =
 
   let margin = String.make 8 ' ' in
   let device_number = ref 0 in
@@ -528,6 +736,8 @@ let add_device_codes buffer graph old_num gates_inputs_positions
     match fst graph.(old_num.(i)) with
       | Device (name, parameters) ->
           
+          move_in_enables_tree buffer old_num.(i);
+
           let rec pack_inputs inputs_positions first_bit last_bit =
             if first_bit = last_bit then
               Buffer.add_string buffer
@@ -576,8 +786,8 @@ let add_device_codes buffer graph old_num gates_inputs_positions
                 (string_of_int 
                   (!device_number * 33 + j)) ^
                 "] = (" ^
-                data_var_name ^ " & 0b1" ^ (String.make j '0') ^
-                ") ? 1 : 0;\n")
+                data_var_name ^ " & (1 << " ^ (string_of_int j) ^
+                ")) ? 1 : 0;\n")
           done;
 
           incr device_number;
@@ -585,6 +795,10 @@ let add_device_codes buffer graph old_num gates_inputs_positions
           Buffer.add_string buffer "\n"
       | _ -> ()
   done;
+
+  Buffer.add_string buffer "\n";
+
+  move_to_root_in_enables_tree buffer;
 
   device_number := 0;
   Buffer.add_string buffer "\n";
@@ -622,17 +836,43 @@ let add_device_deletions buffer graph old_num =
       | _ -> ()
   done
 
+let add_enables_to_outputs graph enables =
+  (* Un peu moche comme façon de procéder... *)
+  List.iter
+    (fun (first, last, (e_node, e_output)) ->
+      for i = first to last do
+        (snd graph.(e_node)).(e_output) <-
+          (i, -1) :: (snd graph.(e_node)).(e_output)
+      done)
+    enables
+
+let remove_enables_from_outputs graph enables =
+  List.iter
+    (fun (first, last, (e_node, e_output)) ->
+      for i = first to last do
+        match (snd graph.(e_node)).(e_output) with
+          | h::t ->
+              assert (snd h = -1);
+              (snd graph.(e_node)).(e_output) <- t
+          | [] -> assert false
+      done)
+    enables
+
 (* Crée le code source d'un programme C++ qui simule l'exécution du cricuit
    passé en argument, en prenant ses entrées sur l'entrée standard (dans
    l'ordre de la liste circuit_inputs) et en écrivant ses sorties sur la
    sortie standard (dans l'ordre de la liste circuit_outputs)
 
    Le programme s'appelle de la façon suivante :
-   nom_du_programme [-s] CYCLES
-    -s : Afficher la valeur des sorties à chaque cycle (une ligne
-         par cycle) plutôt qu'une seule fois, après le dernier cycle
 
-    CYCLES : Durée de la simulation, en cycles
+   nom_du_programme <options> <cycles>
+   Options :
+    -s  Afficher la valeur des sorties à chaque cycle (une ligne
+        par cycle) plutôt qu'une seule fois, après le dernier cycle.
+    -c <fréquence>  Simuler <fréquence> cycles par seconde (plutôt que
+                    le maximum possible).
+
+    <cycles> : Durée de la simulation, en cycles
 
    Les entrées du circuit doivent être placées au début du tableau
    représentant le graphe, immédiatement suivies des sorties du circuit.
@@ -644,10 +884,14 @@ let circuit_code (graph, (number_of_circuit_inputs, number_of_circuit_outputs,
   
   ignore(enables); (* FIXME *)
   ignore(number_of_devices); (* FIXME *)
-  
+
+  let enables_tree = make_enables_tree graph enables in
+
+  add_enables_to_outputs graph enables;
   let (new_num,old_num) = topological_sort graph 
-    number_of_circuit_inputs number_of_circuit_outputs
+    number_of_circuit_inputs number_of_circuit_outputs enables_tree
   in
+  remove_enables_from_outputs graph enables;
 
   let (gates_outputs_positions, gates_outputs_array_size) =
     gates_outputs_positions graph old_num
@@ -721,7 +965,14 @@ let circuit_code (graph, (number_of_circuit_inputs, number_of_circuit_outputs,
     ("devices_array_name", devices_array_name);
     ("devices_array_length", string_of_int (number_of_devices * 33));
     ("init_devices_array",
-    if number_of_devices > 0 then " = {0}" else "")]
+    if number_of_devices > 0 then " = {0}" else "");
+    ("active_registers_array_name", active_registers_array_name);
+    ("active_registers_gates_array_name", active_registers_gates_array_name);
+    ("active_registers_array_length", active_registers_array_length);
+    ("active_registers_list_length", active_registers_list_length);
+    ("active_registers_array_default_length",
+    string_of_int active_registers_array_default_length);
+    ("add_active_register_function_name", add_active_register_function_name)]
   in
   
   (try
@@ -732,7 +983,55 @@ let circuit_code (graph, (number_of_circuit_inputs, number_of_circuit_outputs,
   let margin = String.make 4 ' ' in
 
   add_device_declarations res graph old_num device_definitions;
-  
+
+  let position_in_enables_tree = ref [enables_tree] in
+
+  let rec move_in_enables_tree buffer destination_old =
+    match !position_in_enables_tree with
+      | [] -> assert false
+      | (Enables_Tree_Node ((first, last, enable), sons))::parents ->
+          if destination_old >= first && destination_old <= last then
+            begin
+              let son = 
+                try
+                  Some (List.find
+                    (fun (Enables_Tree_Node ((f, l, _), _)) ->
+                    destination_old >= f && destination_old <= l)
+                    sons)
+                with
+                  | Not_found -> None
+              in
+              match son with
+                | Some ((Enables_Tree_Node ((f, l, e), _)) as n)->
+                    position_in_enables_tree :=
+                      n :: (!position_in_enables_tree);
+                    let (e_node, e_output) = match e with
+                      | None -> assert false
+                      | Some x -> x
+                    in
+                    Buffer.add_string buffer
+                      ("if (" ^ gates_outputs_array_name ^ "[" ^
+                        string_of_int 
+                      (fst gates_outputs_positions.(new_num.(e_node)) 
+                      + e_output - first_input_number) ^
+                        "]) {\n");
+                    move_in_enables_tree buffer destination_old
+                | None -> ()
+            end
+          else
+            begin
+              Buffer.add_string buffer "}\n";
+              position_in_enables_tree := parents;
+              move_in_enables_tree buffer destination_old
+            end
+  in
+  let move_to_root_in_enables_tree buffer =
+    Buffer.add_string res
+      (String.make (List.length (!position_in_enables_tree) - 1) '}');
+    Buffer.add_string res "\n";
+    position_in_enables_tree := [enables_tree]
+  in
+
   begin
     let position_in_circuit_inputs_array = ref 0 in
     
@@ -740,12 +1039,12 @@ let circuit_code (graph, (number_of_circuit_inputs, number_of_circuit_outputs,
       for j = 0 to snd circuit_inputs_positions.(i) - 1 do
         Buffer.add_string res
           (margin ^ gates_outputs_array_name ^
-          "[" ^
-          (string_of_int (fst circuit_inputs_positions.(i) + j)) ^
-          "] = " ^
-          circuit_inputs_array_name ^ 
-          "[" ^ (string_of_int (!position_in_circuit_inputs_array)) ^ "];\n");
-          incr position_in_circuit_inputs_array
+            "[" ^
+            (string_of_int (fst circuit_inputs_positions.(i) + j)) ^
+            "] = " ^
+            circuit_inputs_array_name ^ 
+            "[" ^ (string_of_int (!position_in_circuit_inputs_array)) ^ "];\n");
+        incr position_in_circuit_inputs_array
       done
     done
   end;
@@ -765,22 +1064,41 @@ let circuit_code (graph, (number_of_circuit_inputs, number_of_circuit_outputs,
     (margin ^ "while (clocked && time_gt (&simulated_time, &current_time))\n" ^
       margin ^ "  gettimeofday (&current_time, NULL);\n" ^
       "\n");
+(*
+for (;active_registers_list_length > 0; active_registers_list_length--)
+ {
+   gates_outputs[active_registers_gates[active_registers_list_length-1]]
+   = registers[active_registers[active_registers_list_length-1]]
+ }
+*)
 
-  for i = 0 to Array.length registers_outputs_positions - 1 do
-    Buffer.add_string res
-      (margin ^ gates_outputs_array_name ^
-      "[" ^ (string_of_int registers_outputs_positions.(i)) ^ "] = " ^
-      registers_array_name ^ "[" ^(string_of_int i) ^ "];\n")
-  done;
+  Buffer.add_string res
+    (margin ^ "for (; " ^
+      active_registers_list_length ^ "  > 0; " ^
+      active_registers_list_length ^ "--)\n" ^
+      margin ^ " {\n");
+
+  let margin = String.make 12 ' ' in
   
-  Buffer.add_string res "\n";
+  Buffer.add_string res
+    (margin ^ gates_outputs_array_name ^
+      "[" ^ active_registers_gates_array_name ^
+      "[" ^ active_registers_list_length ^ "-1]] = \n" ^
+      margin ^ registers_array_name ^
+      "[" ^ active_registers_array_name ^
+      "[" ^ active_registers_list_length ^ "-1]];\n");
+
+  let margin = String.make 8 ' ' in
+
+  Buffer.add_string res (margin ^ " }\n\n");
 
   ignore
     (fold_left_for
-      (fun next_register i -> 
+      (fun next_register node_new -> 
+        move_in_enables_tree res old_num.(node_new);
         let (code, next_register) = 
           node_code graph old_num gates_inputs_positions
-            gates_outputs_positions next_register i
+            gates_outputs_positions next_register node_new
         in
         if code <> "" then  
           Buffer.add_string res (margin ^ code ^ ";\n");
@@ -790,9 +1108,13 @@ let circuit_code (graph, (number_of_circuit_inputs, number_of_circuit_outputs,
       (Array.length old_num - 1));
 
   Buffer.add_string res "\n";
-  add_device_codes res graph old_num gates_inputs_positions
+  add_device_codes res graph old_num
+    move_in_enables_tree move_to_root_in_enables_tree
+    gates_inputs_positions
     gates_outputs_positions;
-  
+
+  move_to_root_in_enables_tree res;
+
   Buffer.add_string res
     (margin ^ "if (i == cycles || step_by_step )\n" ^
     margin ^ " {\n");

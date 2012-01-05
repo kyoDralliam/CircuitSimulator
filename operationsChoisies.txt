@@ -1,0 +1,48 @@
+On prend :
+
+   ArithmÃ©tique :
+   add
+   addi
+   sub
+   subi
+   mult
+
+   Logique :
+   and
+   andi
+   or
+   ori
+   xor
+   nor
+
+   Branchement :
+   beq
+   bne
+   j
+   jal
+   jr
+
+   Transfert :
+   lb
+   lh
+   lw
+   sw
+   sh
+   sb
+   lui
+   mflo
+   mfhi
+
+   Comparaison :
+   slt
+   slti
+
+   DÃ©calage :
+   sll
+   srl
+   sra
+
+On prend pas :
+
+   Les operations sur unsigned
+   les divisions
