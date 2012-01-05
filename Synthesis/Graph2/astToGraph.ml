@@ -3,6 +3,7 @@ open List
 open Ast
 open IntAst
 
+module UF = Js_union_find
 
 module WMap = Wire.WireIdentMap 
 
@@ -25,7 +26,7 @@ type wire_origin =
   | Plug of origin_location
 
 type simple_wire = wire_origin * (int*int) list
-type complex_wire = simple_wire ref list
+type complex_wire = simple_wire UF.t list
 
 exception Plug_out of complex_wire WMap.t
 
@@ -132,10 +133,10 @@ let main (start, block_type_definitions, device_list) =
     with Not_found -> assert false
   in
 
-  let make_simple_wire () = Unplug [], [] in
+  let make_simple_wire () = UF.create (Unplug [], []) in
   let rec make_complex_wire ?(acc=[]) = function
     | 0 -> acc
-    | n -> make_complex_wire ~acc:((ref (make_simple_wire ()))::acc) (n-1)
+    | n -> make_complex_wire ~acc:((make_simple_wire ())::acc) (n-1)
   in
 
   let n_max = ref 0 in
@@ -144,8 +145,8 @@ let main (start, block_type_definitions, device_list) =
   let make_global_input () =
     let plug_to_input complex_wire =
       let wire_count = ref 0 in
-      let aux simple_wire_ref =
-	simple_wire_ref := Plug (!n_max,!wire_count) , snd !simple_wire_ref ;
+      let aux simple_wire =
+	UF.set simple_wire  (Plug (!n_max,!wire_count) , snd (UF.get simple_wire)) ;
 	incr wire_count 
       in
 	iter aux complex_wire ; 
@@ -169,7 +170,8 @@ let main (start, block_type_definitions, device_list) =
     let plug_to_output complex_wire =
       let wire_count = ref 0 in
       let aux simple_wire_ref =
-	simple_wire_ref := fst !simple_wire_ref, (!n_max, !wire_count)::(snd !simple_wire_ref) ;
+	let w = UF.get simple_wire_ref in
+	UF.set simple_wire_ref (fst w, (!n_max, !wire_count)::(snd w)) ;
 	incr wire_count
       in
 	iter aux complex_wire ; !wire_count
@@ -331,8 +333,9 @@ let main (start, block_type_definitions, device_list) =
     let call_instantiation (inst,local_map) = 
       let process_input_wire i w =
 	let plug j w' =
+	  let w'' = UF.get w' in
 	  begin
-	    match fst !w' with
+	    match fst w'' with
 	      | Plug (input_index, output_num) ->
 		  assert ( input_index < max_size) ;
 		  let gate,output_array = graph.(input_index) in
@@ -340,16 +343,17 @@ let main (start, block_type_definitions, device_list) =
 		    output_array.(output_num) <- (!n_max,j)::output_array.(output_num) 
 	      | Unplug _ -> ()
 	  end ;
-	  w' := fst !w', (!n_max,i)::(snd !w') ;
+	  UF.set w' (fst w'', (!n_max,i)::(snd w'') );
 	  j+1
 	in
 	  fold_left plug i (make_wire w)
       in
       let process_output_wire out i output_wire =
-	  output_wire := (Plug (!n_max,i)), snd !output_wire ;
-	    assert ( i < Array.length out) ;
-	    out.(i) <- (snd !output_wire) @ out.(i) ; 
-	    i + 1
+	let ow = UF.get output_wire in
+	UF.set output_wire (Plug (!n_max,i), snd ow) ;
+	assert ( i < Array.length out) ;
+	out.(i) <- (snd ow) @ out.(i) ; 
+	i + 1
       in
       let process_base_block_or_device output_names assertion =
 	assert( !n_max < max_size ) ;
@@ -369,7 +373,7 @@ let main (start, block_type_definitions, device_list) =
       in
       let n_enable,w_enable = 
 	match inst.enable with
-	  | None -> -1 , ref (Unplug [],[])
+	  | None -> -1 , UF.create (Unplug [],[])
 	  | Some w -> !n_max, match make_wire w with
 	      | [x] -> x
 	      | _ -> assert false
@@ -415,22 +419,24 @@ let main (start, block_type_definitions, device_list) =
 	with Not_found -> assert false in 
       let intern_wire = make_wire (snd wire_def) in
       let plug_simple_wire intern_wire extern_wire =
-	let new_outputs = snd !extern_wire in
-	let input = fst !intern_wire in
+	let ew = UF.get extern_wire in
+	let iw = UF.get intern_wire in
 	let new_input = 
-	  match input with
+	  match fst iw with
 	    | Unplug l -> 
 		let x = block_def.name, block_def.parameters, wire_name in
 		  Unplug (x::l)
 	    | (Plug (input_index,output_num)) as input-> 
-		 assert ( input_index < max_size ) ;
-		 let _,output_array = graph.(input_index) in
-		   assert ( output_num < Array.length output_array ) ;
-		   let res = new_outputs @ output_array.(output_num) in
-		   output_array.(output_num) <- res ;
-		   input
+		assert ( input_index < max_size ) ;
+		let _,output_array = graph.(input_index) in
+		  assert ( output_num < Array.length output_array ) ;
+		  let res = (snd ew) @ output_array.(output_num) in
+		    output_array.(output_num) <- res ;
+		    input
 	in
-	  extern_wire := new_input, (snd !intern_wire) @ new_outputs
+	let new_wire = new_input, (snd iw) @ (snd ew) in
+	  UF.union intern_wire extern_wire ;
+	  UF.set intern_wire new_wire
       in
 	assert (length extern_wire = length intern_wire) ;
 	iter2 plug_simple_wire intern_wire extern_wire
@@ -447,7 +453,7 @@ let main (start, block_type_definitions, device_list) =
 
   let check_output output_map =
     let exists_unplugged x = 
-      match fst !x with 
+      match fst (UF.get x) with 
 	| Unplug _ -> true 
 	| Plug _ -> false 
     in
@@ -461,7 +467,7 @@ let main (start, block_type_definitions, device_list) =
     make_graph start input_list output_map ;
     check_output output_map ;
     let map_fun (i,j,w) = i, j,
-      match fst !w with Plug x -> x | Unplug _ -> assert false 
+      match fst (UF.get w) with Plug x -> x | Unplug _ -> assert false 
     in
     let res_enable_list = List.map map_fun !enable_list in
       graph, (input_count, output_count, !register_count, !device_count, res_enable_list, device_list)
