@@ -188,7 +188,7 @@ struct
   
 
   let simple_wire_ref x = 
-    match fst !x with
+    match fst (UF.get x) with
       | Unplug l ->
 	  mk_string ~b:"[ " ~e:" ]" ~sep:" ; " node_location l
       | Plug _ -> ""
