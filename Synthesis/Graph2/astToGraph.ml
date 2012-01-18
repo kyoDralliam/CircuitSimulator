@@ -251,11 +251,10 @@ let main (start, block_type_definitions, device_list) =
       wire_map := WMap.add (None, s) complex_wire !wire_map 
     in
 
-    (** prend en paramètre un tableau associatif wire_map et
+    (** prend en paramètre 
 	une instantiation d'un bloc et rajoute un fil pour 
 	chaque sortie du bloc dans la wire_map ainsi que 
 	dans une local_map qui est ensuite retourné
-	@param wire_map (complex_wire WMap.t ref)
 	@param inst (IntAst.instantiation)
 	@return IntAst.instantiation * complex_wire WMap.t
     *)
@@ -274,17 +273,17 @@ let main (start, block_type_definitions, device_list) =
       let add_to_map ((s,i),_) =
 	wire_map := WMap.add (Some inst.var_name, s) (make_complex_wire i) !wire_map
       in
-	iter add_to_map inst_outputs ;
-	let add_to_local_map local_map ((id,_),_) =
-	  let indexes =
-	    try
-	      WMap.find (Some inst.var_name, id) !wire_map
-	    with Not_found -> assert false
-	  in
-	  WMap.add (Some "sortie", id) indexes local_map
+      let _ = iter add_to_map inst_outputs in
+      let add_to_local_map local_map ((id,_),_) =
+	let indexes =
+	  try
+	    WMap.find (Some inst.var_name, id) !wire_map
+	  with Not_found -> assert false
 	in
-	let local_map = fold_left add_to_local_map WMap.empty inst_outputs in
-	  inst,local_map
+	  WMap.add (Some "sortie", id) indexes local_map
+      in
+      let local_map = fold_left add_to_local_map WMap.empty inst_outputs in
+	inst, local_map
     in
       
 
@@ -343,7 +342,7 @@ let main (start, block_type_definitions, device_list) =
 		    output_array.(output_num) <- (!n_max,j)::output_array.(output_num) 
 	      | Unplug _ -> ()
 	  end ;
-	  UF.set w' (fst w'', (!n_max,i)::(snd w'') );
+	  UF.set w' (fst w'', (!n_max,j)::(snd w'') );
 	  j+1
 	in
 	  fold_left plug i (make_wire w)

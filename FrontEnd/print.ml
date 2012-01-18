@@ -115,7 +115,7 @@ struct
   open Printf
   open Graph2.AstToGraph
 
-  let gate gate_type gate_index = sprintf "%s (%i)" 
+  let gate gate_type gate_index = sprintf "%s (%d)" 
     (gate_to_base_block gate_type) gate_index
 
   (*
@@ -127,7 +127,7 @@ struct
     ogii : output_gate_input_index
   *)
   let transition ig igi og ogi igoi ogii labelize =
-    let label = if labelize then sprintf "[label=\"%i:%i -> %i:%i\"]" igi igoi ogi ogii else "" in
+    let label = if labelize then sprintf "[label=\"%d:%d -> %d:%d\"]" igi igoi ogi ogii else "" in
     sprintf "\"%s\" -> \"%s\" %s;" (gate ig igi) (gate og ogi) label
 
   let graph ?(label=false) g =  
