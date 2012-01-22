@@ -13,7 +13,7 @@ main:
 
         # On récupère le timestamp que l'on met dans $s7
         #lw      $s7, timestamp
-        li      $s7, 1327246917
+        li      $s7, 721676579
 
         # On calcule le nombre de jours écoulés depuis le 01/01/1970
         move    $a0, $s7
@@ -108,44 +108,58 @@ main:
         li      $a1, 366
         jal     multiplier
         sub     $s4, $s0, $v0 # $s4 = Nombre de jours depuis le début de l'année
-            #move    $a0, $s4
-            #jal print_int
         li      $s5, 1 # $s5 = Mois
+        li      $t1, 0
         li      $t0, 32 # Janvier + 1 (à cause de la comparaison stricte)
         bgt     $t0, $s4, moistrouve
-        addi    $s5, s5, 1
+        addi    $s5, $s5, 1
+        move    $t1, $t0
         addi    $t0, $t0, 29 # Février
         bgt     $t0, $s4, moistrouve
-        addi    $s5, s5, 1
+        addi    $s5, $s5, 1
+        move    $t1, $t0
         addi    $t0, $t0, 31 # Mars
         bgt     $t0, $s4, moistrouve
-        addi    $s5, s5, 1
+        addi    $s5, $s5, 1
+        move    $t1, $t0
         addi    $t0, $t0, 30 # Avril
         bgt     $t0, $s4, moistrouve
-        addi    $s5, s5, 1
+        addi    $s5, $s5, 1
+        move    $t1, $t0
         addi    $t0, $t0, 31 # Mai
         bgt     $t0, $s4, moistrouve
-        addi    $s5, s5, 1
+        addi    $s5, $s5, 1
+        move    $t1, $t0
         addi    $t0, $t0, 30 # Juin
         bgt     $t0, $s4, moistrouve
-        addi    $s5, s5, 1
+        addi    $s5, $s5, 1
+        move    $t1, $t0
         addi    $t0, $t0, 31 # Juillet
         bgt     $t0, $s4, moistrouve
-        addi    $s5, s5, 1
+        addi    $s5, $s5, 1
+        move    $t1, $t0
         addi    $t0, $t0, 31 # Août
         bgt     $t0, $s4, moistrouve
-        addi    $s5, s5, 1
+        addi    $s5, $s5, 1
+        move    $t1, $t0
         addi    $t0, $t0, 30 # Septembre
         bgt     $t0, $s4, moistrouve
-        addi    $s5, s5, 1
+        addi    $s5, $s5, 1
+        move    $t1, $t0
         addi    $t0, $t0, 31 # Octobre
         bgt     $t0, $s4, moistrouve
-        addi    $s5, s5, 1
+        addi    $s5, $s5, 1
+        move    $t1, $t0
         addi    $t0, $t0, 30 # Novembre
         bgt     $t0, $s4, moistrouve
-        addi    $s5, s5, 1
+        addi    $s5, $s5, 1
+        move    $t1, $t0
     moistrouve:
-        addi    $t0, 
+            move    $a0, $s5 # $s5 = Mois
+            jal print_int
+        sub     $s4, $s4, $t1
+            move    $a0, $s4 # $s4 = Jour
+            jal print_int
         
         #li      $a0, 22742 
         #li      $a1, 17
@@ -197,7 +211,7 @@ multiplier:
     multiplier_fintest:
         # On divise $a1 par 2 et on fait un bel appel récursif
         li      $t0, 1
-        sra     $a1, $a1, $t0
+        srl     $a1, $a1, $t0
         jal     multiplier
         # On multiplie par 2 le résultat
         li      $t0, 1
@@ -230,7 +244,7 @@ diviser:
         bgt     $t1, $a0, diviser_finpetiteboucle
         sll     $t1, $t1, 1
         sll     $t2, $t2, 1
-        b       diviser_petiteboucle
+        j       diviser_petiteboucle
     diviser_finpetiteboucle:
         # On est allés un cran trop loin, on corrige ça
         # (nb : il doit y avoir une méthode plus propre, mais là j'ai la flemme)
@@ -240,7 +254,7 @@ diviser:
         # ce qu'il faut au quotient
         sub     $a0, $a0, $t1
         add     $v0, $v0, $t2
-        b       diviser_debut
+        j       diviser_debut
     diviser_fin:
         # On récupère $ra
         lw      $ra, 0($sp)
