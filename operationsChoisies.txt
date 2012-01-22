@@ -5,7 +5,6 @@ On prend :
    addi
    sub
    subi
-   mult
 
    Logique :
    and
@@ -30,8 +29,6 @@ On prend :
    sh
    sb
    lui
-   mflo
-   mfhi
 
    Comparaison :
    slt

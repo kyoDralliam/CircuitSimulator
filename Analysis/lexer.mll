@@ -100,5 +100,6 @@ rule token = parse
 and comment = parse
   | "(*"                    { comment lexbuf ; comment lexbuf }
   | "*)"                    { () }
+  | newline                 { incr_linenum lexbuf ; comment lexbuf }
   | one_line_comment        { comment lexbuf }
   | _                       { comment lexbuf }

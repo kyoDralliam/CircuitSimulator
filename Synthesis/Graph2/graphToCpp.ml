@@ -1107,12 +1107,6 @@ for (;active_registers_list_length > 0; active_registers_list_length--)
       0
       (Array.length old_num - 1));
 
-  Buffer.add_string res "\n";
-  add_device_codes res graph old_num
-    move_in_enables_tree move_to_root_in_enables_tree
-    gates_inputs_positions
-    gates_outputs_positions;
-
   move_to_root_in_enables_tree res;
 
   Buffer.add_string res
@@ -1150,6 +1144,14 @@ for (;active_registers_list_length > 0; active_registers_list_length--)
   let margin = String.make 8 ' ' in
 
   Buffer.add_string res (margin ^ " }\n\n");
+
+  Buffer.add_string res "\n";
+  add_device_codes res graph old_num
+    move_in_enables_tree move_to_root_in_enables_tree
+    gates_inputs_positions
+    gates_outputs_positions;
+
+  move_to_root_in_enables_tree res;
   
   Buffer.add_string res 
     ("\n" ^
