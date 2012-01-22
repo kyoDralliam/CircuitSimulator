@@ -1,0 +1,42 @@
+
+Pour un opCode sur 6 bits :
+
++les 4 premiers designent l'opérations de l'Alu concerné:
+0000 Et
+1000 Ou
+0100 Xor
+1100 Nand
+0010 Nor
+1010 Add
+0110 Sub
+1110 Mul
+
+0001 Egal
+1001 Different 
+0101 infStrict
+1101 supStrict
+0011 inf ou egal
+1011 sup ou egal
+0111 Encore libre
+1111 srl 
+
++les deux derniers définissent le format :
+   00 pour un R-format
+   11 pour un I-format
+   01 pour les jump et load et store
+   10 pour un Branch-format
+
+lw : 110001
+lb : 100001
+
+sw : 110101 
+sb : 100101
+
+j  : 111101 
+jr : 000001
+
+
+
+
+
+
