@@ -23,20 +23,20 @@ let empty =
 let map = 
   create_map
     [
-      "and", (0x0l, [ RD ; RS ; RT ] ) ;
-      "or",  (0x8l, [ RD ; RS ; RT ] ) ;
-      "xor", (0x4l, [ RD ; RS ; RT ] ) ;
-      "nor", (0x2l, [ RD ; RS ; RT ] ) ;
-      "add", (0xAl, [ RD ; RS ; RT ] ) ;
-      "sub", (0x6l, [ RD ; RS ; RT ] ) ;
-      "jr",  (0x1l, [RS]) ;
-      "slt", (0x3l, [ RD ; RS ; RT ] ) ;
-      "sgt", (0x5l, [ RD ; RS ; RT ] ) ;
-      "sll", (0x7l, [ RD ; RT ; SHAMT ] ) ;
-      "srl", (0x9l, [ RD ; RT ; SHAMT ] ) ;
-      "sra", (0xBl, [ RD ; RT ; SHAMT ] ) ;
-      "srav",(0xCl, [ RD ; RT ; RS ] ) ;    
-      "sllv",(0xDl, [ RD ; RT ; RS ] ) 
+      "and", (0b000000l, [ RD ; RS ; RT ] ) ;
+      "or",  (0b100000l, [ RD ; RS ; RT ] ) ;
+      "xor", (0b010000l, [ RD ; RS ; RT ] ) ;
+      "nor", (0b001000l, [ RD ; RS ; RT ] ) ;
+      "add", (0b101000l, [ RD ; RS ; RT ] ) ;
+      "sub", (0b011000l, [ RD ; RS ; RT ] ) ;
+      "jr",  (0b000100l, [RS]) ;
+      "slt", (0b001100l, [ RD ; RS ; RT ] ) ;
+      "sgt", (0b010100l, [ RD ; RS ; RT ] ) ;
+      "sll", (0b011100l, [ RD ; RT ; SHAMT ] ) ;
+      "srl", (0b100100l, [ RD ; RT ; SHAMT ] ) ;
+      "sra", (0b101100l, [ RD ; RT ; SHAMT ] ) ;
+      "srav",(0b110000l, [ RD ; RT ; RS ] ) ;    
+      "sllv",(0b110100l, [ RD ; RT ; RS ] ) 
     ]
 
 let parse n l (funct, args) =  

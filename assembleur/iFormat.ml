@@ -23,21 +23,21 @@ let empty =
 let map = 
   create_map
     [
-      "andi", (0x0l, [ RT ; RS ; Imm ] ) ;
-      "ori",  (0x8l, [ RT ; RS ; Imm ] ) ;
-      "xori", (0x4l, [ RT ; RS ; Imm ] ) ;
-      "nori", (0x2l, [ RT ; RS ; Imm ] ) ;
-      "addi", (0xAl, [ RT ; RS ; Imm ] ) ;
-      "subi", (0x6l, [ RT ; RS ; Imm ] ) ;
-      "beq",  (0xFl, [ RS ; RT ; Imm ] ) ;
-      "bne",  (0x1l, [ RS ; RT ; Imm ] ) ; 
-      "lb",   (0x3l, [ RS ; Ad ] ) ;
-      "lh",   (0x5l, [ RS ; Ad ] ) ;
-      "lw",   (0x7l, [ RS ; Ad ] ) ; 
-      "sw",   (0x9l, [ RS ; Ad ] ) ; 
-      "sh",   (0xBl, [ RS ; Ad ] ) ; 
-      "sb",   (0xCl, [ RS ; Ad ] ) ; 
-      "lui",  (0xDl, [ RT ; Imm ]) ;
+      "andi", (0b000011l, [ RT ; RS ; Imm ] ) ;
+      "ori",  (0b100011l, [ RT ; RS ; Imm ] ) ;
+      "xori", (0b010011l, [ RT ; RS ; Imm ] ) ;
+      "nori", (0b001011l, [ RT ; RS ; Imm ] ) ;
+      "addi", (0b101011l, [ RT ; RS ; Imm ] ) ;
+      "subi", (0b011011l, [ RT ; RS ; Imm ] ) ;
+      "beq",  (0b111111l, [ RS ; RT ; Imm ] ) ;
+      "lw",   (0b110001l, [ RS ; Ad ] ) ; 
+      "sw",   (0b110101l, [ RS ; Ad ] ) ; 
+      "bne",  (0b01l, [ RS ; RT ; Imm ] ) ; (* à corriger *)
+      "lb",   (0b01l, [ RS ; Ad ] ) ; 
+      "lh",   (0b01l, [ RS ; Ad ] ) ;
+      "sh",   (0b01l, [ RS ; Ad ] ) ;  
+      "sb",   (0b01l, [ RS ; Ad ] ) ; 
+      "lui",  (0b01l, [ RT ; Imm ]) ; 
       (* slti ? *)
     ]
     

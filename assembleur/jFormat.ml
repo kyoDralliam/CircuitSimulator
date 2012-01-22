@@ -12,8 +12,8 @@ type t =
 let map = 
   create_map
     [
-      "j", 0xFl ;
-      "jal", 0xEl ;
+      "j", 0b111101l ;
+      "jal", 0b111001l ; (* à corriger ou à passer en pseudo-instruction*)
     ] 
     
 let parse n l opcode = 
