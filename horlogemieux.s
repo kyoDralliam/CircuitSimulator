@@ -36,11 +36,15 @@ main:
         move    $s2, $v0 # $s2 = Heures
             # Affichage de l'heure
             add     $t0, $s2, $s2
-            lb      $t1, two_digits_to_segments($t0)
+            li      $t5, two_digits_to_segments 
+            add     $t0, $t0, $t5
+            #lb      $t1, two_digits_to_segments($t0)
             la      $t2, clock_display
             sb      $t1, 0($t2)
             addi    $t0, $t0, 1
-            lb      $t1, two_digits_to_segments($t0)
+            li      $t5, two_digits_to_segments 
+            add     $t0, $t0, $t5
+            #lb      $t1, two_digits_to_segments($t0)
             sb      $t1, 1($t2)
 
         move    $a0, $s2
@@ -54,11 +58,15 @@ main:
         move    $s3, $v0 # $s3 = Minutes
             # Affichage des minutes
             add     $t0, $s3, $s3
-            lb      $t1, two_digits_to_segments($t0)
+            li      $t5, two_digits_to_segments 
+            add     $t0, $t0, $t5
+            #lb      $t1, two_digits_to_segments($t0)
             la      $t2, clock_display
             sb      $t1, 2($t2)
             addi    $t0, $t0, 1
-            lb      $t1, two_digits_to_segments($t0)
+            li      $t5, two_digits_to_segments 
+            add     $t0, $t0, $t5
+            #lb      $t1, two_digits_to_segments($t0)
             sb      $t1, 3($t2)
 
         move    $a0, $s3
@@ -67,11 +75,15 @@ main:
         sub     $s4, $s1, $v0 # $s4 = Secondes
             # Affichage des secondes
             add     $t0, $s4, $s4
-            lb      $t1, two_digits_to_segments($t0)
+            li      $t5, two_digits_to_segments 
+            add     $t0, $t0, $t5
+            #lb      $t1, two_digits_to_segments($t0)
             la      $t2, clock_display
             sb      $t1, 4($t2)
             addi    $t0, $t0, 1
-            lb      $t1, two_digits_to_segments($t0)
+            li      $t5, two_digits_to_segments 
+            add     $t0, $t0, $t5
+            #lb      $t1, two_digits_to_segments($t0)
             sb      $t1, 5($t2)
         
         # ---- Calcul de la date ----
@@ -180,24 +192,34 @@ main:
             # Affichage de la date
             # Jour
             add     $t0, $s4, $s4
-            lb      $t1, two_digits_to_segments($t0)
+            li      $t5, two_digits_to_segments 
+            add     $t0, $t0, $t5
+            #lb      $t1, two_digits_to_segments($t0)
             la      $t2, clock_display
             sb      $t1, 6($t2)
             addi    $t0, $t0, 1
-            lb      $t1, two_digits_to_segments($t0)
+            li      $t5, two_digits_to_segments 
+            add     $t0, $t0, $t5
+            #lb      $t1, two_digits_to_segments($t0)
             sb      $t1, 7($t2)
             # Mois
             add     $t0, $s5, $s5
-            lb      $t1, two_digits_to_segments($t0)
+            li      $t5, two_digits_to_segments 
+            add     $t0, $t0, $t5
+            #lb      $t1, two_digits_to_segments($t0)
             la      $t2, clock_display
             sb      $t1, 8($t2)
             addi    $t0, $t0, 1
-            lb      $t1, two_digits_to_segments($t0)
+            li      $t5, two_digits_to_segments 
+            add     $t0, $t0, $t5
+            #lb      $t1, two_digits_to_segments($t0)
             sb      $t1, 9($t2)
             # Années
             add     $t0, $s6, $s6
             add     $t0, $t0, $t0
-            lw      $t1, year_to_segments($t0)
+            li      $t5, year_to_segments 
+            add     $t0, $t0, $t5
+            #lw      $t1, year_to_segments($t0)
             la      $t2, clock_display
             addi    $t2, $t2, 10
             sw      $t1, 0($t2)
