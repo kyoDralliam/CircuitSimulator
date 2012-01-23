@@ -13,8 +13,9 @@ main:
         sw      $ra, 0($sp)
 
         # On récupère le timestamp que l'on met dans $s7
-        #lw      $s7, timestamp
-        li      $s7, 1327338988
+        li      $t0, timestamp
+        lw      $s7, $t0
+        #li      $s7, 1327338988
 
         # On calcule le nombre de jours écoulés depuis le 01/01/1970
         move    $a0, $s7
@@ -38,13 +39,13 @@ main:
             add     $t0, $s2, $s2
             li      $t5, two_digits_to_segments 
             add     $t0, $t0, $t5
-            #lb      $t1, two_digits_to_segments($t0)
+            lb      $t1, 0($t0)
             la      $t2, clock_display
             sb      $t1, 0($t2)
             addi    $t0, $t0, 1
             li      $t5, two_digits_to_segments 
             add     $t0, $t0, $t5
-            #lb      $t1, two_digits_to_segments($t0)
+            lb      $t1, 0($t0)
             sb      $t1, 1($t2)
 
         move    $a0, $s2
@@ -60,13 +61,13 @@ main:
             add     $t0, $s3, $s3
             li      $t5, two_digits_to_segments 
             add     $t0, $t0, $t5
-            #lb      $t1, two_digits_to_segments($t0)
+            lb      $t1, 0($t0)
             la      $t2, clock_display
             sb      $t1, 2($t2)
             addi    $t0, $t0, 1
             li      $t5, two_digits_to_segments 
             add     $t0, $t0, $t5
-            #lb      $t1, two_digits_to_segments($t0)
+            lb      $t1, 0($t0)
             sb      $t1, 3($t2)
 
         move    $a0, $s3
@@ -77,13 +78,13 @@ main:
             add     $t0, $s4, $s4
             li      $t5, two_digits_to_segments 
             add     $t0, $t0, $t5
-            #lb      $t1, two_digits_to_segments($t0)
+            lb      $t1, 0($t0)
             la      $t2, clock_display
             sb      $t1, 4($t2)
             addi    $t0, $t0, 1
             li      $t5, two_digits_to_segments 
             add     $t0, $t0, $t5
-            #lb      $t1, two_digits_to_segments($t0)
+            lb      $t1, 0($t0)
             sb      $t1, 5($t2)
         
         # ---- Calcul de la date ----
@@ -143,7 +144,8 @@ main:
         li      $t0, 32 # Janvier + 1 (à cause de la comparaison stricte)
         bgt     $t0, $s4, moistrouve
         addi    $s5, $s5, 1
-        move    $t1, $t0
+        li      $t4, 2
+        sub     $t1, $t0, $t4
         addi    $t0, $t0, 29 # Février
         bgt     $t0, $s4, moistrouve
         addi    $s5, $s5, 1
@@ -194,32 +196,32 @@ main:
             add     $t0, $s4, $s4
             li      $t5, two_digits_to_segments 
             add     $t0, $t0, $t5
-            #lb      $t1, two_digits_to_segments($t0)
+            lb      $t1, 0($t0)
             la      $t2, clock_display
             sb      $t1, 6($t2)
             addi    $t0, $t0, 1
             li      $t5, two_digits_to_segments 
             add     $t0, $t0, $t5
-            #lb      $t1, two_digits_to_segments($t0)
+            lb      $t1, 0($t0)
             sb      $t1, 7($t2)
             # Mois
             add     $t0, $s5, $s5
             li      $t5, two_digits_to_segments 
             add     $t0, $t0, $t5
-            #lb      $t1, two_digits_to_segments($t0)
+            lb      $t1, 0($t0)
             la      $t2, clock_display
             sb      $t1, 8($t2)
             addi    $t0, $t0, 1
             li      $t5, two_digits_to_segments 
             add     $t0, $t0, $t5
-            #lb      $t1, two_digits_to_segments($t0)
+            lb      $t1, 0($t0)
             sb      $t1, 9($t2)
             # Années
             add     $t0, $s6, $s6
             add     $t0, $t0, $t0
             li      $t5, year_to_segments 
             add     $t0, $t0, $t5
-            #lw      $t1, year_to_segments($t0)
+            lw      $t1, 0($t0)
             la      $t2, clock_display
             addi    $t2, $t2, 10
             sw      $t1, 0($t2)
@@ -329,6 +331,9 @@ diviser:
 	.data
 newline:
 	.asciiz "\n"
+
+timestamp:
+    .word 1327345992
 
 .align 2
 year_to_segments:

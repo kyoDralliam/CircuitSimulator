@@ -1,3 +1,21 @@
 Pour lancer le horloge.s :
 
 spim -file horloge.s
+
+Le fichier horloge.s est le fichier assembleur qui code l'horloge (d'où son nom,
+incroyable, n'est-il pas ?). Son fonctionnement est le suivant :
+
+1) Il va chercher le timestamp courant dans l'adresse mémoire ayant comme label
+   "timestamp". Le format est celui du timestamp UNIX standard, accessible (par
+   exemple avec la commande "date +%s". Pour mémoire, il s'agit du nombre de
+   secondes écoulées depuis le 1er janvier 1970 à 00:00:00.
+2) Il transforme ce nombre de secondes en nombre de jours en faisant une simple
+   division (codée plus loin, car indisponible dans notre microprocesseur, à
+   partir d'une multiplication, elle aussi recodée avec des additions - de façon
+   logarithmique bien sûr).
+3) En prenant le reste de la division précédente, et par divisions successives,
+   il est très facile d'obtenir l'heure de la journée. Ce calcul est donc
+   effectué puis affiché dans l'afficheur 7 segments (la méthode pour cela est
+   décrite à part).
+4) Puis, on doit calculer la date. Et là, c'est nettement plus technique. Il
+   faut commencer par corriger les bugs dûs aux 

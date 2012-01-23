@@ -13,8 +13,7 @@ main:
 
         # On récupère le timestamp que l'on met dans $s7
         #lw      $s7, timestamp
-        li      $s7, 1327336394
-
+        li      $s7, 1329500537
 
         # On calcule le nombre de jours écoulés depuis le 01/01/1970
         move    $a0, $s7
@@ -115,46 +114,68 @@ main:
         bgt     $t0, $s4, moistrouve
         addi    $s5, $s5, 1
         move    $t1, $t0
+        li      $t4, 1
+        sub     $t1, $t1, $t4
         addi    $t0, $t0, 29 # Février
         bgt     $t0, $s4, moistrouve
         addi    $s5, $s5, 1
         move    $t1, $t0
+        li      $t4, 1
+        sub     $t1, $t1, $t4
         addi    $t0, $t0, 31 # Mars
         bgt     $t0, $s4, moistrouve
         addi    $s5, $s5, 1
         move    $t1, $t0
+        li      $t4, 1
+        sub     $t1, $t1, $t4
         addi    $t0, $t0, 30 # Avril
         bgt     $t0, $s4, moistrouve
         addi    $s5, $s5, 1
         move    $t1, $t0
+        li      $t4, 1
+        sub     $t1, $t1, $t4
         addi    $t0, $t0, 31 # Mai
         bgt     $t0, $s4, moistrouve
         addi    $s5, $s5, 1
         move    $t1, $t0
+        li      $t4, 1
+        sub     $t1, $t1, $t4
         addi    $t0, $t0, 30 # Juin
         bgt     $t0, $s4, moistrouve
         addi    $s5, $s5, 1
         move    $t1, $t0
+        li      $t4, 1
+        sub     $t1, $t1, $t4
         addi    $t0, $t0, 31 # Juillet
         bgt     $t0, $s4, moistrouve
         addi    $s5, $s5, 1
         move    $t1, $t0
+        li      $t4, 1
+        sub     $t1, $t1, $t4
         addi    $t0, $t0, 31 # Août
         bgt     $t0, $s4, moistrouve
         addi    $s5, $s5, 1
         move    $t1, $t0
+        li      $t4, 1
+        sub     $t1, $t1, $t4
         addi    $t0, $t0, 30 # Septembre
         bgt     $t0, $s4, moistrouve
         addi    $s5, $s5, 1
         move    $t1, $t0
+        li      $t4, 1
+        sub     $t1, $t1, $t4
         addi    $t0, $t0, 31 # Octobre
         bgt     $t0, $s4, moistrouve
         addi    $s5, $s5, 1
         move    $t1, $t0
+        li      $t4, 1
+        sub     $t1, $t1, $t4
         addi    $t0, $t0, 30 # Novembre
         bgt     $t0, $s4, moistrouve
         addi    $s5, $s5, 1
         move    $t1, $t0
+        li      $t4, 1
+        sub     $t1, $t1, $t4
     moistrouve:
             move    $a0, $s5 # $s5 = Mois
             jal print_int
@@ -180,13 +201,13 @@ main:
         jr      $ra
 
 # Affiche l'entier présent dans le registre $a0, suivi d'un retour à la ligne
-print_int:
-        li      $v0, 1
-        syscall
-        li      $v0, 4
-        la      $a0, newline
-        syscall
-        jr      $ra
+#print_int:
+        #li      $v0, 1
+        #syscall
+        #li      $v0, 4
+        #la      $a0, newline
+        #syscall
+        #jr      $ra
 
 # Multiplie les deux entiers contenus dans $a0 et $a1
 # Renvoie le résultat dans $v0
