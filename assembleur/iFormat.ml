@@ -1,8 +1,10 @@
 open CommonFormat
 
 type part = RS | RT | Imm | Ad
-    
-type pseudo_constant = Const of constant | Label of string
+
+
+type pseudo_constant = Const of constant | Label of string * T.modifier
+
 
 type t =
     { 
@@ -29,14 +31,15 @@ let map =
       "nori", (0b001011l, [ RT ; RS ; Imm ] ) ;
       "addi", (0b101011l, [ RT ; RS ; Imm ] ) ;
       "subi", (0b011011l, [ RT ; RS ; Imm ] ) ;
-      "beq",  (0b111111l, [ RS ; RT ; Imm ] ) ;
+      (*"beq",  (0b000110l, [ RS ; RT ; Imm ] ) ;*)
       "lw",   (0b110001l, [ RS ; Ad ] ) ; 
       "sw",   (0b110101l, [ RS ; Ad ] ) ; 
-      "bne",  (0b01l, [ RS ; RT ; Imm ] ) ; (* à corriger *)
-      "lb",   (0b01l, [ RS ; Ad ] ) ; 
-      "lh",   (0b01l, [ RS ; Ad ] ) ;
+      "jr",   (0b000001l, [ RS ]) ; 
+      (*"bne",  (0b100110l, [ RS ; RT ; Imm ] ) ; (* à corriger *)*)
+      "lb",   (0b100001l, [ RS ; Ad ] ) ; 
+      (* "lh",   (0b01l, [ RS ; Ad ] ) ; *)
       "sh",   (0b01l, [ RS ; Ad ] ) ;  
-      "sb",   (0b01l, [ RS ; Ad ] ) ; 
+      "sb",   (0b100101l, [ RS ; Ad ] ) ; 
       "lui",  (0b01l, [ RT ; Imm ]) ; 
       (* slti ? *)
     ]
@@ -46,10 +49,14 @@ let parse n l (opcode, args) =
     match (x,y) with
       | T.Reg s, RS -> { acc with rs = get_reg s }
       | T.Reg s, RT -> { acc with rt = get_reg s }
-      | T.Int n, Imm -> { acc with immediate = Const (Int n) }
+      | T.Int (n, mf) , Imm -> 
+	  Printf.printf "int %ld\n" n ; 
+	  let n' = int_with_modifier n mf in
+	  { acc with immediate = Const (Int n') }
       | T.Char c, Imm -> { acc with immediate = Const (Char c) }
-      | T.Lab s, Imm -> { acc with immediate = Label s }
+      | T.Lab (s, mf), Imm -> { acc with immediate = Label (s, mf) } 
       | T.Shift (n, s), Ad -> 
+	  Printf.printf "shift %ld\n" n ; 
 	  if n > 1l lsl 16 then raise & Integer_too_big (n, 1l lsl 16) ;
 	  { acc with rs = get_reg s ; immediate = Const (Int n) } 
       | x, _ -> raise (Invalid_param (x, T.Instruction (n,l)))
@@ -70,12 +77,15 @@ let to_char_list x =
   let imm = 
     match x.immediate with
       | Const (Int n) -> 
-	  if n < 1l lsl 16
-	  then int32_to_half n
-	  else raise ( Integer_too_big (n, 1l lsl 16) )
+	  if n >= 0l && n < 1l lsl 16 
+	  then int32_to_u_half n
+	  else
+	    if (Int32.abs n) < 1l lsl 15
+	    then int32_to_half n
+	    else raise ( Integer_too_big (n, 1l lsl 15) )
       | Const (Char c) -> 
 	  char_to_half c
       | Label _ -> assert false
   in
-    ( List.rev & int32_to_half res ) @ ( List.rev imm )
+    ( List.rev & int32_to_u_half res ) @ ( List.rev imm )
       

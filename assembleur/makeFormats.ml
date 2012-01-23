@@ -4,28 +4,51 @@ type format =
     RFormat of RFormat.t 
   | IFormat of IFormat.t
   | JFormat of JFormat.t
+  | BFormat of BFormat.t
 
 type program = char list * char list
 
 
 type variable = X | Y | Z
-type var_or_const = Var of variable | Const of ParseAst.Text.arg
+type var_or_const = 
+    Var of variable 
+  | Const of ParseAst.Text.arg 
+  | Fun of variable * (ParseAst.Text.arg -> ParseAst.Text.arg)
+
 module VarMap = Map.Make(struct type t = variable let compare = Pervasives.compare end)
 
 let pseudo_instructions = 
   let ( ~? ) x = Var x in 
   let ( ~! ) x = Const x in 
-  let const_0 = ~!(T.Int 0l) in
+  let const_0 = ~!(T.Int (0l, T.All)) in
   let reg0 = ~!(T.Reg "zero") in
   let at_reg = ~!(T.Reg "at") in
+  let get_upper x =
+    let up = function
+	T.Lab (s,_) -> T.Lab (s, T.Up) 
+      | T.Int (n,_) -> T.Int (n, T.Up)
+      | _ -> assert false
+    in
+      Fun (x, up) 
+  in
+  let get_lower x =
+    let down = function
+	T.Lab (s,_) -> T.Lab (s, T.Down) 
+      | T.Int (n,_) -> T.Int (n, T.Down)
+      | _ -> assert false
+    in
+      Fun (x, down)
+  in
     create_map
       [
 	"move", ( [ X ; Y ], [ "addi", [ ~?X ; ~?Y ; const_0 ] ] ) ;
 	"clear", ( [ X ], [ "add", [ ~?X ; reg0 ; reg0 ] ] ) ;
-	"la", ( [ X ; Y ], [ "lui", [ ~?X ; ~?Y ] ; "addi", [ ~?X ; reg0 ; ~?Y ] ] ) ;
-	"li", ( [ X ; Y ], [ "lui", [ ~?X ; ~?Y ] ; "addi", [ ~?X ; reg0 ; ~?Y ] ] ) ;
+	"la", ( [ X ; Y ], [ "lui", [ ~?X ; get_upper Y ] ; "addi", [ ~?X ; reg0 ; get_lower Y ] ] ) ;
+	"li", ( [ X ; Y ], [ "lui", [ ~?X ; get_upper Y ] ; "addi", [ ~?X ; reg0 ; get_lower Y ] ] ) ;
 	"b", ( [ X ], [ "beq", [ reg0 ; reg0 ; ~?X ] ] ) ;
-	"bgt", ( [ X ; Y ; Z ], [ "slt", [ at_reg ; ~?Y ; ~?X ] ; "bne", [ at_reg ; reg0 ; ~?Z ] ] ) 
+	"bgt", ( [ X ; Y ; Z ], [ "slt", [ at_reg ; ~?Y ; ~?X ] ; "bne", [ at_reg ; reg0 ; ~?Z ] ] ) ;
+	"beqz", ( [ X ; Y ], [ "beq", [ ~?X ; reg0 ; ~?Y ] ] ) ;
+	"lui", ( [ X ; Y ], [ "addi", [ ~?X ; reg0 ; ~?Y ] ; "sll", [ ~?X ; ~?X ; ~!(T.Int (16l, T.All)) ] ] )
       ]
 
 let get_pseudo s l = 
@@ -44,6 +67,7 @@ let get_pseudo s l =
   let subst = function
     | Var x -> (try VarMap.find x params with Not_found -> assert false)
     | Const x -> x
+    | Fun (x, f) -> f (try VarMap.find x params with Not_found -> assert false)
   in
   let subst' (s, l) = T.Instruction (s, List.map subst l) in
     List.map subst' instrs
@@ -52,7 +76,7 @@ let get_pseudo s l =
 open StringMap 
 
 class text_context = 
-object
+object (self)
   val labels = StringMap.empty
   val pc = 0x0l
   val instructions : format list = []
@@ -64,6 +88,10 @@ object
       {< 
 	labels = add l pc labels
       >}
+
+  method add_branch t = 
+    let instr = BFormat BFormat.( { t with label = fst t.label, pc } ) in
+      self # add instr
 
   method add instr =
     {<
@@ -79,17 +107,21 @@ end
 let rec text_instruction ctx = function
   | T.Label l -> ctx # add_label l
 
+  | T.Instruction (n,l) when mem n BFormat.map ->
+      let res = BFormat.parse n l & try find n BFormat.map with Not_found -> assert false in
+	ctx # add_branch res
+
   | T.Instruction (n, l) when mem n RFormat.map ->
       let res = RFormat.parse n l & try find n RFormat.map with Not_found -> assert false in
-	ctx#add (RFormat res)
+	ctx # add (RFormat res)
 
   | T.Instruction (n, l) when mem n IFormat.map ->
       let res = IFormat.parse n l & try find n IFormat.map with Not_found -> assert false in
-	ctx#add (IFormat res)
+	ctx # add (IFormat res)
 	
   | T.Instruction (n, l) when mem n JFormat.map ->
       let res = JFormat.parse n l & try find n JFormat.map with Not_found -> assert false in
-	ctx#add (JFormat res)
+	ctx # add (JFormat res)
 
   | T.Instruction (n, l) when mem n pseudo_instructions ->
       List.fold_left text_instruction ctx (get_pseudo n l)
@@ -174,20 +206,27 @@ let substitute labels format =
   in
     match format with 
       | RFormat x -> RFormat.to_char_list x 
+      | BFormat t ->
+	  let n = get_label & fst t.BFormat.label in
+	  let d = Int32.sub n & snd t.BFormat.label in
+	  let _ = assert ( Int32.abs d < 1l lsl 15 ) in 
+	    BFormat.to_char_list { t with BFormat.delta = d } 
       | IFormat t ->
 	  let open IFormat in
 	  let imm = 
 	    match t.immediate with 
 	      | Const x -> Const x
-	      | Label s -> Const (Int (get_label s))
+	      | Label (s, mf) -> 
+		  let n = int_with_modifier (get_label s) mf in 
+		    Printf.printf "labl %s %ld" s n ; Const (Int n)
 	  in
-	    to_char_list { t with immediate = imm }
+	    to_char_list { t with immediate = imm } 
       | JFormat t -> 
 	  let open JFormat in
 	  let ad = 
 	    match t.address with
 	      | Const x -> Const x
-	      | Label s -> Const (get_label s)
+	      | Label s -> let n = get_label s in Const n
 	  in
 	    to_char_list { t with address = ad }
 	      

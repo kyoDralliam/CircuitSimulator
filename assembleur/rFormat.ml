@@ -13,7 +13,7 @@ type t =
       
 let empty = 
   {
-    rs = 0l ;
+    rs = 31l ;
     rt = 0l ;
     rd = 0l ;
     shamt = 0l ;
@@ -27,16 +27,18 @@ let map =
       "or",  (0b100000l, [ RD ; RS ; RT ] ) ;
       "xor", (0b010000l, [ RD ; RS ; RT ] ) ;
       "nor", (0b001000l, [ RD ; RS ; RT ] ) ;
-      "add", (0b101000l, [ RD ; RS ; RT ] ) ;
+      "add", (0b101000l, [ RD ; RS ; RT ] ) ; 
       "sub", (0b011000l, [ RD ; RS ; RT ] ) ;
-      "jr",  (0b000100l, [RS]) ;
       "slt", (0b001100l, [ RD ; RS ; RT ] ) ;
       "sgt", (0b010100l, [ RD ; RS ; RT ] ) ;
-      "sll", (0b011100l, [ RD ; RT ; SHAMT ] ) ;
-      "srl", (0b100100l, [ RD ; RT ; SHAMT ] ) ;
-      "sra", (0b101100l, [ RD ; RT ; SHAMT ] ) ;
-      "srav",(0b110000l, [ RD ; RT ; RS ] ) ;    
-      "sllv",(0b110100l, [ RD ; RT ; RS ] ) 
+      (* quels shifts faut-il garder ??? *)
+      "sll", (0b111100l, [ RD ; RT ; SHAMT ] ) ;
+      "srl", (0b111100l, [ RD ; RT ; SHAMT ] ) ;
+      "srlv", (0b111100l, [ RD ; RT ; RS ] ) ;
+      "sllv", (0b111100l, [ RD ; RT ; RS ] ) ;
+      "sra", (0b111100l, [ RD ; RT ; SHAMT ] ) ; 
+      (* "srav",(0b111100l, [ RD ; RT ; RS ] ) ;    
+      "sllv",(0b111100l, [ RD ; RT ; RS ] ) *)
     ]
 
 let parse n l (funct, args) =  
@@ -45,7 +47,7 @@ let parse n l (funct, args) =
       | T.Reg s, RD -> { acc with rd = get_reg s }
       | T.Reg s, RS -> { acc with rs = get_reg s }
       | T.Reg s, RT -> { acc with rt = get_reg s }
-      | T.Int n, SHAMT -> 
+      | T.Int (n, _), SHAMT -> 
 	  if n < 32l 
 	  then { acc with shamt = n } 
 	  else raise (Integer_too_big (n, 32l) )

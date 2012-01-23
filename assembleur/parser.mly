@@ -38,9 +38,9 @@ text_instruction:
 
 text_arg:
   | x=REG                                                 { Text.Reg x }
-  | l=IDENT                                               { Text.Lab l }
+  | l=IDENT                                               { Text.Lab (l, Text.All) }
   | n=INT LPAREN x=REG RPAREN                             { Text.Shift (n, x) }
-  | n=INT                                                 { Text.Int n }
+  | n=INT                                                 { Text.Int (n, Text.All) }
   | c=CHAR                                                { Text.Char c }
 
 %%

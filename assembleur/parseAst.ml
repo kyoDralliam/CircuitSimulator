@@ -1,11 +1,13 @@
 module Text =
 struct
 
+  type modifier = All | Up | Down
+
   type arg = 
       Reg of string
-    | Lab of string
+    | Lab of string * modifier
     | Shift of int32 * string
-    | Int of int32
+    | Int of int32 * modifier
     | Char of char 
 
   type instruction = 
@@ -43,7 +45,7 @@ let mk_program l =
   let open List in
   let text_l, data_l = partition split_section l in
     (
-      concat (map (fun (TextSection l) -> l) text_l),
-      concat (map (fun (DataSection l) -> l) data_l)
+      concat (map (function (TextSection l) -> l | _ -> assert false ) text_l),
+      concat (map (function (DataSection l) -> l | _ -> assert false ) data_l)
     )
 

@@ -19,8 +19,8 @@ let map =
 let parse n l opcode = 
   let ad = 
     match l with
-      | [ T.Int n ] -> Const n
-      | [ T.Lab l ] -> Label l
+      | [ T.Int (n, _) ] -> Const n
+      | [ T.Lab (l, _) ] -> Label l
       | _ -> raise & Invalid_instruction ( T.Instruction (n, l) )
   in
     { opcode = opcode ; address = ad }

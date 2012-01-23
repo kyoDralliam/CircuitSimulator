@@ -8,9 +8,9 @@ struct
 
   let arg ppf = function
     | Reg s -> fprintf ppf "$%s" s
-    | Lab s -> pp_print_string ppf s
+    | Lab (s, mf) -> pp_print_string ppf s
     | Shift (n, s) -> fprintf ppf "%ld($%s)" n s
-    | Int n -> print_int32 ppf n
+    | Int (n, mf) -> print_int32 ppf n
     | Char c -> print_char ppf c
 
   let instruction ppf = function
