@@ -1,0 +1,143 @@
+\documentclass{article}
+
+\usepackage[T1]{fontenc} 
+\usepackage[utf8]{inputenc}
+\usepackage[frenchb]{babel}
+
+\title{Rapport du Projet de Système digital \no1}
+\author{Belghiti Ismaël, Desfontaines Damien, Geoffroy Guillaume, Maillard Kenji}
+\date{\today}
+
+\usepackage{amsthm}
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{mathrsfs}
+
+\begin{document}
+
+\maketitle
+
+\section{Introduction}
+Le projet consiste actuellement en un compilateur qui prend en argument un fichier rock (le nom du langage que nous utilisons) et crée un éxécutable qui simule le circuit.
+
+\subsection{Plan général du compilateur}
+Les différentes étapes de la compilation sont :
+\begin{enumerate}
+\item Lexer
+\item Parseur
+\item Analyse sémantique
+\item Destruction de l'AST en graphe
+\item Génération du code C++
+\item Compilation vers un éxécutable natif
+\end{enumerate}
+
+\subsection{Prise en main rapide}
+Le compilateur s'appelle \emph{obsidian}. Il attend en entrée au moins
+un fichier .rock contenant la source du programme. On accéde à l'aide
+via l'option \texttt{-help}. Les autres options intéressantes sont
+\texttt{-pdf}, \texttt{-o}, \texttt{-cc}, \texttt{-ccflags} et
+\texttt{-susucre}. Le programme résultant accepte deux options, -s
+pour afficher les sorties à chaque cycle et -c n pour indiquer la
+fréquence du compilateur, ainsi qu'un argument obligatoire, le nombre
+de cycles. Les entrées du circuit sont attendues sur l'entrée
+standard. Plusieurs exemples sont présents dans FrontEnd/tests/ et
+compilable avec \texttt{make tests}.
+On peut aussi simuler directement un circuit à partir de sa net-list
+avec :
+\begin{verbatim}
+$ ./simultor.sh path-to-net-list cycles
+\end{verbatim}
+ 
+
+
+
+\section{Le langage rock}
+
+Le langage de description des circuits et un langage déclaratif basé sur la notion de bloc. Il y a trois types de blocs différents :
+\begin{itemize}
+\item Les blocs de base : xor, and, or, mux, not, ground, vdd et reg (déclarés dans Analysis/baseBlocks.ml)
+\item Les blocs classiques pouvant être paramètrés par des entiers, prenant des fils en entrées et créant des fils en sorties, qui définissent leur corps à partir d'autres blocs.
+\item Les périphériques ou blocs externes.
+\end{itemize}
+
+\paragraph{Syntaxe du langage}
+Le langage suit la grammaire suivante :\newline\newline
+\begin{tabular}{ r c l }
+  fichier &$::=$&\: instruction* BlocEntrée instruction*\\ [1.5ex]
+  BlocEntrée &$::=$&\: {\bf start} NomBloc $<$ ConstanteEntière, ... ,
+  ConstanteEntière  $>$\\ [1.5ex]
+  instruction &$::=$&\: BlocDéfinition\\
+  &&| PériphériqueDéfinition \\ [1.5ex]
+  BlocDéfinition &$::=$&\: NomBloc Paramètres? Arguments? Instance* $\to$
+  Sorties $;$\\ [1.5ex]
+  PériphériqueDéfinition &$::=$&\: {\bf device} NomBloc Paramètres\\ [1.5ex]
+  NomBloc &$::=$&\: \emph{identifiant commençant par une majuscule}\\ [1.5ex]
+  Paramètres &$::=$&\: $<$ Pattern, ... , Pattern $>$\\ [1.5ex]
+  Pattern &$::=$&\: $a*n+k+b$     \\ 
+  &&| $b$ \\ 
+  \multicolumn{3}{c}{(avec $a$, $b$ des constantes entières, $a
+    \neq 1$ et $n$, $k$ des identifiants de variables)} \\ [1.5ex]
+  Arguments &$::=$&\: $($ DeclarationFil, ... , DeclarationFil $)$ \\ [1.5ex]
+  DeclarationFil  &$::=$&\: NomFil \\
+  &&| NomFil $[$ ConstanteEntière $]$ \\ [1.5ex]
+  NomFil &$::=$&\: \emph{identifiant commençant par une minuscule}\\ [1.5ex]
+  Instance &$::=$&\: NomBloc NomVariableBloc $($ Fil, ... , Fil $)$ \\ [1.5ex]
+  Fil &$::=$&\: NomFil\\
+  &&| NomFil $[$ ConstanteEntière $]$\\
+  &&| NomFil $[$ ConstanteEntière {\bf..} ConstanteEntière $]$\\
+  &&| {\bf \$} $(0|1)+$
+  &&| $\mathbf{\{}$ Fil, ... , Fil $\mathbf{\}}$\\ [1.5ex]
+  Sorties&$::=$&\: DeclarationFil : Fil, ... , DeclarationFil : Fil
+\end{tabular}
+
+
+\paragraph{Opérations sur les entiers.}
+
+
+
+\subsection{Les blocs classiques}
+La syntaxe des blocs classiques est comme suit :
+\begin{verbatim}
+NomBloc [<param1, .. >] [(fil1, ..)]
+    NomBloc NomVariable[(fil1, .. )]
+    -> nomSortie1 : fil1 , .. ;
+\end{verbatim}
+
+où les crochets indiquent les parties optionnelles lorsqu'elles sont vides. \\
+Les paramètres (entre chevrons) doivent être d'une des formes suivantes :
+\begin{itemize}
+\item$n$ où $n$ est un entier littéral
+\item$ax + y + b$ où $x$ et $y$ sont des variables et $a$ et $b$ des littéraux avec $a \neq 1$
+\item$x + a$ où $x$ est une variable et $a$ un littéral. 
+\end{itemize}
+Les paramètres peuvent notamment être employés pour faire de la récursivité.\\
+Les fils en entrées et en sortie sont des fils épais dont la taille doit être indiquée entre crochets sauf si le fil est de taille $1$. Deux opérateurs permettent de travailler sur les fils épais :
+\begin{itemize}
+\item La construction \texttt{fil[i..j]} permet d'extraire un fil de taille $j - i + 1$ tandis que \texttt{fil[i]} extrait un fil de taille $1$.
+\item La construction \texttt{\{$fil_{1}$, .. , $fil_{n}$\}} permet de construire un fil de taille la somme des tailles de fil $fil_{i}$.
+\end{itemize}
+On accéde à la sortie d'un bloc avec la construction \texttt{NomBloc.nomSortie}. À ce propos, les noms de blocs et de variables de blocs commencent par une majuscule tandis que les noms de fils et de variables entières commencent par une minuscule. 
+
+
+\subsection{Les périphériques}
+
+Les périphériques sont des portes dont le code est fourni au compilateur. On peut par exemple faire des périphériques ``mémoire'', ou des périphériques permettant au circuit d'intéragir avec l'utilisateur. Un périphérique prend la forme d'une classe C++, qui doit dériver de la classe \texttt{device} (dont on trove une définition dans FrontEnd/devices/device.h). Elle doit posséder les membres publics suivants :
+\begin{itemize}
+\item Une méthode statique \texttt{make} qui prend les mêmes arguments que le constructeur (dans la netlist, ces arguments apparaissent comme les paramètres du périphérique ; ils doivent bien sûr tous être de type \texttt{int}). Cette fonction doit instancier la classe avec \texttt{new} (en passant ses arguments au constructeur) et renvoyer le pointeur de l'instance upcasté en \texttt{device}.
+\item Une méthode \texttt{cycle} de prototype :
+\begin{verbatim}
+
+virtual unsigned int cycle (unsigned int address,
+                            unsigned int data,
+                            char byte_enables,
+                            bool write_enable,
+                            bool interrupt_enable,
+                            bool iack,
+                            char * irq);
+
+\end{verbatim}
+Cette méthode sera appelée à chaque cycle ; ses arguments sont obtenus à partir des 67 bits d'entrée du périphérique : les 32 premiers bits vont dans \texttt{address} (en ordre \emph{little endian}), les 32 suivants dans \texttt{data}, les 4 suivants dans \texttt{byte\_enables}, et les derniers dans les 3 arguments suivants. Les 32 premiers bits de sortie du périphérique définisent la valeur de retour de la méthode, et le dernier est écrit dans \texttt{*irq}. L'idée est que les périhériques du processeur seront mappés en mémoire, et accessibles comme sur un processeur \emph{mips}, d'où la présence des quatre bits \emph{byte enable}. Un exemple de device est donné dans FrontEnd/devices/memory.cpp et utilisé par FrontEnd/tests/use-memory. Un exemple plus complexe est aussi donné dans FrontEnd/devices/bus.cpp et utilisé dans FrontEnd/tests/test-bus : ici, en plus de la mémoire, on simule des afficheurs 7 segments (mappés à partir de l'adresse 0x80000000).
+\end{itemize}
+
+
+\end{document}

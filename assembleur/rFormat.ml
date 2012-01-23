@@ -24,22 +24,22 @@ let map =
   create_map
     [
       "and", (0b000000l, [ RD ; RS ; RT ] ) ;
-      "or",  (0b100000l, [ RD ; RS ; RT ] ) ;
-      "xor", (0b010000l, [ RD ; RS ; RT ] ) ;
-      "nand",(0b110000l, [ RD ; RS ; RT ] ) ;
-      "nor", (0b001000l, [ RD ; RS ; RT ] ) ;
-      "add", (0b101000l, [ RD ; RS ; RT ] ) ;  
-      "sub", (0b011000l, [ RD ; RS ; RT ] ) ;
-      (* "mul", (0b111000l, [ RD ; RS ; RT ] ) ; *)
-      "seq", (0b000100l, [ RD ; RS ; RT ] ) ;
-      "sne", (0b000100l, [ RD ; RS ; RT ] ) ;
-      "slt", (0b010100l, [ RD ; RS ; RT ] ) ;
-      "sgt", (0b110100l, [ RD ; RS ; RT ] ) ;
+      "or",  (0b000001l, [ RD ; RS ; RT ] ) ;
+      "xor", (0b000010l, [ RD ; RS ; RT ] ) ;
+      "nand",(0b000011l, [ RD ; RS ; RT ] ) ;
+      "nor", (0b000100l, [ RD ; RS ; RT ] ) ;
+      "add", (0b000101l, [ RD ; RS ; RT ] ) ;  
+      "sub", (0b000110l, [ RD ; RS ; RT ] ) ;
+      (* "mul", (0b000111l, [ RD ; RS ; RT ] ) ; *)
+      "seq", (0b001000l, [ RD ; RS ; RT ] ) ;
+      "sne", (0b001000l, [ RD ; RS ; RT ] ) ;
+      "slt", (0b001010l, [ RD ; RS ; RT ] ) ;
+      "sgt", (0b001011l, [ RD ; RS ; RT ] ) ;
       "sle", (0b001100l, [ RD ; RS ; RT ] ) ;
-      "sge", (0b000100l, [ RD ; RS ; RT ] ) ;
+      "sge", (0b001000l, [ RD ; RS ; RT ] ) ;
       (* quels shifts faut-il garder ??? *)
-      "srl", (0b111100l, [ RD ; RT ; SHAMT ] ) ;
-      "srlv", (0b111100l, [ RD ; RT ; RS ] ) ;
+      "srl", (0b001111l, [ RD ; RT ; SHAMT ] ) ;
+      "srlv", (0b001111l, [ RD ; RT ; RS ] ) ;
       (*
 	"sll", (0b111100l, [ RD ; RT ; SHAMT ] ) ;
 	"sllv", (0b111100l, [ RD ; RT ; RS ] ) ;
@@ -70,10 +70,10 @@ let shift = accumulate [| 0 ; 6 ; 5 ; 5 ; 5 ; 5 ; 6 |]
   
 let to_char_list x = 
   let res = 
-    x.funct lsl shift.(0) +
-      x.shamt lsl shift.(1) +
+    x.funct lsl shift.(4) +
+      x.shamt lsl shift.(3) +
       x.rd lsl shift.(2) +
-      x.rt lsl shift.(3) +
-      x.rs lsl shift.(4)
+      x.rt lsl shift.(1) +
+      x.rs lsl shift.(0)
   in
-    List.rev & int32_to_word res
+    int32_to_word res

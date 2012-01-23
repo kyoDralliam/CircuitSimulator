@@ -12,8 +12,8 @@ type t =
 let map = 
   create_map
     [
-      "j", 0b111101l ;
-      "jal", 0b111001l ; (* à corriger ou à passer en pseudo-instruction*)
+      "j", 0b101111l ;
+      (* "jal", 0b111001l ;  à corriger ou à passer en pseudo-instruction*)
     ] 
     
 let parse n l opcode = 
@@ -25,12 +25,12 @@ let parse n l opcode =
   in
     { opcode = opcode ; address = ad }
       
-let shift = accumulate [| 0 ; 26 ; 6 |]
+let shift = accumulate [| 0 ; 6 ; 26 |]
   
 let to_char_list x =
   let ad = match x.address with Const t -> t | Label _ -> assert false in
   let res = 
-    ad lsl shift.(0) +
-      x.opcode lsl shift.(1)
+    ad lsl shift.(1) +
+      x.opcode lsl shift.(0)
   in
-    List.rev & int32_to_word res
+     int32_to_word res

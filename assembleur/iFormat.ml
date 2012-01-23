@@ -25,21 +25,21 @@ let empty =
 let map = 
   create_map
     [
-      "andi", (0b000011l, [ RT ; RS ; Imm ] ) ;
-      "ori",  (0b100011l, [ RT ; RS ; Imm ] ) ;
-      "xori", (0b010011l, [ RT ; RS ; Imm ] ) ;
+      "andi", (0b110000l, [ RT ; RS ; Imm ] ) ;
+      "ori",  (0b110001l, [ RT ; RS ; Imm ] ) ;
+      "xori", (0b110010l, [ RT ; RS ; Imm ] ) ;
       "nandi",(0b110011l, [ RT ; RS ; Imm ] ) ;
-      "nori", (0b001011l, [ RT ; RS ; Imm ] ) ;
-      "addi", (0b101011l, [ RT ; RS ; Imm ] ) ;
-      "subi", (0b011011l, [ RT ; RS ; Imm ] ) ;
-      (* "muli", (0b111011l, [ RD ; RS ; Imm ] ) ; *)
-      "lw",   (0b110001l, [ RS ; Ad ] ) ; 
-      "sw",   (0b110101l, [ RS ; Ad ] ) ; 
-      "jr",   (0b000101l, [ RS ]) ; 
+      "nori", (0b110100l, [ RT ; RS ; Imm ] ) ;
+      "addi", (0b110101l, [ RT ; RS ; Imm ] ) ;
+      "subi", (0b110110l, [ RT ; RS ; Imm ] ) ;
+      (* "muli", (0b110111l, [ RD ; RS ; Imm ] ) ; *)
+      "lw",   (0b100011l, [ RS ; Ad ] ) ; 
+      "sw",   (0b101011l, [ RS ; Ad ] ) ; 
+      "jr",   (0b101000l, [ RS ]) ; 
       "lb",   (0b100001l, [ RS ; Ad ] ) ; 
       (* "lh",   (0b01l, [ RS ; Ad ] ) ; *)
-      "sh",   (0b01l, [ RS ; Ad ] ) ;  
-      "sb",   (0b100101l, [ RS ; Ad ] ) ; 
+      (* "sh",   (0b01l, [ RS ; Ad ] ) ;  *)
+      "sb",   (0b101001l, [ RS ; Ad ] ) ; 
       (* "lui",  (0b01l, [ RT ; Imm ]) ; *)
       (* slti ? *)
     ]
@@ -66,13 +66,13 @@ let parse n l (opcode, args) =
       List.fold_left2 aux format l args
     with Invalid_argument _ -> raise & Invalid_instruction ( T.Instruction (n, l) )
       
-let shift = accumulate [| 0 ; 5 ; 5 ; 6 |]
+let shift = accumulate [| 0 ; 6; 5 ; 5 |]
   
 let to_char_list x = 
   let res =
-    x.rt lsl shift.(0) +
+    x.rt lsl shift.(2) +
       x.rs lsl shift.(1) +
-      x.opcode lsl shift.(2)
+      x.opcode lsl shift.(0)
   in
   let imm = 
     match x.immediate with
@@ -87,5 +87,5 @@ let to_char_list x =
 	  char_to_half c
       | Label _ -> assert false
   in
-    ( List.rev & int32_to_u_half res ) @ ( List.rev imm )
+     (int32_to_u_half res )  @ imm 
       
