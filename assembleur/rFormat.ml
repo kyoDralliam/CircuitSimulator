@@ -30,7 +30,7 @@ let map =
       "nor", (0b000100l, [ RD ; RS ; RT ] ) ;
       "add", (0b000101l, [ RD ; RS ; RT ] ) ;  
       "sub", (0b000110l, [ RD ; RS ; RT ] ) ;
-       "mul", (0b000111l, [ RD ; RS ; RT ] ) ; 
+      "mul", (0b000111l, [ RD ; RS ; RT ] ) ; 
       "seq", (0b001000l, [ RD ; RS ; RT ] ) ;
       "sne", (0b001000l, [ RD ; RS ; RT ] ) ;
       "slt", (0b001010l, [ RD ; RS ; RT ] ) ;
@@ -66,7 +66,7 @@ let parse n l (funct, args) =
       List.fold_left2 aux format l args
     with Invalid_argument _ -> raise & Invalid_instruction ( T.Instruction (n, l) )
 
-let shift = accumulate [| 0 ; 6 ; 5 ; 5 ; 5 ; 5 ; 6 |]
+let shift = accumulate [| 6 ; 5 ; 5 ; 5 ; 5 ; 6 |]
   
 let to_char_list x = 
   let res = 
