@@ -237,7 +237,7 @@ let substitute labels format =
       | RFormat x -> RFormat.to_char_list x 
       | BFormat t ->
 	  let n = get_label & fst t.BFormat.label in
-	  let d = (Int32.sub n & snd t.BFormat.label) + 4l in
+	  let d = (Int32.sub n & ((snd t.BFormat.label) + 4l) ) in
 	  let _ = assert ( Int32.abs d < 1l lsl 15 ) in 
 	    BFormat.to_char_list { t with BFormat.delta = d } 
       | IFormat t ->
