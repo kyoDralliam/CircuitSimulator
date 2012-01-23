@@ -40,7 +40,7 @@ let map =
       (* "lh",   (0b01l, [ RS ; Ad ] ) ; *)
       (* "sh",   (0b01l, [ RS ; Ad ] ) ;  *)
       "sb",   (0b101001l, [ RS ; Ad ] ) ; 
-      (* "lui",  (0b01l, [ RT ; Imm ]) ; *)
+      "lui",  (0b111110l, [ RT ; RS ; Imm ]) ; 
       (* slti ? *)
     ]
     

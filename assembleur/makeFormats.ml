@@ -43,12 +43,15 @@ let pseudo_instructions =
       [
 	"move", ( [ X ; Y ], [ "addi", [ ~?X ; ~?Y ; const_0 ] ] ) ;
 	"clear", ( [ X ], [ "add", [ ~?X ; reg0 ; reg0 ] ] ) ;
-	"la", ( [ X ; Y ], [ "lui", [ ~?X ; get_upper Y ] ; "addi", [ ~?X ; reg0 ; get_lower Y ] ] ) ;
-	"li", ( [ X ; Y ], [ "lui", [ ~?X ; get_upper Y ] ; "addi", [ ~?X ; reg0 ; get_lower Y ] ] ) ;
+	"la", ( [ X ; Y ], [ "lui", [ ~?X ; ~?X ; get_upper Y ] ; "addi", [ ~?X ; reg0 ; get_lower Y ] ] ) ;
+	"li", ( [ X ; Y ], [ "lui", [ ~?X ; ~?X ; get_upper Y ] ; "addi", [ ~?X ; reg0 ; get_lower Y ] ] ) ;
 	"b", ( [ X ], [ "beq", [ reg0 ; reg0 ; ~?X ] ] ) ;
 	"bgt", ( [ X ; Y ; Z ], [ "slt", [ at_reg ; ~?Y ; ~?X ] ; "bne", [ at_reg ; reg0 ; ~?Z ] ] ) ;
 	"beqz", ( [ X ; Y ], [ "beq", [ ~?X ; reg0 ; ~?Y ] ] ) ;
-	"lui", ( [ X ; Y ], [ "addi", [ ~?X ; reg0 ; ~?Y ] ; "sll", [ ~?X ; ~?X ; ~!(T.Int (16l, T.All)) ] ] )
+	(* 
+	   "lui", ( [ X ; Y ], [ "addi", [ ~?X ; reg0 ; ~?Y ] 
+	   ; "sll", [ ~?X ; ~?X ; ~!(T.Int (16l, T.All)) ] ] ) 
+	*)
       ]
 
 let get_pseudo s l = 
@@ -99,6 +102,29 @@ object (self)
       instructions = instr :: instructions
     >}
 
+  method jal s = 
+    let addi_opcode = 
+      try fst & find "addi" IFormat.map
+      with Not_found -> assert false 
+    in
+    let set_ra = 
+      IFormat IFormat.(
+	{ 
+	  opcode = addi_opcode ;  
+	  rt = get_reg "ra" ;
+	  rs = get_reg "zero" ;
+	  immediate = Const (Int (pc + 8l) )
+	}
+      ) in
+    let jump = 
+      JFormat JFormat.(
+	{
+	  opcode = 0b101111l ;
+	  address = Label s 
+	}
+      ) in
+      (self # add set_ra) # add jump
+
   method result = labels, List.rev instructions
 
   method end_address = pc
@@ -123,7 +149,10 @@ let rec text_instruction ctx = function
       let res = JFormat.parse n l & try find n JFormat.map with Not_found -> assert false in
 	ctx # add (JFormat res)
 
-  | T.Instruction (n, l) when mem n pseudo_instructions ->
+  | T.Instruction ("jal", [ T.Lab(s, mf) ]) ->
+      ctx # jal s
+
+  | T.Instruction (n, l) when mem n pseudo_instructions -> 
       List.fold_left text_instruction ctx (get_pseudo n l)
 
   | x -> raise & Invalid_instruction x
