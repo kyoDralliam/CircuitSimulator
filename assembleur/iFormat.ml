@@ -28,19 +28,19 @@ let map =
       "andi", (0b000011l, [ RT ; RS ; Imm ] ) ;
       "ori",  (0b100011l, [ RT ; RS ; Imm ] ) ;
       "xori", (0b010011l, [ RT ; RS ; Imm ] ) ;
+      "nandi",(0b110011l, [ RT ; RS ; Imm ] ) ;
       "nori", (0b001011l, [ RT ; RS ; Imm ] ) ;
       "addi", (0b101011l, [ RT ; RS ; Imm ] ) ;
       "subi", (0b011011l, [ RT ; RS ; Imm ] ) ;
-      (*"beq",  (0b000110l, [ RS ; RT ; Imm ] ) ;*)
+      (* "muli", (0b111011l, [ RD ; RS ; Imm ] ) ; *)
       "lw",   (0b110001l, [ RS ; Ad ] ) ; 
       "sw",   (0b110101l, [ RS ; Ad ] ) ; 
-      "jr",   (0b000001l, [ RS ]) ; 
-      (*"bne",  (0b100110l, [ RS ; RT ; Imm ] ) ; (* à corriger *)*)
+      "jr",   (0b000101l, [ RS ]) ; 
       "lb",   (0b100001l, [ RS ; Ad ] ) ; 
       (* "lh",   (0b01l, [ RS ; Ad ] ) ; *)
       "sh",   (0b01l, [ RS ; Ad ] ) ;  
       "sb",   (0b100101l, [ RS ; Ad ] ) ; 
-      "lui",  (0b01l, [ RT ; Imm ]) ; 
+      (* "lui",  (0b01l, [ RT ; Imm ]) ; *)
       (* slti ? *)
     ]
     
