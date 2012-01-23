@@ -245,13 +245,13 @@ main:
         jr      $ra
 
 # Affiche l'entier présent dans le registre $a0, suivi d'un retour à la ligne
-print_int:
-        li      $v0, 1
-        syscall
-        li      $v0, 4
-        la      $a0, newline
-        syscall
-        jr      $ra
+#print_int:
+        #li      $v0, 1
+        #syscall
+        #li      $v0, 4
+        #la      $a0, newline
+        #syscall
+        #jr      $ra
 
 # Multiplie les deux entiers contenus dans $a0 et $a1
 # Renvoie le résultat dans $v0

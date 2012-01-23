@@ -18,4 +18,32 @@ incroyable, n'est-il pas ?). Son fonctionnement est le suivant :
    effectué puis affiché dans l'afficheur 7 segments (la méthode pour cela est
    décrite à part).
 4) Puis, on doit calculer la date. Et là, c'est nettement plus technique. Il
-   faut commencer par corriger les bugs dûs aux 
+   faut commencer par corriger les décalages dûs aux années bissextiles. Deux
+   approches sont essentiellement possibles : considérer qu'une année "normale"
+   est une année de 365 jours, et prévoir un cas précis pour certains timestamps
+   correspondant aux quelques 29 févriers ; ou bien considérer qu'une année
+   "normale" fait 366 jours et se contenter de modifier en dur le timestamp en
+   ajoutant l'équivalent d'un jour chaque 28 février à 23:59:59 d'une année non
+   bissextile. C'est cette deuxième option qui a été choisie.
+5) On calcule donc le nombre de jours à ajouter, par paquets de 4 ans (on
+   rajoute 72 heures à chaque foisO) et en corrigeant en bout de course. On fait
+   un cas particulier pour l'an 2000 (année non bissextile, comme tous les 400
+   ans - heureusement, le timestamp UNIX s'arrête en 2038, on est donc pas tenus
+   de prévoir les autres cas), et finalement on obtient un nombre de jours
+   "artificiels" mais qui permet de traiter tous les cas d'un seul coup.
+6) On calcule le mois et le jour en faisant 12 cas, faute de méthode plus simple
+   pour s'adapter aux durées variables des différents mois. Pour le mois de
+   février, un des avantages est que l'on peut toujours considérer qu'il dure 29
+   jours - la modification précédente du timestamp garantit que l'on ne peut pas
+   tomber dans le cas "29 février" si on n'est pas une année bissextile.
+7) On affiche enfin la date, et on revient au début pour récupérer le nouveau
+   timestamp et recommencer. "Un programme n'est pas fait pour être arrêté."
+
+Pour afficher la date, il faut d'abord transformer un nombre sur un octet en
+format "afficheur 7 segments" (où chaque bit représente l'état, allumé ou
+éteint, d'un des 7 segments). La traduction est codée en dur, dans deux tables
+(selon si les nombres considérés ont deux (cas le plus courant) ou quatre
+chiffres (pour les années par exemple)) nommées two_digits_to_segments et
+year_to_segments, et il suffit de chercher au bon endroit de ces tables (au
+début pour 00, dans les deux cases suivantes pour 01, etc.) pour avoir
+le renseignement voulu.
