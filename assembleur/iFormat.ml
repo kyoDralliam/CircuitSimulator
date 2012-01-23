@@ -32,7 +32,7 @@ let map =
       "nori", (0b110100l, [ RT ; RS ; Imm ] ) ;
       "addi", (0b110101l, [ RT ; RS ; Imm ] ) ;
       "subi", (0b110110l, [ RT ; RS ; Imm ] ) ;
-      (* "muli", (0b110111l, [ RD ; RS ; Imm ] ) ; *)
+      "muli", (0b110111l, [ RT ; RS ; Imm ] ) ; 
       "lw",   (0b100011l, [ RS ; Ad ] ) ; 
       "sw",   (0b101011l, [ RS ; Ad ] ) ; 
       "jr",   (0b101000l, [ RS ]) ; 
@@ -40,7 +40,7 @@ let map =
       (* "lh",   (0b01l, [ RS ; Ad ] ) ; *)
       (* "sh",   (0b01l, [ RS ; Ad ] ) ;  *)
       "sb",   (0b101001l, [ RS ; Ad ] ) ; 
-      (* "lui",  (0b01l, [ RT ; Imm ]) ; *)
+      "lui",  (0b111110l, [ RT ; RS ; Imm ]) ; 
       (* slti ? *)
     ]
     
