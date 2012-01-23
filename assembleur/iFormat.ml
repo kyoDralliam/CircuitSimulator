@@ -35,7 +35,7 @@ let map =
       "muli", (0b110111l, [ RT ; RS ; Imm ] ) ; 
       "lw",   (0b100011l, [ RS ; Ad ] ) ; 
       "sw",   (0b101011l, [ RS ; Ad ] ) ; 
-      "jr",   (0b101000l, [ RS ]) ; 
+      "jr",   (0b100000l, [ RS ]) ; 
       "lb",   (0b100001l, [ RS ; Ad ] ) ; 
       (* "lh",   (0b01l, [ RS ; Ad ] ) ; *)
       (* "sh",   (0b01l, [ RS ; Ad ] ) ;  *)
