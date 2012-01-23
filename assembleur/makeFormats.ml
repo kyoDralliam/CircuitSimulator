@@ -43,8 +43,8 @@ let pseudo_instructions =
       [
 	"move", ( [ X ; Y ], [ "addi", [ ~?X ; ~?Y ; const_0 ] ] ) ;
 	"clear", ( [ X ], [ "add", [ ~?X ; reg0 ; reg0 ] ] ) ;
-	"la", ( [ X ; Y ], [ "lui", [ ~?X ; ~?X ; get_upper Y ] ; "addi", [ ~?X ; reg0 ; get_lower Y ] ] ) ;
-	"li", ( [ X ; Y ], [ "lui", [ ~?X ; ~?X ; get_upper Y ] ; "addi", [ ~?X ; reg0 ; get_lower Y ] ] ) ;
+	"la", ( [ X ; Y ], [ "addi", [ ~?X ; reg0 ; get_lower Y ] ; "lui", [ ~?X ; ~?X ; get_upper Y ] ] ) ;
+	"li", ( [ X ; Y ], [ "addi", [ ~?X ; reg0 ; get_lower Y ] ; "lui", [ ~?X ; ~?X ; get_upper Y ] ] ) ;
 	"b", ( [ X ], [ "beq", [ reg0 ; reg0 ; ~?X ] ] ) ;
 	"beqz", ( [ X ; Y ], [ "beq", [ ~?X ; reg0 ; ~?Y ] ] ) ;
 	"bnez",  ( [ X ; Y ], [ "bne", [ ~?X ; reg0 ; ~?Y ] ] ) ;
