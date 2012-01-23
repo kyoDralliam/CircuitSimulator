@@ -45,9 +45,14 @@ let char_list_of_string s =
     String.iter (fun c -> res := c :: !res ) s ;
     !res 
 
+let neg_if_neg x = 
+  if x < 0l 
+  then Int32.lognot & Int32.sub (Int32.neg x) 1l 
+  else x
+
 let int32_to_word x = 
-  let sg, x' = if x < 0l then 1l lsl 7, Int32.neg x else 0l, x in 
-  let x0 = ( ( x' lsl 0 ) lsr 24 ) ||| sg in
+  let x' = neg_if_neg x in 
+  let x0 = ( x' lsl 0 ) lsr 24  in
   let x1 = ( x' lsl 8 ) lsr 24 in
   let x2 = ( x' lsl 16) lsr 24 in
   let x3 = ( x' lsl 24) lsr 24 in
@@ -78,9 +83,9 @@ let int32_to_u_half x =
     List.map chr [ x1 ; x0 ] *)
 
 let int32_to_half x =  
-  let sgn, x' = if x < 0l then 1l lsl 7, Int32.neg x else 0l, x in
+  let x' = neg_if_neg x in
   let _ = assert ( x' < 1l lsl 15 ) in
-  let x0 = ( (x' lsl 16) lsr 24 ) ||| sgn in
+  let x0 = ( x' lsl 16 ) lsr 24 in
   let x1 = ( x' lsl 24 ) lsr 24 in
     List.map chr [ x1 ; x0 ]
 
@@ -93,10 +98,9 @@ let int32_to_u_byte x =
     chr x
 
 let int32_to_byte x =
-  let sgn, x' = if x < 0l then 1l lsl 7, Int32.neg x else 0l, x in
+  let x' = neg_if_neg x in
   let _ = assert ( x' < 1l lsl 7 ) in
-  let x0 = x' + sgn in
-    chr x0
+    chr x'
 
 
 let accumulate a = 
