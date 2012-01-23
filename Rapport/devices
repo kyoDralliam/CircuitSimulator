@@ -1,0 +1,110 @@
+Les périphériques
+------------
+
+Les périphériques sont un moyen de définir de nouvelles portes en plus des
+portes base. On peut les utiliser pour simuler des mémoires, ou des
+périphériques d'entrée/sortie.
+
+Tous les périphériques ont la même interface (les mêmes fils d'entrée et
+les mêmes fils de sortie) :
+
+-   Entrée :
+    Address               (32 bits)
+    Data                  (32 bits)
+    Write mode            (1 bit)
+    Byte enables          (4 bits)
+    Enable interrupt      (1 bit)
+    Interrupt processed   (1 bit)
+
+-   Sortie :
+    Data                  (32 bits)
+    Interrupt request     (1 bit)
+
+Les périphériques peuvent contenir du code arbitraire, et peuvent donc a
+priori gérer leurs entrées et sorties de n'importe quelle
+manière. Cependant, ils sont faits pour simuler des périphériques mappés en
+mémoire : Les entrées "Address", "Data" et "Write mode" et la sortie Dat
+fonctionnent comme leur nom l'indique (l'entrée "Data" contient les données
+à écrire si "Write mode" =  1, la sortie "Data" contient les données lues).
+L'entrée "Byte enables" indique quels octets il faut prendre en compte :
+
+-   Si à l'adresse 0 se trouve la suite d'octets 11 22 33 44, et si l'on
+    essaye de lire à l'adresse 0 avec "Byte enables" = $1010, la valeur lue
+    correspondra à la suite d'octets 11 00 33 00.
+
+-   Si à l'adresse 0 se trouve la suite d'octets 11 22 33 44, et si l'on
+    essaye d'écrire 55 66 77 88 à l'adresse 0 avec "Byte enables" = $1010,
+    on trouvera à l'adresse 0 la suite d'octets : 55 22 77 44.
+
+Les périphériques sont pensés comme des registres, c'est-à-dire que si l'on
+écrit l'adresse où l'on veut lire au cycle t, on pourra lire le résultat au
+cycle t+1. A posteriori, il aurait été plus pratique de donner le choix
+entre les deux modes de fonctionnement (lecture instantannée et lecture
+retardée d'un cycle), car lorsqu'un périphérique n'est pas utilisé pour
+couper une boucle combianatoire, on perd simplement un cycle à attendre.
+
+On déclare les types de périphériques de la façon suivante :
+
+  device Memory<size>
+
+
+Puis, le type de périphérique peut être instancié comme n'importe quel
+autre type de bloc, par exemple, le circuit suivant :
+
+  Start
+      Memory<5> Ram($0000...0000, $0000...0000, $1111, $0, $0)
+      -> out[32] : Ram.dtata;
+
+  start Start
+
+Est constitué d'une mémoire sur 2⁵ = 32 octets, et sa sortie correspond au
+mot de 32 bits contenu à l'adresse 0 dans la mémoire. Si la mémoire est
+prévue pour initialiser tous ses octets à 0, la sortie de ce circuit sera :
+
+  00000000000000000000000000000000
+  00000000000000000000000000000000
+  00000000000000000000000000000000
+  00000000000000000000000000000000
+  ...
+
+Et le circuit suivant :
+
+  Start
+      Memory<5> Ram($0000...0000, $1111...1111, $1100, $1, $0)
+      -> out[32] : Ram.dtata;
+
+  start Start
+
+Aura pour sortie :
+
+  00000000000000000000000000000000
+  11111111111111110000000000000000
+  11111111111111110000000000000000
+  11111111111111110000000000000000
+  ...
+
+
+On définit les types périphériques de la manière suivante :
+Chaque type de périphérique est défini par une classe C++, qui doit
+descendre de la classe device :
+
+  class device
+  {
+  public :
+    virtual ~device();
+    virtual unsigned int cycle (unsigned int address, unsigned int data,
+                                char byte_enables, bool write_enable,
+                                bool interrupt_enable, bool iack, char *
+                                irq)=0;
+  };
+
+Chaque périhérique doit également fournir une méthode statique "make", qui
+construit un objet de cette classe et renvoie un pointeur vers cet objet,
+upcasté en "device*". Cette méthode prend un argument (de type "int") par
+paramètre du périphérique. Par exemple, pour le périphérique "Memory", la
+méthode "make" a le prototype suivant :
+
+  device * make (int size)
+
+Pour chaque périphérique du circuit, sa méthode "cycle" est appelée à
+chaque cycle, avec comme arguments les valeurs lues dans les fils d'entrée.

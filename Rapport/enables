@@ -1,0 +1,123 @@
+Les enables
+------------
+
+Les enables permettent de redéfinir localement l'horloge du circuit :
+le circuit suivant :
+
+  Count_mod_2
+      Not N(R.o)
+      Reg R(N.o)
+      -> o : R.o
+
+  Start
+      Count_mod_2 C1
+      Count_mod_2 @ C1.o C2
+      -> o : C2.o
+
+  start Start
+
+Contient deux compteurs modulo 2 : C1 et C2, mais à l'intérieur du second,
+l'horloge est localement redéfinie, de sorte que le second compteur n'est
+actif qu'au cycles où la sortie du premier vaut 1, c'est-à-dire un cycle
+sur deux. La sortie du circuit est donc :
+
+  0
+  0
+  1
+  1
+  0
+  0
+  1
+  1
+  ...
+
+Lorsqu'une porte n'est pas active, le code C++ correspondant n'est
+simplement pas exécuté : La sortie de la porte garde sa valeur du cycle
+précédent, et s'il s'agit d'un registre, son contenu n'est pas
+modifié. Dans le cas d'un périphérique, sa méthode "cycle" n'est pas
+appelée.
+
+
+Si on redéfinit l'horloge d'un bloc, on redéfinit l'horloge de toutes les
+portes et de tous les blocs qu'il contient. Si ce bloc lui-même redéfinit
+l'horloge de l'un de ses composants, celui-ci ne sera actif que lorsque son
+bloc parent l'est et que son bloc parent l'active. Par exemple, on peut
+utiliser les enables pour programmer un compteur modulo 2^n : Le bloc
+suivant :
+
+  Count<1>
+      Reg M(N.o)
+      Not N(M.o)
+      -> out : M.o,
+         carry : M.o;
+
+  Count<n>
+      Count<1> Low
+      Count<n-1> @ Low.carry High
+      And A(Low.carry, High.carry)
+      -> out[n] : {Low.out, High.out},
+         carry : A.o;
+
+  Start<n>
+      Count<n> C
+      -> out[n] : C.out;
+
+  start Start<3>
+
+A pour sortie :
+
+  000
+  100
+  010
+  110
+  001
+  101
+  011
+  111
+  000
+  100
+  010
+  ...
+
+
+L'intérêt majeur des enables est qu'ils permettent de gagner du temps en
+n'exécutant que les parties du circuit qui sont utiles au cycle en cours
+(en plus de rendre certains codes plus simples, comme celui du compteur
+modulo 2^n). Par exemple, grâce aux enables, on peut définir un bloc
+"Ram" de manière (à peu près) efficace :
+
+  Mux_scalar <1> (selector, input0[1], input1[1])
+      Mux M(selector, input0, input1)
+      -> o : M.o;
+
+  Mux_scalar <n> (selector, input0[n], input1[n])
+      Mux_scalar<n-1> Low(selector, input0[0..n-2], input1[0..n-2])
+      Mux High(selector, input0[n-1], input1[n-1])
+      -> o[n] : {Low.o, High.o};
+
+  Ram <0,1> (data[1], write)
+      Mux M(write, R.o, data[0])
+      Reg R(M.o)
+      -> data[1] : R.o;
+
+  Ram <0,d> (data[d], write)
+      Ram<0,d-1> Low(data[0..d-2], write)
+      Ram<0,1> High(data[d-1], write)
+      -> data[d] : {Low.data, High.data};
+
+  Ram <1,d> (address[1], data[d], write)
+      Not N(address[0])
+      Ram<0,d> @ address[0] Low(data, write)
+      Ram<0,d> @ N.o        High(data, write)
+      Mux_scalar<d> M(address, Low.data, High.data)
+      -> data[d] : M.o;
+
+  Ram <a,d> (address[a], data[d], write)
+      Not N(address[a-1])
+      Ram<a-1,d> @ N.o          Low(address[0..a-2], data, write)
+      Ram<a-1,d> @ address[a-1] High(address[0..a-2], data, write)
+      Mux_scalar<d> M(address[a-1], Low.data, High.data)
+      -> data[d] : M.o;
+
+Ainsi, pour une mémoire de 2^a mots de d bits, le temps de calcul pour un
+cycle est en O(a*d), au lieu du O(2^a * d) que l'on aurait eu sans enables.
