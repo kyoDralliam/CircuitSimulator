@@ -51,16 +51,13 @@ let newline = '\n' | '\r' | '\r' '\n' | '\n' '\r'
 let alphaNum = ['A'-'Z' 'a'-'z' '_' '0'-'9']
 let upperCase = ['A'-'Z']
 let lowerCase = ['a'-'z']
-let int = ['0'-'9' '_'] + 
+let int = 
+  ( ['0'-'9' '_'] + )
+  | ( '0' ['x' 'X'] ['0'-'9' 'A'-'F' 'a'-'f'] + )
+  | ( '0' ['o' 'O'] ['0'-'7']+ )
+  | ( '0' ['b' 'B'] ['0'-'1']+ )
 let one_line_comment = "#" [^ '\r' '\n']*
 let multi_line_comment_begin = "(*"
-
-(* si on veut rajouter les hexadécimaux, octals ou binaires
-   ( extrait de l'exemple de cédric pasteur)
-   | '0' ['x' 'X'] ['0'-'9' 'A'-'F' 'a'-'f']+
-   | '0' ['o' 'O'] ['0'-'7']+
-   | '0' ['b' 'B'] ['0'-'1']+
-*)
 
 rule token = parse
   | newline                 { incr_linenum lexbuf ; token lexbuf }

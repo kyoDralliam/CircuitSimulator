@@ -22,7 +22,7 @@ let pseudo_instructions =
   let ( ~! ) x = Const x in 
   let const_0 = ~!(T.Int (0l, T.All)) in
   let reg0 = ~!(T.Reg "zero") in
-  let at_reg = ~!(T.Reg "at") in
+  (* let at_reg = ~!(T.Reg "at") in *)
   let get_upper x =
     let up = function
 	T.Lab (s,_) -> T.Lab (s, T.Up) 
@@ -46,8 +46,8 @@ let pseudo_instructions =
 	"la", ( [ X ; Y ], [ "lui", [ ~?X ; ~?X ; get_upper Y ] ; "addi", [ ~?X ; reg0 ; get_lower Y ] ] ) ;
 	"li", ( [ X ; Y ], [ "lui", [ ~?X ; ~?X ; get_upper Y ] ; "addi", [ ~?X ; reg0 ; get_lower Y ] ] ) ;
 	"b", ( [ X ], [ "beq", [ reg0 ; reg0 ; ~?X ] ] ) ;
-	"bgt", ( [ X ; Y ; Z ], [ "slt", [ at_reg ; ~?Y ; ~?X ] ; "bne", [ at_reg ; reg0 ; ~?Z ] ] ) ;
 	"beqz", ( [ X ; Y ], [ "beq", [ ~?X ; reg0 ; ~?Y ] ] ) ;
+	"bnez",  ( [ X ; Y ], [ "bne", [ ~?X ; reg0 ; ~?Y ] ] ) ;
 	(* 
 	   "lui", ( [ X ; Y ], [ "addi", [ ~?X ; reg0 ; ~?Y ] 
 	   ; "sll", [ ~?X ; ~?X ; ~!(T.Int (16l, T.All)) ] ] ) 
