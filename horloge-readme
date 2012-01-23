@@ -46,4 +46,5 @@ format "afficheur 7 segments" (où chaque bit représente l'état, allumé ou
 chiffres (pour les années par exemple)) nommées two_digits_to_segments et
 year_to_segments, et il suffit de chercher au bon endroit de ces tables (au
 début pour 00, dans les deux cases suivantes pour 01, etc.) pour avoir
-le renseignement voulu.
+le renseignement voulu. Puis, on stocke le résultat en dur dans des cases
+mémoires reliées directement à l'afficheur 7 segments.
