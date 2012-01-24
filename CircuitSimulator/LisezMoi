@@ -6,6 +6,10 @@ Pour lancer l'horloge avec une configuration par défaut (Démo !) :
 
 make run
 
+Pour calculer 7! en utilisant notre processeur :
+
+make facto
+
 
 L'horloge n'est à ce jour pas optimisée à fond, on recalcule notamment la date à
 chaque calcul de timestamp. Ce défaut sera corrigé lors de la présentation, et
