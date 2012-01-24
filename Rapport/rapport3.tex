@@ -130,6 +130,39 @@ Ils supportent les opérations suivantes :
 \end{itemize}
 
 
+\subsection{Les fils}
+
+Les fils présent dans rock sont des fils épais. Ils sont les seuls moyens de
+communications entre blocs et sont passés en arguments lors de la construction
+d'une instance et retournés à l'aide de la syntaxe \texttt{nom du bloc . nom du
+  fil en sortie}.
+Les fils supportent deux opérations :
+\begin{itemize}
+\item l'extraction d'un sous-fil se fait via la syntaxe $a[\ p\ ..\ q\ ]$ et crée
+  un nouveau fil de largeur $q - p + 1$ qui est branché sur les fils sous-jacents
+  de $a$ indicés de $p$ à $q$.
+\item la fusion de fils se fait via la syntaxe $\{ a_1, a_2, ..., a_n \}$ et
+  produit un fil dont la largeur est la somme des largeurs des $a_i$.
+\end{itemize} 
+\text{}\\
+En plus de ces opérations, du sucre syntaxique à été rajouté pour améliorer
+l'expérience utilisateur :
+\begin{itemize}
+\item La syntaxe $a[n]$ est équivalente à $a[n..n]$ et produit donc un fil de
+  taille 1.
+\item La syntaxe $\$01101$ ( où le nombre en binaire est quelconque) est
+  équivalente à :
+\begin{verbatim}
+    Gnd G
+    Vdd V
+    ... { G.o, V.o, V.o, G.o, V.o } ...
+\end{verbatim}
+  c'est à dire à un fil où chaque $1$ est remplacé par un fil portant toujours
+  la valeur $1$ (instance de \texttt{Vdd}) et chaque $0$ par un fil portant
+  toujours la valeur $0$ (instance de \texttt{Gnd}). 
+\end{itemize}
+
+
 \section{Concepts clés du langage}
 
 Le langage rock est muni de plusieurs concepts qui en font un outil maniable,
@@ -590,15 +623,132 @@ Et le compteur :
 
 \section{Spécificités techniques de l'implémentation d'Obsidian}
 
-ocamllex et menhir pour lexing et parsing
+Le compilateur Obsidian s'occupe de transformer un fichier rock en éxécutable.
+Il est codé en OCaml, langage trés partique pour la manipulation d'expression
+symbolique, puis génére du code c++ qui est ensuite compilée par un compilateur
+c++ classique pour tenter d'améliorer les performances. Dans la suite de cette
+section, chaque étape est présentée avec ses particularités techniques et/ou
+algorithmiques.
 
-sur -> analyse sémantique lourde mais efficace
-    static bound checking
-    vérification du caractère bien fondé des récursions
+Les principales étapes du compilateur sont :
+\begin{enumerate}
+\item Le lexer et le parseur.
+\item L'analyse sémantique.
+\item La \og destruction \fg{} de l'AST en graphe.
+\item La génération de code c++.
+\end{enumerate}
 
-union-find pour détruire le graphe en ast
+\subsection{Le lexer et le parseur}
 
+Les librairies ocamllex et menhir ont été employées pour faire cette partie. Les
+symboles reconnus par le lexer ainsi que la grammaire employée dans le parser
+ont déja été vus dans la présentation du langage. 
+
+L'arbre de syntaxe abstraite (ou AST) est formé de la manière suivante :
+\begin{itemize}
+\item À la racine, d'un tableau associatif qui à chaque nom de bloc associe sa
+  définition, d'une liste des périphériques déclarés avec leur nombre de
+  paramètres ainsi que du nom et des paramètres du bloc de départ (celui qui
+  englobe tout le circuit simulé).
+\item Les définitions de blocs, sont des enregistrements dont les champs sont
+  les paramètres du bloc (motifs), les entrées (fils), les instances (création
+  de sous-bloc) et les sorties (fils). Ceux-ci sont eux même des types
+  enregistrement jusqu'à arriver au atomes (nom de fil, nom de bloc, entier, etc).
+\end{itemize}
+
+L'AST, ou plutôt les AST, est paramétré par un module définissant les entiers à
+utiliser dans l'AST (il s'agit donc d'un foncteur). L'intéret de paramétrer la
+définition des entiers à l'intérieur de l'AST est de pouvoir produire à la
+sortie du parser un AST dans lequel la plupart des \og entiers\fg{} sont en fait
+des \emph{expressions entières} pas encore évaluées et qui seront transformées à
+l'étape suivante.
+
+\subsection{L'analyse sémantique}
+
+L'analyse sémantique est un des morceaux les plus lourd d'Obsidian, mais aussi
+ce qui fait du langage un outil utilisable car sur. En effet l'analyse statique
+pratiquée au niveau de l'analyse sémantique permet d'éliminer presque toutes les
+erreurs de sémantiques au niveau du circuit. Concrétement, l'analyse sémantique
+vérifie :
+\begin{itemize}
+\item que tous les blocs employés ont été déclarés et que dans chaque blocs
+  toutes les variables (que se soit de bloc ou de fil) ont été définis.
+\item que tous les fils sont corrects c'est à dire qu'il n'y a jamais de fil
+  vide voir d'épaisseur négative et que les branchements fait entre deux fils
+  sont bien fait avec des fils de même largeur.
+\item que chaque création de sous-fils ( avec la syntaxe $[\ ..\ ]$) est bien
+  fait avec un intervalles valique (c'est à dire inclus dans l'intervalle $[| 0
+  ; n - 1|]$ où $n$ est la taille du fil original).
+\item que chaque applications de paramètres lors d'une instance est bien
+  acceptée par un certain motif.
+\item que la récursion est bien fondée, qu'il n'y a pas de suite infinie de
+  blocs dans le circuit ce qui est une vérification cruciale pour l'étape de
+  transformation en graphe. 
+\end{itemize}
+
+En particulier, l'analyse sémantique s'occupe d'une opération que l'on appelle
+réification par analogie avec l'opération que font certains compilateurs pour
+gérer le paramétrage polymorphique (par exemple avec les templates en c++). Il
+s'agit en fait de transformer l'AST ne contenant que des entiers \og
+formels\fg{} c'est à dire des \emph{expressions entières} en entiers.
+Par exemple, le code suivant :
+\begin{verbatim}
+ And_vect<1> (a[1],b[1]) 
+      And A(a[0],b[0])
+      -> o : A.o;
+
+  And_vect<n> (a[n],b[n])
+      And Low(a[0],b[0])
+      And_vect<n-1> High(a[1..n-1],b[1..n-1])
+      -> o[n] : {Low.o, High.o};
+
+  start And_vect<4>
+\end{verbatim}
+
+génére d'abord l'AST contenant les définitions de \texttt{And\_vect<1>} et
+\texttt{And\_vect<n>}, puis aprés réification, il contiendra les définitions de
+\texttt{And\_vect<1>}, \texttt{And\_vect<2>}, \texttt{And\_vect<2>},
+\texttt{And\_vect<4>}. 
+
+Cette multiplication de symboles peut paraître trés lourde mais elle permet une
+analyse en détail de chaque blocs et l'étape suivante du compilateur fait
+disparaître les redondances.
+
+Il faut aussi noter que l'analyse sémantique ne vérifie pas l'absence totale de
+cycle combinatoire. Pour cela, il faut attendre que l'AST soit transformé en
+graphe. Il s'agit donc de la seule vérification doit attendre la phase de
+génération de code pour être faite.
+
+\subsection{La transformation en graphe}
+
+À la sortie de l'analyse sémantique, un AST \emph{réifié} est obtenu. La
+transformation en graphe se fait en deux étapes :
+\begin{itemize}
+\item Un premier parcours de l'AST pour déterminer la liste des portes
+  que contiendra le graphe. Cette liste est ensuite transformée en tableau.
+  Le choix des listes au début est pour permettre une concaténation efficace,
+  tandis que la transformation en tableau à la fin est nécessaire pour avoir un
+  accés aléatoire à chaque éléments.
+\item Un deuxième parcours de l'AST se charge de \emph{brancher} les fils entre
+  les portes. Pour cela on considère l'ensemble des \emph{bouts de fil} identifiables
+  (c'est à dire l'ensemble des variables de fils en distinguant selon la portée)
+  et on construit la relation d'équivalence \og est branché avec\fg{} avec un
+  Union-find. Les classes d'équivalence résultantes à la fin du parcours sont
+  exactement l'ensemble des fils.
+\end{itemize}
+
+Au passage, tous les blocs qui ne sont pas des blocs de base ou des
+périphériques sont éliminés, ou plutôt oubliés, au cours de l'opération.
+Le résultat est un graphe sous la forme d'un tableau où à chaque indice est
+associé le type de la porte et un tableau contenant pour chaque sortie de la
+porte en question les portes en aval avec lesquelles elle est branchée. Un
+certain nombre d'informations telles que le nombre total de registres ou de
+périphériques est aussi collecté durant cette phase pour aider la génération du code. 
+
+\subsection{La génération du code c++}
+vérification de l'absence de cycles combinatoires.
 compilation vers du c++ pour les performances
+
 
 \section{Le microprocesseur}
 

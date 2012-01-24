@@ -93,7 +93,6 @@ let make_base_block_list block_type_definitions device_list block =
   let rec aux block =
     try 
       let res = [ gate_of_block block device_list ] in
-	(*Printf.printf "a ::> %s\n" (Print.IntAstPrinter.block_type block) ;*)
 	res
     with Not_a_base_block -> 
       let block_def = 
