@@ -35,9 +35,20 @@
 
 \maketitle
 \tableofcontents
-
+\newpage
 \section{Introduction}
-
+Le projet du cours de systéme digital a pour but de programmer une horloge en
+assembleur, cette horloge devant tourner sur un processeur simulé en tant que
+circuit digital synchrone sur un ordinateur. Notre approche du problème consiste
+à encoder les circuits dans un langage nommé \emph{Rock}, puis de le compiler
+avec \emph{Obsidian}, de coder un microprocesseur suivant la spécification de
+l'architecture MIPS en Rock, de coder l'horloge en assembleur MIPS, d'assembler
+ce code MIPS avec un assembleur fabriqué par nos soins et enfin de charger ce
+dernier résultat dans le microprocesseur.\\
+On présentera d'abord le langage rock, avant de s'intéresser à l'implémentation
+du compilateur, du microprocesseur, de l'assembleur, puis de l'horloge. La
+dernière partie contient des informations importantes pour l'utilisation en
+pratique de ce que nous avons produit. 
 
 
 \section{Le langage rock}
@@ -54,13 +65,6 @@ blocs est déterminé à partir de blocs plus petits précédemment déclarés.
 
 Il est compilé à l'aide du logiciel \emph{obsidian} dont l'organisation est
 schématisée dans la figure 1. Les sections suivantes présentent les aspects spécifiques du langage et de sa compilation.
-
-\begin{figure}[!h]
-\centering
-\includegraphics[width=14.7cm,height=17.96cm]{obsidian.png}
-\caption{Architecture d'Obsidian}
-\label{Architecture d'Obsidian}
-\end{figure}
 
 \subsection{Traitement lexical}
 Le langage contient deux mots clés {\bf start} et {\bf device } ainsi que les
@@ -79,6 +83,14 @@ Les identifiants sont de l'une des deux formes suivantes :
 L'opération d'analyse lexicale se charge aussi d'effacer les commentaires qui
 sont soit de la forme \og $(*$\fg{} \og $*)$\fg{} pour les commentaires
 multi-lignes, soit de la forme \og \#\fg{} pour les commentaires sur une seule ligne.
+
+\begin{figure}
+  \begin{center}
+    \includegraphics[width=14.7cm,height=17.96cm]{obsidian.png}
+    \caption{Architecture d'Obsidian}
+    \label{Architecture d'Obsidian}
+  \end{center}
+\end{figure}
 
 \subsection{Syntaxe du langage}
 Le langage suit la grammaire suivante :\newline\newline
@@ -110,6 +122,26 @@ Le langage suit la grammaire suivante :\newline\newline
   &&| $\mathbf{\{}$ Fil, ... , Fil $\mathbf{\}}$\\ [1.5ex]
   Sorties&$::=$&\: DeclarationFil : Fil, ... , DeclarationFil : Fil
 \end{tabular}
+\text{}\\
+
+\subsection{Principe des blocs}
+Les blocs sont les unités structurantes du langage. Ils sont séparés en 3
+catégories :
+\begin{itemize}
+\item Les blocs de base qui sont fournis par le compilateur ( \texttt{Xor}, \texttt{And}, \texttt{Reg},
+  \texttt{Mux}, \texttt{Vdd}, \texttt{Gnd}, etc).
+\item Les blocs classiques qui définissent la majeure partie du circuit.
+\item Les périphériques qui permettent d'introduire des éléments externe dans le langage.
+\end{itemize}
+\text{}\\
+Les blocs classiqus se construisent par composition. Ils ont en général la forme
+suivante : 
+\begin{verbatim}
+BlocDéfini < params > (arg1, ..., argn)
+   Bloc1  Instance1(arg1', ... , argp')
+   Bloc2  Instance2(arg1'', ... , argq'' )
+   -> sortie1 : fil1, ... , sortiek : filk ;
+\end{verbatim}
 
 
 \subsection{Les entiers} 
@@ -223,7 +255,7 @@ les mêmes fils de sortie) :
 \begin{itemize}
 \item Entrée :
 \text{}\\
-\text{}\\
+\begin{center}
   \begin{tabular}{ | c | c | }
     \hline
     Address &  32 bits \\
@@ -239,10 +271,11 @@ les mêmes fils de sortie) :
     Interrupt processed & 1 bit\\
     \hline
   \end{tabular}
+\end{center}
 \text{}\\
 \item Sortie :
 \text{}\\
-\text{}\\
+\begin{center}
  \begin{tabular}{ | c | c | }
     \hline
     Data &  32 bits \\
@@ -250,8 +283,9 @@ les mêmes fils de sortie) :
     Interrupt request & 1 bit \\
     \hline
   \end{tabular}
+\end{center}
 \end{itemize}
-
+\text{}\\
 Les périphériques peuvent contenir du code arbitraire, et peuvent donc a
 priori gérer leurs entrées et sorties de n'importe quelle
 manière. Cependant, ils sont faits pour simuler des périphériques mappés en
