@@ -188,35 +188,34 @@ Il y a deux types de motifs :
 Étant donnés un entier $p$ et une liste ordonnée de motifs $(m_i)_i$, les motifs
 fonctionnent selon le principe suivant : 
 \begin{itemize}
-\item l'entier est testé sur le $i^{e}$motif (en prenant au départ $i=0$)
+\item l'entier est testé sur le $i^{e}$motif (en prenant au départ $i=0$),
 \item s'il est accepté, les variables correspondant au motif sont assignées si
-  nécessaire
-\item s'il est rejeté, on passe au motif suivant et on recommence.
+  nécessaire,
+\item et s'il est rejeté, on passe au motif suivant et on recommence.
 \end{itemize}
 Si on ne trouve aucun motif convenable, le compilateur lève une erreur.
 \text{}\\
 \text{}\\
-Un tel système de motifs permet d
-La récursion devient alors assez immédiate :
+Un tel système de motifs permet différents types de récursions. Ainsi, on peut :
 \begin{itemize}
-\item On peut itérer sur tous les entiers avec les motifs $<n+1>$ et $<0>$.
-\item Ou seulement sur les puissances de deux avec les motifs $<2*n>$ et $<1>$.
-\item Ou travailler sur des congruences modulo 3 avec les motifs $<3*n>$, $<3*n +
+\item itérer sur tous les entiers avec les motifs $<n+1>$ et $<0>$,
+\item itérer seulement sur les puissances de deux avec les motifs $<2*n>$ et $<1>$,
+\item ou encore travailler sur des congruences modulo 3 avec les motifs $<3*n>$, $<3*n +
   1>$ et $<3*n + 2>$.
 \end{itemize}
 \text{}\\
-Un point important limite cependant l'expressivité de cet outil : à l'intérieur
-d'un bloc ayant comme paramètres les entiers $(n_i)_i$, seuls des blocs avec
-des paramètres plus petit (au sens de l'odre sur $\mathfrak{N}$) peuvent être
-instancier. Ce critère permet notamment d'assurer la terminaison des calculs et
-surtout la terminaison de la compilation en assurant qu'il n'y a pas de chaine
-infini de blocs.
+Ce système est néanmoins sujet à des limitations théoriques : il faut s'assurer
+que les calculs et la compilation se terminent ; et notamment qu'il n'y a pas de
+chaîne infinie de blocs. Pour cela, une contrainte supplémentaire a été ajoutée
+: à l'intérieur d'un bloc ayant comme paramètres les entiers $(n_i)_i$, seuls
+des blocs avec des paramètres plus petits (au sens de l'ordre sur
+$\mathfrak{N}$) peuvent être instanciés.
 
 \subsection{Les périphériques}
 
 
 Les périphériques sont un moyen de définir de nouvelles portes en plus des
-portes base. On peut les utiliser pour simuler des mémoires, ou des
+portes de base. On peut les utiliser pour simuler des mémoires, ou des
 périphériques d'entrée/sortie.
 
 Tous les périphériques ont la même interface (les mêmes fils d'entrée et
@@ -274,7 +273,7 @@ L'entrée \texttt{Byte enables} indique quels octets il faut prendre en compte :
 Les périphériques sont pensés comme des registres, c'est-à-dire que si l'on
 écrit l'adresse où l'on veut lire au cycle t, on pourra lire le résultat au
 cycle t+1. A posteriori, il aurait été plus pratique de donner le choix
-entre les deux modes de fonctionnement (lecture instantannée et lecture
+entre les deux modes de fonctionnement (lecture instantanée et lecture
 retardée d'un cycle), car lorsqu'un périphérique n'est pas utilisé pour
 couper une boucle combianatoire, on perd simplement un cycle à attendre.
 
@@ -293,7 +292,7 @@ autre type de bloc, par exemple, le circuit suivant :
 
   start Start
 \end{verbatim}
-Est constitué d'une mémoire sur $2^5 = 32$ octets, et sa sortie correspond au
+est constitué d'une mémoire sur $2^5 = 32$ octets, et sa sortie correspond au
 mot de $32$ bits contenu à l'adresse $0$ dans la mémoire. Si la mémoire est
 prévue pour initialiser tous ses octets à $0$, la sortie de ce circuit sera :
 
@@ -327,7 +326,7 @@ Aura pour sortie :
 
 On définit les types périphériques de la manière suivante :
 Chaque type de périphérique est défini par une classe C++, qui doit
-descendre de la classe device :
+hériter de la classe device :
 \begin{verbatim}
   class device
   {
@@ -339,9 +338,9 @@ descendre de la classe device :
                                 irq)=0;
   };
 \end{verbatim}
-Chaque périhérique doit également fournir une méthode statique \texttt{make}, qui
+Chaque périphérique doit également fournir une méthode statique \texttt{make}, qui
 construit un objet de cette classe et renvoie un pointeur vers cet objet,
-upcasté en \emph{device*}. Cette méthode prend un argument (de type \emph{int}) par
+upcasté en \texttt{device*}. Cette méthode prend un argument (de type \texttt{int}) par
 paramètre du périphérique. Par exemple, pour le périphérique \texttt{Memory}, la
 méthode \texttt{make} a le prototype suivant :
 
@@ -349,7 +348,7 @@ méthode \texttt{make} a le prototype suivant :
   device * make (int size)
 \end{verbatim}
 
-Pour chaque périphérique du circuit, sa méthode "cycle" est appelée à
+Pour chaque périphérique du circuit, sa méthode \texttt{cycle} est appelée à
 chaque cycle, avec comme arguments les valeurs lues dans les fils d'entrée.
 
 
@@ -371,7 +370,7 @@ le circuit suivant :
   start Start
 \end{verbatim}
 
-Contient deux compteurs modulo 2 : C1 et C2, mais à l'intérieur du second,
+contient deux compteurs modulo 2 : C1 et C2, mais à l'intérieur du second,
 l'horloge est localement redéfinie, de sorte que le second compteur n'est
 actif qu'au cycles où la sortie du premier vaut 1, c'est-à-dire un cycle
 sur deux. La sortie du circuit est donc :
@@ -388,9 +387,9 @@ sur deux. La sortie du circuit est donc :
   ...
 \end{verbatim}
 Lorsqu'une porte n'est pas active, le code C++ correspondant n'est
-simplement pas exécuté : La sortie de la porte garde sa valeur du cycle
+simplement pas exécuté : la sortie de la porte garde sa valeur du cycle
 précédent, et s'il s'agit d'un registre, son contenu n'est pas
-modifié. Dans le cas d'un périphérique, sa méthode "cycle" n'est pas
+modifié. Dans le cas d'un périphérique, sa méthode \texttt{cycle} n'est pas
 appelée.
 
 
@@ -398,7 +397,7 @@ Si on redéfinit l'horloge d'un bloc, on redéfinit l'horloge de toutes les
 portes et de tous les blocs qu'il contient. Si ce bloc lui-même redéfinit
 l'horloge de l'un de ses composants, celui-ci ne sera actif que lorsque son
 bloc parent l'est et que son bloc parent l'active. Par exemple, on peut
-utiliser les enables pour programmer un compteur modulo $2^n$ : Le bloc
+utiliser les enables pour programmer un compteur modulo $2^n$. Ainsi, le circuit
 suivant :
 \begin{verbatim}
   Count<1>
@@ -420,7 +419,7 @@ suivant :
 
   start Start<3>
 \end{verbatim}
-A pour sortie :
+a pour sortie :
 \begin{verbatim}
   000
   100
