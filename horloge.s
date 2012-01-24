@@ -13,7 +13,7 @@ main:
 
         # On récupère le timestamp que l'on met dans $s7
         #lw      $s7, timestamp
-        li      $s7, 1330560000
+        li      $s7, 1327971723
 
         # On calcule le nombre de jours écoulés depuis le 01/01/1970
         move    $a0, $s7
@@ -196,7 +196,7 @@ multiplier:
         li      $t0, 1
         beq     $a1, $t0, multiplier_fin
         # Sinon, on va avoir besoin d'appeller la fonction "récursivement", donc
-        # On sauvegarde $ra
+        # on sauvegarde $ra
         addi    $sp, $sp, 4
         sw      $ra, 0($sp)
         # On stocke ce qu'on rajoute au résultat en fonction de la parité de $a1
@@ -207,12 +207,10 @@ multiplier:
         sw      $a0, 0($sp)
     multiplier_fintest:
         # On divise $a1 par 2 et on fait un bel appel récursif
-        li      $t0, 1
-        srl     $a1, $a1, $t0
+        srl     $a1, $a1, 1
         jal     multiplier
         # On multiplie par 2 le résultat
-        li      $t0, 1
-        sll    $v0, $v0, $t0
+        add     $v0, $v0, $v0
         # On ajoute ce qu'on avait stocké tout à l'heure
         lw      $t0, 0($sp)
         addi    $sp, $sp, -4
@@ -239,14 +237,14 @@ diviser:
         li      $t2, 1
     diviser_petiteboucle:
         bgt     $t1, $a0, diviser_finpetiteboucle
-        sll     $t1, $t1, 1
-        sll     $t2, $t2, 1
+        add     $t1, $t1, $t1
+        add     $t2, $t2, $t2
         j       diviser_petiteboucle
     diviser_finpetiteboucle:
         # On est allés un cran trop loin, on corrige ça
         # (nb : il doit y avoir une méthode plus propre, mais là j'ai la flemme)
-        sra     $t1, $t1, 1
-        sra     $t2, $t2, 1
+        srl     $t1, $t1, 1
+        srl     $t2, $t2, 1
         # On a bien positionné "$a1" (dans $t1), on l'enlève à $a0 en rajoutant
         # ce qu'il faut au quotient
         sub     $a0, $a0, $t1
