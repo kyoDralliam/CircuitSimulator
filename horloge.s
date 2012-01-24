@@ -11,6 +11,13 @@ main:
         addi    $sp, $sp, 4
         sw      $ra, 0($sp)
 
+        li      $a0, 1
+        li      $a1, 1
+        jal     diviser
+        move    $a0, $v0
+        jal     print_int
+        j       finprogramme
+
         # On récupère le timestamp que l'on met dans $s7
         #lw      $s7, timestamp
         li      $s7, 1329500537
@@ -195,19 +202,20 @@ main:
         #move    $a0, $v0
         #jal     print_int
 
+    finprogramme:
         # On récupère $ra
         lw      $ra, 0($sp)
         addi    $sp, $sp, -4
         jr      $ra
 
 # Affiche l'entier présent dans le registre $a0, suivi d'un retour à la ligne
-#print_int:
-        #li      $v0, 1
-        #syscall
-        #li      $v0, 4
-        #la      $a0, newline
-        #syscall
-        #jr      $ra
+print_int:
+        li      $v0, 1
+        syscall
+        li      $v0, 4
+        la      $a0, newline
+        syscall
+        jr      $ra
 
 # Multiplie les deux entiers contenus dans $a0 et $a1
 # Renvoie le résultat dans $v0
