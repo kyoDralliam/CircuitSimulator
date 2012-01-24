@@ -247,7 +247,7 @@ let substitute labels format =
 	      | Const x -> Const x
 	      | Label (s, mf) -> 
 		  let n = int_with_modifier (get_label s) mf in 
-		    Printf.printf "labl %s %ld" s n ; Const (Int n)
+		    Const (Int n)
 	  in
 	    to_char_list { t with immediate = imm } 
       | JFormat t -> 

@@ -50,13 +50,11 @@ let parse n l (opcode, args) =
       | T.Reg s, RS -> { acc with rs = get_reg s }
       | T.Reg s, RT -> { acc with rt = get_reg s }
       | T.Int (n, mf) , Imm -> 
-	  Printf.printf "int %ld\n" n ; 
 	  let n' = int_with_modifier n mf in
 	  { acc with immediate = Const (Int n') }
       | T.Char c, Imm -> { acc with immediate = Const (Char c) }
       | T.Lab (s, mf), Imm -> { acc with immediate = Label (s, mf) } 
       | T.Shift (n, s), Ad -> 
-	  Printf.printf "shift %ld\n" n ; 
 	  if n > 1l lsl 16 then raise & Integer_too_big (n, 1l lsl 16) ;
 	  { acc with rs = get_reg s ; immediate = Const (Int n) } 
       | x, _ -> raise (Invalid_param (x, T.Instruction (n,l)))

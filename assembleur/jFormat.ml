@@ -13,7 +13,6 @@ let map =
   create_map
     [
       "j", 0b101111l ;
-      (* "jal", 0b111001l ;  à corriger ou à passer en pseudo-instruction*)
     ] 
     
 let parse n l opcode = 
