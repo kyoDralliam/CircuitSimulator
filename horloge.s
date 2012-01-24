@@ -13,7 +13,7 @@ main:
 
         # On récupère le timestamp que l'on met dans $s7
         #lw      $s7, timestamp
-        li      $s7, 1328118137
+        li      $s7, 1362246137
 
         # On calcule le nombre de jours écoulés depuis le 01/01/1970
         move    $a0, $s7
@@ -59,7 +59,7 @@ main:
         # Dans le cas absurde où on se trouverait avant le premier décalage, on
         # ne fait rien du tout
         li      $t0, 68256000
-        bgt     $t0, $s7, antibug
+        bgt     $t0, $s7, finbissextile
         # On veut donc savoir combien de 29 févriers on doit rajouter
         # artificiellement (information mise dans $s1). On commence par mettre
         # le point de départ du comptage le 1er Mars 1970
@@ -85,21 +85,17 @@ main:
         bgt     $t0, $s6, finbissextile
         addi    $s1, $s1, 1
     finbissextile:
-        # 2000 n'est pas une année bissextile
-        li      $t0, 951868799
-        bgt     $t0, $s7, antibug
-        addi    $s1, $s1, 1
-    antibug:
         # Et on effectue la correction calculée dans $s1
         add     $s0, $s0, $s1 # Rappel // $s0 = Jours depuis le 01/01/1970
 
         # Maintenant on a facilement l'année
-        li      $s6, 1970
+        li      $s6, 0
         move    $a0, $s0
         li      $a1, 366
         jal     diviser
-        add     $s6, $s6, $v0 # $s6 = Année
+        move    $s6, $v0 # $s6 = Année
             move    $a0, $s6
+            addi    $a0, $a0, 1970
             jal print_int
 
         # On trouve le mois en mode "gros sac"
@@ -109,11 +105,10 @@ main:
         sub     $s4, $s0, $v0 # $s4 = Nombre de jours depuis le début de l'année
         li      $s5, 1 # $s5 = Mois
         li      $t1, 0
-        li      $t0, 32 # Janvier + 1 (à cause de la comparaison stricte)
+        li      $t0, 31 # Janvier + 1 (à cause de la comparaison stricte)
         bgt     $t0, $s4, moistrouve
         addi    $s5, $s5, 1
-        li      $t4, 2
-        sub     $t1, $t0, $t4
+        move    $t1, $t0
         addi    $t0, $t0, 29 # Février
         bgt     $t0, $s4, moistrouve
         addi    $s5, $s5, 1
@@ -157,6 +152,7 @@ main:
     moistrouve:
             move    $a0, $s5 # $s5 = Mois
             jal     print_int
+        sub     $t1, $t1, 1
         sub     $s4, $s4, $t1
             move    $a0, $s4 # $s4 = Jour
             jal     print_int
