@@ -13,7 +13,7 @@ main:
 
         # On récupère le timestamp que l'on met dans $s7
         #lw      $s7, timestamp
-        li      $s7, 1330560000
+        li      $s7, 1327971723
 
         # On calcule le nombre de jours écoulés depuis le 01/01/1970
         move    $a0, $s7
