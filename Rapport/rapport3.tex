@@ -754,6 +754,49 @@ compilation vers du c++ pour les performances
 
 \section{L'assembleur}
 
+Le microprocesseur lit en entrée du code éxécutable qui se trouve dans un
+fichier \emph{ram} qu'il charge en mémoire. La génération du fichier \emph{ram}
+à partir des sources MIPS incombe donc à l'assembleur. L'assembleur a été codé
+sur la même architecture générale qu' Obsidian (lexer, parser, légére analyse
+sémantique et génération du code) en OCaml. \\
+La syntaxe du MIPS est assez simple à parser et à analyser, cependant quelques
+limitations ont été introduites : 
+\begin{itemize}
+\item Il doit y avoir au plus une instruction ou étiquette par ligne.
+\item Le code doit se trouver obligatoirement dans le segment de texte
+  (introduit par l'instruction \texttt{.text} et les données dans celui de
+  donnée (introduit par \texttt{.data}). 
+\item Par conséquent, les instructions \texttt{.word}, \texttt{.byte},
+  \texttt{.half}, \texttt{.ascii}, \texttt{.asciiz} et \texttt{.space} ne sont
+  disponibles que dans le segment de données et le autres instructions
+  commençant par un \og .\fg{} ne sont pas présentent.
+\item Les instructions et pseudo-instructions ne sont pas toutes présentent :
+  il n'y a pas de \texttt{syscall} par exemple (puisqu'il n'y a pas d'OS sur le
+  microprocesseur). Certaines pseudo-instructions comme \texttt{bgt} ou
+  \texttt{ble} ont aussi été implémentées comme des vrais instructions.
+\item Les entrées/sorties sont faite à l'aide de deux étiquettes
+  \texttt{clock\_display} et \texttt{timestamp} qui sont des adresses mappées en
+  mémoire dans le processeur.
+\end{itemize}
+\text{}\\
+Les conventions de nommages employées pour les registre sont celles appellées
+\emph{O$32$}. Les registres disponibles sont donc : \$zero, \$at, \$v$0$ -
+\$v$1$, \$a$0$ - \$a$3$, \$t$0$ - \$t$9$, \$s$0$ - \$s$7$, \$k$0$ - \$k$1$,
+\$gp, \$sp, \$fp et \$ra.
+
+\text{}\\
+La liste des pseudo-instructions implémentées est :
+\begin{itemize}
+\item \texttt{move} déplace un registre dans un autre.
+\item \texttt{clear} met un registre à $0$.
+\item \texttt{la} charge une étiquette dans un registre.
+\item \texttt{li} charge une constante de $32$ bits dans un registre.
+\item \texttt{b} branche sans condition.
+\item \texttt{beqz} branche si le registre contient $0$.
+\item \texttt{bnez} branche si le registre ne contient pas $0$.
+\item \texttt{beqd} branche si le registre contient $42$.
+\end{itemize}
+
 \section{L'horloge}
 
 Le fichier horloge.s est le fichier assembleur qui code l'horloge (d'où son nom,
