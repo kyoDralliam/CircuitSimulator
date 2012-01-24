@@ -42,14 +42,18 @@
 
 \section{Le langage rock}
 
-Le langage de description des circuits et un langage déclaratif basé sur la notion de bloc nommé \emph{rock}. Il y a trois types de blocs différents :
+Le langage de description des circuits est un langage déclaratif basé sur la
+notion de bloc. Nous l'avons appelé \emph{rock}. Il y a trois types de blocs différents :
 \begin{itemize}
 \item Les blocs de base : xor, and, or, mux, not, ground, vdd et reg (déclarés dans Analysis/baseBlocks.ml)
-\item Les blocs classiques pouvant être paramètrés par des entiers, prenant des fils en entrées et créant des fils en sorties, qui définissent leur corps à partir d'autres blocs.
+\item Les blocs déclarés par l'utilisateur, qui peuvent être paramétrés par des
+entiers. Les entrées et les sorties de ces blocs sont des fils, et le corps des
+blocs est déterminé à partir de blocs plus petits précédemment déclarés. 
 \item Les périphériques ou blocs externes.
 \end{itemize}
 
-Il est compilé à l'aide du logiciel \emph{obsidian} dont l'organisation est montrée dans la figure 1. Les sections suivantes présentent les aspects spécifiques du langage et de sa compilation.
+Il est compilé à l'aide du logiciel \emph{obsidian} dont l'organisation est
+schématisée dans la figure 1. Les sections suivantes présentent les aspects spécifiques du langage et de sa compilation.
 
 \begin{figure}[!h]
 \centering
@@ -109,14 +113,11 @@ Le langage suit la grammaire suivante :\newline\newline
 
 
 \subsection{Les entiers} 
-Les entiers sont présents en rock à deux niveaux : 
-\begin{itemize}
-\item Dans les paramètres pour permettre la récursion.
-\item Dans les fils pour préciser leur taille.
-\end{itemize}
+Les constantes entières sont présentes dans les paramètres - pour permettre de
+coder des blocs récusrivement - et dans les fils - pour pouvoir préciser leur taille.
 \text{}\\
 
-On peut les écrires tout aussi bien en hexadécimal (préfixe \og $0x$\fg{} ou \og $0X$\fg{}), en
+On peut les écrire tout aussi bien en hexadécimal (préfixe \og $0x$\fg{} ou \og $0X$\fg{}), en
 octal (préfixe \og $0o$\fg{} ou \og $0O$\fg{}), en binaire (préfixe \og $0b$ \og
 ou \og $0B$\fg{}) ou en décimal (sans préfixe).
 Ils supportent les opérations suivantes :
@@ -124,16 +125,16 @@ Ils supportent les opérations suivantes :
 \item $+$ l'addition
 \item $-$ la soustraction
 \item $*$ le produit
-\item $/$ le quotient dans la division euclidienne
-\item $\%$ le reste dans la division euclidienne
+\item $/$ le quotient (division euclidienne)
+\item $\%$ le reste (division euclidienne)
 \item \^{} l'exponentiation
 \end{itemize}
 
 
 \subsection{Les fils}
 
-Les fils présent dans rock sont des fils épais. Ils sont les seuls moyens de
-communications entre blocs et sont passés en arguments lors de la construction
+Les fils présents dans rock sont des fils épais. Ils sont les seuls moyens de
+communication entre blocs. Ils sont passés en arguments lors de la construction
 d'une instance et retournés à l'aide de la syntaxe \texttt{nom du bloc . nom du
   fil en sortie}.
 Les fils supportent deux opérations :
@@ -145,12 +146,12 @@ Les fils supportent deux opérations :
   produit un fil dont la largeur est la somme des largeurs des $a_i$.
 \end{itemize} 
 \text{}\\
-En plus de ces opérations, du sucre syntaxique à été rajouté pour améliorer
+En plus de ces opérations, du sucre syntaxique a été rajouté pour améliorer
 l'expérience utilisateur :
 \begin{itemize}
 \item La syntaxe $a[n]$ est équivalente à $a[n..n]$ et produit donc un fil de
   taille 1.
-\item La syntaxe $\$01101$ ( où le nombre en binaire est quelconque) est
+\item La syntaxe du type $\$01101$ est
   équivalente à :
 \begin{verbatim}
     Gnd G
@@ -166,33 +167,36 @@ l'expérience utilisateur :
 \section{Concepts clés du langage}
 
 Le langage rock est muni de plusieurs concepts qui en font un outil maniable,
-utile, voir efficace : il s'agit de la récursion, des périphériques et des enables.
+utile, et efficace : citons notamment la récursion, les périphériques et les
+redéfinitions locales d'horloges.
 
 \subsection{Motifs et récursion}
-Le langage ne dispose pas des opérations classiques comme \texttt{for},
-\texttt{while} ou \texttt{if} pour manipuler le flôt d'éxécution. Il est par
+Le langage ne dispose pas des boucles classiques (\texttt{for}, \texttt{while})
+ni de structures conditionnelles (\texttt{if}) pour manipuler le flot d'exécution. Il est par
 contre doté d'un système puissant de récursion et de reconnaissance de motifs.
 Il y a deux types de motifs :
 \begin{itemize}
-\item les motifs constants qui n'acceptent que la valeur de leur constante. 
+\item les motifs constants qui n'acceptent que leur valeur. 
 \item les motifs de la forme $ a*n + b $, avec $a$, $b$ constants et $n$
   variable, qui acceptent les entiers $p$  tels que $p \equiv b\
   \text{mod}\ a$ et on a alors $n = \frac{p - b}{a}$.
 \item les motifs de la forme $ a*n + k + b $, avec $a \neq 1 $, $b$ constants et
-  $n$ variable, qui acceptent tous les entiers $p$ en posant $k \equiv  p - b\
+  $k$, $n$ variables, qui acceptent tous les entiers $p$, et posent $k \equiv  p - b\
   \text{mod}\ a$, $0 \leq k < a$ et $n = \frac{p - b - k}{a}$.
 \end{itemize}
 \text{}\\
-Étant donné un entier $p$ et une liste ordonnée de motifs $(m_i)_i$, les motifs
+Étant donnés un entier $p$ et une liste ordonnée de motifs $(m_i)_i$, les motifs
 fonctionnent selon le principe suivant : 
 \begin{itemize}
-\item l'entier est testé sur le $i^{e}$motif.
-\item s'il est accepté, les variables correspondant au motif sont assignés si
-  nécessaire.
-\item s'il est rejeté, on passe au motif $i+1$.
-\item si aucun motif ne convient, le compilateur lève une erreur.
+\item l'entier est testé sur le $i^{e}$motif (en prenant au départ $i=0$)
+\item s'il est accepté, les variables correspondant au motif sont assignées si
+  nécessaire
+\item s'il est rejeté, on passe au motif suivant et on recommence.
 \end{itemize}
+Si on ne trouve aucun motif convenable, le compilateur lève une erreur.
 \text{}\\
+\text{}\\
+Un tel système de motifs permet d
 La récursion devient alors assez immédiate :
 \begin{itemize}
 \item On peut itérer sur tous les entiers avec les motifs $<n+1>$ et $<0>$.
