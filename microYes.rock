@@ -1,0 +1,881 @@
+# Opérations arithmétiques et logiques pour le codage de l'ALU.
+# Tous les entiers binaires sont encodés avec les bits de poids le plus fort à droite.
+# On a donc a[0..n-1] = somme des a[i]*(2^i), pour i de 0 à (n-1)
+
+device Memory <id, memory_size, init_ram>
+device Memory_reader <id>
+
+device Clock_bus <id, memory_size, number_of_displays, frequency>
+device Clock_bus_reader <id>
+
+##################################
+# Opérations standard sur n bits #
+##################################
+
+# (Avec des noms bien francisés parce que je peux pas réutiliser les mots-clés déjà
+# définis. Et puis je trouve que "Nou", ça sonne bien :D)
+
+# Opérations logiques 
+
+Et <1> (a,b)
+   And A (a,b)
+   -> o : A.o ;
+
+Et <n> (a[n],b[n])
+   Et<n-1> D (a[0..n-2],b[0..n-2])
+   And F (a[n-1],b[n-1])
+   -> o[n] : { D.o,F.o } ;
+
+Ou <1> (a,b)
+   Or A (a,b)
+   -> o : A.o ;
+
+Ou <n> (a[n],b[n])
+   Ou<n-1> D (a[0..n-2],b[0..n-2])
+   Or F (a[n-1],b[n-1])
+   -> o[n] : { D.o,F.o } ;
+
+Xou <1> (a,b)
+   Xor A (a,b)
+   -> o : A.o ;
+
+Xou <n> (a[n],b[n])
+   Xou<n-1> D (a[0..n-2],b[0..n-2])
+   Xor F (a[n-1],b[n-1])
+   -> o[n] : { D.o,F.o } ;
+
+Neg <1> (a)
+    Not M(a)
+    -> o : M.o ;
+
+Neg <n> (a[n])
+    Neg<n-1> M (a[0..n-2])
+    Not F (a[n-1])
+    -> o[n] : { M.o, F.o } ;
+
+Nou <n> (a[n],b[n])
+    Ou <n> O(a[0..n-1],b[0..n-1])
+    Neg <n> N(O.o)
+    -> o[n] : N.o ;
+
+Net <n> (a[n],b[n])
+    Et <n> O(a[0..n-1],b[0..n-1])
+    Neg <n> N(O.o)
+    -> o[n] : N.o ;
+
+Multiplexer <1> (selector, input0[1], input1[1])
+	Mux M(selector, input0, input1)
+	-> o : M.o;
+
+Multiplexer <n> (selector, input0[n], input1[n])
+	Multiplexer<n-1> Low(selector, input0[0..n-2], input1[0..n-2])
+	Mux High(selector, input0[n-1], input1[n-1])
+	-> o[n] : {Low.o, High.o};
+
+
+# Constantes utiles pour la suite 
+
+Zero<1> ()
+    Gnd G()
+    -> o[1] : G.o;
+
+Zero<n> ()
+    Gnd H()
+    Zero<n-1> L()
+    -> o[n] : {L.o, H.o};
+
+Un <1> ()
+    Vdd V()
+    -> o : V.o ;
+
+Un <n> ()
+    Un <n-1> U()
+    Gnd G()
+    -> o[n] : { U.o , G.o };
+
+MoinsUn<1> ()
+    Vdd V()
+    -> o[1] : V.o;
+
+MoinsUn <n> ()
+    Vdd H()
+    MoinsUn <n-1> L
+    -> o[n] : {L.o, H.o};
+
+
+# Addition 
+
+HalfAdder ( a, b)
+    Xor X( a, b)
+    And	A( a, b)
+    -> o : X.o, c : A.o ;
+
+FullAdder ( a, b, c)
+    HalfAdder H1( a, b)
+    HalfAdder H2( c, H1.o)
+    Or O( H1.c, H2.c)
+    -> o : H2.o, c : O.o ;  
+
+Adder <1> (a, b)
+    HalfAdder F (a, b) 
+    -> o : F.o, c : F.c ;
+
+Adder <n> (a[n] , b[n])
+    Adder<n-1> A (a[0..n-2], b[0..n-2])  
+    FullAdder F (a[n-1], b[n-1], A.c) 
+    -> 
+       o[n] : { A.o, F.o } , 
+       c : F.c ;
+
+
+# Négation (arithmétique) unaire 
+
+UnarySub <n> (a[n])
+    Neg <n> NonA(a[0..n-1])
+    Un <n> U()
+    Adder <n> MoinsA(NonA.o,U.o)
+    -> o[n] : MoinsA.o ;
+
+
+# Soustraction 
+
+Sub <n> (a[n],b[n])
+    UnarySub <n> MoinsB(b[0..n-1])
+    Adder <n> AMoinsB(MoinsB.o,a[0..n-1])
+    -> o[n] : AMoinsB.o ,
+       c : AMoinsB.c ;
+
+
+# Transforme un entier n bits en un entier n+m bits 
+
+Agrandir <n,1> (a[n])
+    -> o[n+1] : {a[0..n-1],a[n-1]} ;
+    
+Agrandir <n,m> (a[n])
+    Agrandir <n,m-1> A(a[0..n-1])
+    -> o[n+m] : { A.o, a[n-1] } ;
+
+
+# Décale un entier n bits de m bits vers la droite 
+
+RShift <n,m> (a[n])
+   Zero <m> Z()
+   -> o[m+n] : { Z.o , a[0..n-1] } ;
+
+# Même chose, mais ne renvoie que les n premiers bits 
+# /!\ On doit avoir n>m /!\
+
+RShiftT <n,m> (a[n])
+   Zero <m> Z()
+   -> o[n] : { Z.o , a[0..n-m-1] } ;
+
+# Décale un entier n bits de m bits vers la gauche 
+# /!\ On doit avoir n>m /!\
+
+LShift <n,m> (a[n])
+    -> o[n-m] : a[m..n-1] ;
+
+# Même chose, mais on obtient un entier n bits en complétant avec des zéros 
+
+LShiftT <n,m> (a[n])
+    Zero <m> Z()
+    -> o[n] : { a[m..n-1] , Z.o } ;
+
+
+# Multiplication 
+
+Mult <n,1> (a[n],b)
+    Zero <n> Z()
+    Multiplexer <n> M(b,Z.o,a[0..n-1])
+    -> o[n] : M.o ;
+
+Mult <n,m> (a[n],b[m])
+    Mult <n,m-1> EtapePrecedente(a[0..n-1],b[0..m-2])
+    Agrandir <n+m-2,1> TermePrecedent(EtapePrecedente.o)
+    RShift <n,m-1> Decalage(a[0..n-1])
+    Zero <n+m-1> Z()
+    Multiplexer <n+m-1> TermeActuel(b[m-1],Z.o,Decalage.o)
+    Adder <n+m-1> Renvoi(TermePrecedent.o,TermeActuel.o)
+    -> o[n+m-1] : Renvoi.o ;
+
+
+# Operations de comparaison (Renvoie 1 pour true, 0 pour false)
+
+Egal <1> (a,b)
+    Xor X(a,b)
+    Not R(X.o)
+    -> o : R.o ;
+
+Egal <n> (a[n],b[n])
+    Egal <n-1> P(a[0..n-2],b[0..n-2])
+    Egal <1> S(a[n-1],b[n-1])
+    And R(P.o,S.o)
+    -> o : R.o ;
+
+SupStrict <1> (a,b)
+    Not NonB(b)
+    And R(a,NonB.o)
+    -> o : R.o ;
+
+SupStrict <n> (a[n],b[n])
+    SupStrict <n-1> PSS(a[0..n-2],b[0..n-2])
+    SupStrict <1> SSS(a[n-1],b[n-1])
+    Egal <1> SE(a[n-1],b[n-1])
+    And OK(PSS.o,SE.o)
+    Or R(SSS.o,OK.o)
+    -> o : R.o ;
+
+InfStrict <1> (a,b)
+    Not NonA(a)
+    And R(b,NonA.o)
+    -> o : R.o ;
+
+InfStrict <n> (a[n],b[n])
+    InfStrict <n-1> PIS(a[0..n-2],b[0..n-2])
+    InfStrict <1> SIS(a[n-1],b[n-1])
+    Egal <1> SE(a[n-1],b[n-1])
+    And OK(PIS.o,SE.o)
+    Or R(SIS.o,OK.o)
+    -> o : R.o ;
+
+SupEgal <n> (a[n],b[n])
+    Egal <n> E(a[0..n-1],b[0..n-1])
+    SupStrict <n> SS(a[0..n-1],b[0..n-1])
+    Or R(E.o,SS.o)
+    -> o : R.o ;
+
+InfEgal <n> (a[n],b[n])
+    Egal <n> E(a[0..n-1],b[0..n-1])
+    InfStrict <n> SS(a[0..n-1],b[0..n-1])
+    Or R(E.o,SS.o)
+    -> o : R.o ;
+
+#######################
+# Opérations Filtrées #
+#######################
+
+#Filtre <m> : renvoie m sorties 1 si les deux arguments sont égaux, 32 sorties 0 sinon 
+
+Filtre <1> (a[4], b[4])
+   Egal<4> Eg(a[0..3], b[0..3])
+   -> o : Eg.o;   
+
+Filtre <m> (a[4], b[4])
+   Filtre <m-1> F1 (a[0..3], b[0..3])
+   Filtre <1> F2 (a[0..3], b[0..3]) 
+   -> o[m] : { F1.o, F2.o };
+
+
+# Toutes les opérations renvoient leur resultats sur m bits si le selecteur correspond à leur code, que des 0 sinon
+
+# Logique - Unaire  , a utiliser
+
+Not32 (a[32])
+    Neg <32> A(a[0..31])
+    -> o[32] : A.o ;
+
+# Logique - Binaire
+
+#Et 
+BinOp<0,m> (a[m], b[m], sel[4]) 
+    Et <m> A(a[0..m-1], b[0..m-1])
+    Filtre<m> F($0000, sel[0..3])
+    Et <m> Res (A.o, F.o)             
+    -> o[m] : Res.o;
+
+#Ou 
+BinOp<1,m> (a[m], b[m], sel[4])
+    Ou <m> A(a[0..m-1], b[0..m-1])
+    Filtre<m> F($1000, sel[0..3])
+    Et <m> Res (A.o, F.o)          
+    -> o[m] : Res.o ;
+
+#Xor 
+BinOp<2,m> (a[m], b[m], sel[4])
+    Xou <m> A(a[0..m-1], b[0..m-1])
+    Filtre<m> F($0100, sel[0..3])
+    Et <m> Res (A.o, F.o)          
+    -> o[m] : Res.o ;
+
+#Nand 
+BinOp<3,m> (a[m], b[m], sel[4])
+    Net <m> A(a[0..m-1],b[0..m-1])
+    Filtre<m> F($1100, sel[0..3])
+    Et <m> Res (A.o, F.o)          
+    -> o[m] : Res.o ;
+
+#Nor 
+BinOp<4,m> (a[m], b[m], sel[4])
+    Nou <m> A(a[0..m-1],b[0..m-1])
+    Filtre<m> F($0010, sel[0..3])
+    Et <m> Res (A.o, F.o)          
+    -> o[m] : Res.o ;
+
+
+# Logique - Ternaire
+
+Mux32 (s,a[32],b[32])
+    Multiplexer <32> M(s,a[0..31],b[0..31])
+    -> o[32] : M.o ;
+
+# Arithmétique - Unaire
+
+USub32 (a[32])
+    UnarySub <32> A(a[0..31])
+    -> o[32] : A.o ;
+
+# Arithmétique - Binaire
+
+#addition
+BinOp<5,m> (a[m], b[m], sel[4])
+    Adder <m> A(a[0..m-1],b[0..m-1])
+    Filtre<m> F($1010, sel[0..3])
+    Et <m> Res (A.o, F.o)          
+    -> o[m] : Res.o ;
+
+#Soustraction
+BinOp<6,m> (a[m],b[m], sel[4])
+    Sub <m> A(a[0..m-1],b[0..m-1])
+    Filtre<m> F($0110, sel[0..3])
+    Et <m> Res (A.o, F.o)          
+    -> o[m] : Res.o ;
+
+#Multiplication ici desactivée pour avoir un circuit plus léger
+
+BinOp<7,m> (a[m],b[m],sel[4])
+    #Mult <m,m> M(a[0..m-1],b[0..m-1])
+    #Filtre<m> F($1110, sel[0..3])
+    #Et <m> Res (M.o[0..m-1],F.o)
+    #-> o[m] : Res.o[0..m-1] ;
+    Zero<m> Z()     
+    -> o[m] :  Z.o ;
+
+# Comparaison - Binaire
+# Renvoie 0 (pour false) ou 1 (pour true)
+
+#Egal
+BinOp<8,m> (a[m],b[m], sel[4])
+    Egal <m> A(a[0..m-1],b[0..m-1])
+    Filtre<1> F($0001, sel[0..3])
+    Et <1> Res (A.o, F.o)
+    Zero<m-1> Z() 
+    -> o[m] : {Res.o, Z.o} ;
+
+#Différent
+BinOp<9,m> (a[m],b[m], sel[4])
+    Egal <m> B(a[0..m-1],b[0..m-1])
+    Not A(B.o)
+    Filtre<1> F($1001, sel[0..3])
+    Et <1> Res (A.o, F.o)
+    Zero<m-1> Z()          
+    -> o[m] : {Res.o, Z.o} ;
+
+#inf
+BinOp<10,m> (a[m],b[m], sel[4])
+    InfStrict <m> A(a[0..m-1],b[0..m-1])
+    Filtre<1> F($0101, sel[0..3])
+    Et <1> Res (A.o, F.o)
+    Zero<m-1> Z()          
+    -> o[m] : {Res.o, Z.o} ;
+
+#sup
+BinOp<11,m> (a[m],b[m], sel[4])
+    SupStrict <m> A(a[0..m-1],b[0..m-1])
+    Filtre<1> F($1101, sel[0..3])
+    Et <1> Res (A.o, F.o)
+    Zero<m-1> Z()          
+    -> o[m] : {Res.o, Z.o} ;
+
+#inf ou egal
+BinOp<12,m> (a[m],b[m], sel[4])
+    InfEgal <m> A(a[0..m-1],b[0..m-1])
+    Filtre<1> F($0011, sel[0..3])
+    Et <1> Res (A.o, F.o)
+    Zero<m-1> Z()          
+    -> o[m] : {Res.o, Z.o} ;
+
+#sup ou egal
+BinOp<13,m> (a[m],b[m], sel[4])
+    SupEgal <m> A(a[0..m-1],b[0..m-1])
+    Filtre<1> F($1011, sel[0..3])
+    Et <1> Res (A.o, F.o)
+    Zero<m-1> Z()          
+    -> o[m] : {Res.o, Z.o} ;
+
+#decalage de 16 bit de l'opérande gauche
+
+BinOp<14,2*m> (a[2*m],b[2*m], sel[4])
+    Filtre<2*m> F($0111, sel[0..3])
+    Et <2*m> Res ({a[0..m-1],b[0..m-1]}, F.o)          
+    -> o[2*m] : {Res.o} ;
+
+#val op gauche
+BinOp<15,m> (a[m],b[m], sel[4])
+    Filtre<m> F($1111, sel[0..3])
+    Et <m> Res (a[0..m-1], F.o)          
+    -> o[m] : {Res.o} ;
+
+
+
+####################
+# Opérations shift #
+####################
+
+To_vect<1> (x)
+    -> o[1] : x;
+To_vect<n> (x)
+    To_vect<n-1> L(x)
+    -> o[n] : {L.o,x};
+
+Mux_wide<1> (s,a[1],b[1])
+    Mux M(s,a,b)
+    -> o[1] : M.o;
+
+Mux_wide<n> (s,a[n],b[n])
+    Mux H(s,a[n-1],b[n-1])
+    Mux_wide<n-1> L(s,a[0..n-2],b[0..n-2])
+    -> o[n] : {L.o,H.o};
+
+Lsh<data_size,1> (data[data_size], shift[1])
+    Lsh_cst<data_size,1> Shifted(data)
+    Mux_wide<data_size> Result(shift[0],data,Shifted.o)
+    -> o[data_size] : Result.o;
+Lsh<data_size,shift_size> (data[data_size], shift[shift_size])
+    Lsh<data_size,shift_size-1> Low(data, shift[0..shift_size-2])
+    Lsh_cst<data_size,2^(shift_size-1)> High(Low.o)
+    Mux_wide<data_size> Result(shift[shift_size-1],Low.o,High.o)
+    -> o[data_size] : Result.o;
+
+Lsh_cst<data_size,shift_value> (data[data_size])
+    Gnd_vect<shift_value> G
+    -> o[data_size] : {G.o, data[0..data_size-shift_value-1]};
+
+Rsh<data_size,shift_size> (data[data_size], shift[shift_size], arithmetic)
+    And Fill(arithmetic,data[data_size-1])
+    Rsh_sub<data_size,shift_size> Shifted(data, shift, Fill.o)
+    -> o[data_size] : Shifted.o;
+
+Rsh_sub<data_size,1> (data[data_size], shift[1], fill)
+    Rsh_cst<data_size,1> Shifted(data,fill)
+    Mux_wide<data_size> Result(shift[0],data,Shifted.o)
+    -> o[data_size] : Result.o;
+Rsh_sub<data_size,shift_size> (data[data_size], shift[shift_size], fill)
+    Rsh<data_size,shift_size-1> Low(data, shift[0..shift_size-2], fill)
+    Rsh_cst<data_size,2^(shift_size-1)> High(Low.o,fill)
+    Mux_wide<data_size> Result(shift[shift_size-1],Low.o,High.o)
+    -> o[data_size] : Result.o;
+
+Rsh_cst<data_size,shift_value> (data[data_size],fill)
+    To_vect<shift_value> F(fill)
+    -> o[data_size] : {data[shift_value..data_size-1], F.o};
+
+Srl<data_size,shift_size> (data[data_size], shift[shift_size])
+    Rsh<data_size,shift_size> Shifted(data, shift, $0)
+    -> o[data_size] : Shifted.o;
+Sra<data_size,shift_size> (data[data_size], shift[shift_size])
+    Rsh<data_size,shift_size> Shifted(data, shift, $1)
+    -> o[data_size] : Shifted.o;
+Sll<data_size,shift_size> (data[data_size], shift[shift_size])
+    Lsh<data_size,shift_size> Shifted(data, shift)
+    -> o[data_size] : Shifted.o;
+
+#####################
+# Entier sur m bits #
+#####################
+
+Entier <2*n,1> ()
+   -> o : $0;
+
+Entier <n,1> ()
+   -> o : $1;
+
+Entier <2*n,m> ()
+   Entier <n, m-1> E()
+   -> o[m] : {$0 ,E.o}; 
+
+Entier <2*n+1,m> ()
+   Entier <n, m-1> E()
+   -> o[m] : {$1 ,E.o}; 
+
+#######
+# ALU #
+#######
+
+AluPartiel <0,m> (a[m], b[m], sel[4])
+   BinOp<0,m> B(a[0..m-1], b[0..m-1], sel[0..3])
+   -> o[m] : B.o;
+   
+AluPartiel <n,m> (a[m], b[m], sel[4])
+   AluPartiel <n-1,m> A(a[0..m-1], b[0..m-1], sel[0..3])
+   BinOp <n,m> B(a[0..m-1], b[0..m-1], sel[0..3])
+   Ou <m> O(A.o, B.o)
+   -> o[m] : O.o;   
+
+Alu <m> (a[m], b[m], sel[4])
+   AluPartiel <15,m> A(a[0..m-1], b[0..m-1], sel[0..3])
+   -> o[m] : A.o;  
+
+###########
+# Filtres #
+###########
+
+FiltreSel <1> (a, b)
+   And Res(a,b)
+   -> o : Res.o;
+
+FiltreSel <n> (a[n], b)
+   FiltreSel <n-1> Haut(a[0..n-2], b)
+   FiltreSel <1> Bas(a[n-1], b)
+   -> o[n] : {Haut.o, Bas.o};
+
+############
+#  Delais  #
+############
+
+Delai <1> (a)
+   Reg R(a)
+   -> o : R.o;
+
+Delai <m> (a[m])
+   Delai <m-1> Deb(a[0..m-2])
+   Reg Fin(a[m-1])
+   -> o[m] : {Deb.o, Fin.o};
+
+
+##########
+#  Micro #
+##########
+
+
+#### Decodage 
+
+#On définit Cycleur<a,b,c,d> dont la sortie vaut successsivement : a,b,c,d,a,b,c,d,a,b,c,d
+
+RegAvecValIni <0> (in)
+   Reg R(in)
+   -> o : R.o;
+
+RegAvecValIni <1> (in)
+   Not N1(in)
+   Reg R(N1.o)
+   Not N2(R.o)
+   -> o : N2.o;
+
+Cycleur <a,b,c,d> ()
+   RegAvecValIni <d> R1(R4.o)
+   RegAvecValIni <c> R2(R1.o)
+   RegAvecValIni <b> R3(R2.o)
+   RegAvecValIni <a> R4(R3.o)
+   -> o : R4.o;
+
+# R format   
+  
+DecodeurR<b> (opcode[6], rs[5], rt[5], rd[5], shift[5], funct[6], alu[32], gestReg[32], pc[b], gr_reader[32]) #rd est l'adresse du resultat
+   Cycleur<0,0,1,0> CRS ()
+   Cycleur<0,0,1,0> CRT ()
+   Cycleur<0,0,0,1> CRD ()
+   Cycleur<0,0,0,1> CycleLectEcr()
+   FiltreSel <5> FRS(rs[0..4], CRS.o)  
+   FiltreSel <5> FRT(rt[0..4], CRT.o)  
+   FiltreSel <5> FRD(rd[0..4], CRD.o)   
+   Ou <5> GR_add(FRT.o, FRD.o)
+
+   Cycleur<0,0,0,1> FALU() 
+   FiltreSel <32> ValOp1(gr_reader[0..31], FALU.o) 
+   FiltreSel <32> ValOp2(gestReg[0..31], FALU.o)
+
+   Cycleur<0,0,0,1> CPC()
+   Entier <4,b> Quatre()
+   FiltreSel <b> Ajout(Quatre.o, CPC.o)
+   Adder <b> NouvPC(pc[0..b-1], Ajout.o) 
+
+   Srl<32,5> Res (alu[0..31], shift[0..4])
+
+   -> versGestRegModeEcr :  CycleLectEcr.o,
+      versGestRegAd[5] : GR_add.o, 
+      versGestRegVal[32] :  Res.o,
+      versAluOp1[32] : ValOp1.o, 
+      versAluOp2[32] : ValOp2.o,
+      versAluTypeOp[4] : funct[0..3], 
+      versGr_reader[5] : FRS.o,
+      versPC[b] : NouvPC.o,
+      sortieConc[1+5+32+32+32+4+ 32 + 32 + 4 + 3 + 5 + b] : 
+      {CycleLectEcr.o, GR_add.o, Res.o, ValOp1.o, ValOp2.o, funct[0..3], 
+  	$00000000000000000000000000000000, $00000000000000000000000000000000, $1111, $0, $0, $0, FRS.o, NouvPC.o};
+
+# I format   
+
+DecodeurI <b> (opcode[6], rs[5], rt[5], imm[16], alu[32], gestReg[32], pc[b]) #rt est l'adresse de resultat
+   Cycleur<0,0,1,0> CRS ()                  
+   Cycleur<0,0,0,1> CRT ()
+   Cycleur<0,0,0,1> CycleLectEcr()
+   FiltreSel <5> FRS(rs[0..4], CRS.o)  
+   FiltreSel <5> FRT(rt[0..4], CRT.o)   
+   Ou <5> SortieAdresseReg(FRS.o, FRT.o) 
+
+   Cycleur<0,0,0,1> FALU()
+
+   FiltreSel <32> ValOp1(gestReg[0..31], FALU.o) 
+   To_vect<16> Comp (imm[15]) 
+   FiltreSel <32> ValOp2({imm[0..15], Comp.o}, FALU.o)
+
+   Cycleur<0,0,0,1> CPC()
+   Entier <4,b> Quatre()
+   FiltreSel <b> Ajout(Quatre.o, CPC.o)
+   Adder <b> NouvPC(pc[0..b-1], Ajout.o) 
+
+   -> versGestRegModeEcr :  CycleLectEcr.o,
+      versGestRegAd[5] : SortieAdresseReg.o, 
+      versGestRegVal[32] :  alu[0..31],
+      versAluOp1[32] : ValOp1.o, 
+      versAluOp2[32] : ValOp2.o,
+      versAluTypeOp[4] : opcode[0..3], 
+      versGr_reader[5] : $00000,
+      versPC[b] : NouvPC.o,        
+      sortieConc[1+5+32+32+32+4+ 32 + 32 + 4 + 3+ 5 +b] : 
+      {CycleLectEcr.o, SortieAdresseReg.o, alu[0..31], ValOp1.o, ValOp2.o, opcode[0..3], 
+	  $00000000000000000000000000000000, $00000000000000000000000000000000, $1111, $0, $0, $0, $00000, NouvPC.o};
+
+#Decodeur J     
+
+DecodeurJ <b> (opcode[6], nouvAdresse[26], pc[b]) 
+   Cycleur<0,0,0,1> CNPC()
+   Cycleur<1,1,1,0> CPC()
+   Zero<b-26> ZComp()
+   FiltreSel <b> NouvPC({nouvAdresse[0..25], ZComp.o}, CNPC.o)
+   FiltreSel <b> PC(pc[0..b-1], CPC.o) 
+   Ou <b> ProchValPC(NouvPC.o, PC.o) 
+
+   -> versGestRegModeEcr :  $0,
+      versGestRegAd[5] : $00000, 
+      versGestRegVal[32] :  $00000000000000000000000000000000,
+      versAluOp1[32] : $00000000000000000000000000000000, 
+      versAluOp2[32] : $00000000000000000000000000000000,
+      versAluTypeOp[4] : $0000,  
+      versGR_reader[5] : $00000,
+      versPC[b] : ProchValPC.o,        
+      sortieConc[1+5+32+32+32+4+ 32 + 32 + 4 + 3 + 5 + b] : 
+      {$0, $00000, $00000000000000000000000000000000, $00000000000000000000000000000000, $00000000000000000000000000000000, $0000, 
+           $00000000000000000000000000000000, $00000000000000000000000000000000, $1111, $0, $0, $0, $00000, ProchValPC.o};  
+
+#Decodeur JR  
+
+DecodeurJR <b> (opcode[6], rs[5], rt[5], rd[5], shift[5], funct[6], gestReg[32], pc[b]) 
+   Cycleur<0,0,0,1> CNPC()
+   Cycleur<1,1,1,0> CPC()
+   
+   Cycleur<0,0,1,0> CRS ()    
+   FiltreSel <5> FRS(rs[0..4], CRS.o)  
+
+   FiltreSel <b> NouvPC(gestReg[0..b-1], CNPC.o)
+   FiltreSel <b> PC(pc[0..b-1], CPC.o) 
+   Ou <b> ProchValPC(NouvPC.o, PC.o) 
+
+   -> versGestRegModeEcr :  $0,
+      versGestRegAd[5] : FRS.o, 
+      versGestRegVal[32] :  $00000000000000000000000000000000,
+      versAluOp1[32] : $00000000000000000000000000000000, 
+      versAluOp2[32] : $00000000000000000000000000000000,
+      versAluTypeOp[4] : $0000,  
+      versGR_reader[5] : $00000,
+      versPC[b] : ProchValPC.o,        
+      sortieConc[1+5+32+32+32+4+ 32 + 32 + 4 + 3 + 5 + b] : 
+      {$0, FRS.o, $00000000000000000000000000000000, $00000000000000000000000000000000, $00000000000000000000000000000000, $0000, 
+           $00000000000000000000000000000000, $00000000000000000000000000000000, $1111, $0, $0, $0, $00000, ProchValPC.o};  
+
+
+
+# Decodeur du branch-format
+
+DecodeurBranch <b> (opcode[6], rs[5], rt[5], imm[16], gestReg[32], pc[b], gr_reader[32], alu[32])
+   Cycleur<0,0,1,0> CRS ()
+   Cycleur<0,0,1,0> CRT ()
+   Cycleur<0,0,0,0> CycleLectEcr()
+   FiltreSel <5> FRS(rs[0..4], CRS.o)    
+   FiltreSel <5> FRT(rt[0..4], CRT.o)   
+ 
+   Cycleur<0,0,0,1> FBEQ()
+   FiltreSel <32> ValOp1(gestReg[0..31], FBEQ.o) 
+   FiltreSel <32> ValOp2(gr_reader[0..31], FBEQ.o)
+
+   Cycleur<0,0,0,1> CPC()
+   Entier <4,b> Quatre()
+
+   To_vect<b-16> Comp(imm[15])
+   FiltreSel <b> AjoutBEQ({imm[0..15], Comp.o}, alu[0])
+
+   Adder <b> AjoutTot(AjoutBEQ.o, Quatre.o) 
+
+   FiltreSel <b> AjoutFiltre(AjoutTot.o, CPC.o)  
+
+   Adder <b> NouvPC(pc[0..b-1], AjoutFiltre.o)
+
+   -> versGestRegModeEcr :  CycleLectEcr.o,
+      versGestRegAd[5] : FRS.o, 
+      versGestRegVal[32] :  $00000000000000000000000000000000,
+      versAluOp1[32] : ValOp1.o, 
+      versAluOp2[32] : ValOp2.o,
+      versAluTypeOp[4] : opcode[0..3],
+      versGR_reader[5] : FRT.o,
+      versPC[b] : NouvPC.o,
+      sortieConc[1+5+32+32+32+4+ 32 + 32 + 4 + 3 + 5 + b] : 
+      {CycleLectEcr.o, FRS.o, $00000000000000000000000000000000, 
+                ValOp1.o, ValOp2.o, opcode[0..3], 
+                   $00000000000000000000000000000000, $00000000000000000000000000000000, $1111, $0, $0, $0, FRT.o, NouvPC.o}; 
+
+# format de lecture mémoire
+
+DecodeurMemLect <b> (opcode[6], rs[5], rt[5], imm[16], alu[32], gestReg[32], pc[b], valMem[32]) #rt est l'adresse de resultat
+   Cycleur<0,1,0,0> CRS ()                        
+   Cycleur<0,0,0,1> CRT ()
+   Cycleur<0,0,0,1> CycleLectEcr()
+   FiltreSel <5> FRS(rs[0..4], CRS.o)  
+   FiltreSel <5> FRT(rt[0..4], CRT.o)   
+   Ou <5> SortieAdresseReg(FRS.o, FRT.o) 
+
+   Cycleur<0,0,1,0> FALU()
+   FiltreSel <32> ValOp1(gestReg[0..31], FALU.o) 
+   FiltreSel <32> ValOp2({imm[0..15], $0000000000000000}, FALU.o)
+
+   Cycleur<0,0,0,1> CPC()
+   Entier <4,b> Quatre()
+   FiltreSel <b> Ajout(Quatre.o, CPC.o)
+   Adder <b> NouvPC(pc[0..b-1], Ajout.o) 
+
+   -> versGestRegModeEcr :  CycleLectEcr.o, 
+      versGestRegAd[5] : SortieAdresseReg.o,
+      versGestRegVal[32] : valMem[0..31],
+      versAluOp1[32] : ValOp1.o, 
+      versAluOp2[32] : ValOp2.o, 
+      versAluTypeOp[4] : $1010,  
+      versAddMem[32] : alu[0..31], 
+      versValEcrMem[32] : $00000000000000000000000000000000, 
+      versGr_reader[5] : $00000,
+      versPC[b] : NouvPC.o,         
+      sortieConc[1+5+32+32+32+4 + 32 + 32 + 4 + 3 + 5 + b] : 
+      {CycleLectEcr.o, SortieAdresseReg.o, valMem[0..31], ValOp1.o, ValOp2.o, $1010, 
+	alu[0..31], $00000000000000000000000000000000, {$1,opcode[1], opcode[1], opcode[1]}, $0, $0, $0, $00000,NouvPC.o};
+
+# format d'ecriture mémoire
+
+DecodeurMemEcr <b> (opcode[6], rs[5], rt[5], imm[16], alu[32], gestReg[32], pc[b]) 
+   Cycleur<0,1,0,0> CRS ()                        
+   Cycleur<0,0,1,0> CRT ()
+   Cycleur<0,0,0,1> CycleLectEcr()
+   FiltreSel <5> FRS(rs[0..4], CRS.o)  
+   FiltreSel <5> FRT(rt[0..4], CRT.o)   
+   Ou <5> SortieAdresseReg(FRS.o, FRT.o) 
+
+   Cycleur<0,0,1,0> FALU()
+   FiltreSel <32> ValOp1(gestReg[0..31], FALU.o) 
+   FiltreSel <32> ValOp2({imm[0..15], $0000000000000000}, FALU.o)
+
+   Delai <32> AddMem(alu[0..31])
+
+   Cycleur<0,0,0,1> CPC()
+   Entier <4,b> Quatre()
+   FiltreSel <b> Ajout(Quatre.o, CPC.o)
+   Adder <b> NouvPC(pc[0..b-1], Ajout.o) 
+
+   -> versGestRegModeEcr :  $0, 
+      versGestRegAd[5] : SortieAdresseReg.o, 
+      versGestRegVal[32] : $00000000000000000000000000000000, 
+      versAluOp1[32] : ValOp1.o, 
+      versAluOp2[32] : ValOp2.o, 
+      versAluTypeOp[4] : $1010,  
+      versAddMem[32] : AddMem.o,  
+      versValEcrMem[32] : gestReg[0..31],
+      versGR_reader[5] : $00000,
+      versPC[b] : NouvPC.o,         
+      sortieConc[1+5+32+32+32+4 + 32 + 32 + 4 + 3 + 5 + b] : 
+      {$0, SortieAdresseReg.o, $00000000000000000000000000000000, ValOp1.o, ValOp2.o, $1010, 
+        AddMem.o, gestReg[0..31], {$1,opcode[1], opcode[1], opcode[1]}, CycleLectEcr.o, $0, $0, $00000,NouvPC.o};
+
+#Decodeur
+
+Controleur <b> (instr[32], alu[32], gestReg[32], pc[b], memVal[32], gr_reader[32])
+    Egal <2> OpcodeR(instr[4..5], $00)
+    Egal <2> OpcodeI(instr[4..5], $11)
+    Egal <2> OpcodeBranch(instr[4..5], $10)   
+
+    Egal <6> OpcodeJ(instr[0..5], $111101)
+    Egal <6> OpcodeJR(instr[0..5], $000001)
+
+    Egal <4> OpcodeMemLect({instr[0], instr[3..5]}, $1001)
+    Egal <4> OpcodeMemEcr (instr[2..5], $0101)
+
+    DecodeurR <b> DR(instr[0..5], instr[6..10], instr[11..15], instr[16..20], instr[21..25], instr[26..31], alu[0..31], gestReg[0..31], pc[0..b-1], gr_reader[0..31])
+    FiltreSel <1+5+32+32+32+4+32 + 32 + 4 + 3 + 5 +b> SortieR(DR.sortieConc, OpcodeR.o)
+
+    DecodeurI <b> DI(instr[0..5], instr[6..10], instr[11..15], instr[16..31], alu[0..31], gestReg[0..31], pc[0..b-1])
+    FiltreSel <1+5+32+32+32+4+32 + 32 + 4 + 3 +5+b> SortieI(DI.sortieConc, OpcodeI.o)
+
+    DecodeurJ <b> DJ(instr[0..5], instr[6..31], pc[0..b-1])
+    FiltreSel <1+5+32+32+32+4+32 + 32 + 4 + 3 + 5+b> SortieJ(DJ.sortieConc, OpcodeJ.o) 
+
+    DecodeurBranch <b> DB(instr[0..5], instr[6..10], instr[11..15], instr[16..31], gestReg[0..31], pc[0..b-1], gr_reader[0..31], alu[0..31])
+    FiltreSel <1+5+32+32+32+4+32 + 32 + 4 + 3 + 5+b> SortieB(DB.sortieConc, OpcodeBranch.o)
+
+    DecodeurMemLect <b> DML(instr[0..5], instr[6..10], instr[11..15], instr[16..31], alu[0..31], gestReg[0..31], pc[0..b-1], memVal[0..31])
+    FiltreSel <1+5+32+32+32+4+32 + 32 + 4 + 3 + 5+b> SortieML(DML.sortieConc, OpcodeMemLect.o)
+
+    DecodeurMemEcr <b> DME(instr[0..5], instr[6..10], instr[11..15], instr[16..31], alu[0..31], gestReg[0..31], pc[0..b-1])
+    FiltreSel <1+5+32+32+32+4+32 + 32 + 4 + 3 + 5+b> SortieME(DME.sortieConc, OpcodeMemEcr.o)
+
+    DecodeurJR <b> DJR(instr[0..5], instr[6..10], instr[11..15], instr[16..20], instr[21..25], instr[26..31], gestReg[0..31], pc[0..b-1])
+    FiltreSel <1+5+32+32+32+4+32 + 32 + 4 + 3 + 5 +b> SortieJR(DJR.sortieConc, OpcodeJR.o)    
+
+    Ou <1+5+32+32+32+4+ 32 + 32 + 4 + 3 + 5 + b> O1(SortieR.o, SortieI.o)
+    Ou <1+5+32+32+32+4+ 32 + 32 + 4 + 3 + 5 + b> O2(SortieJ.o, SortieB.o)
+    Ou <1+5+32+32+32+4+ 32 + 32 + 4 + 3 + 5 + b> O3(SortieML.o, O2.o)
+    Ou <1+5+32+32+32+4+ 32 + 32 + 4 + 3 + 5 + b> O4(SortieME.o, O3.o)
+    Ou <1+5+32+32+32+4+ 32 + 32 + 4 + 3 + 5 + b> O5(SortieJR.o, O4.o)
+    Ou <1+5+32+32+32+4+ 32 + 32 + 4 + 3 + 5 + b> Res(O1.o, O5.o)        
+
+    ->versGestRegModeEcr :  Res.o[0],
+      versGestRegAd[5] : Res.o[1..5], 
+      versGestRegVal[32] :  Res.o[6..37],
+      versAluOp1[32] : Res.o[38..69], 
+      versAluOp2[32] : Res.o[70..101],
+      versAluTypeOp[4] : Res.o[102..105], 
+      versAddMem[32] : Res.o[106..137],
+      versValEcrMem[32] : Res.o[138..169],
+      versMemByteEnable[4] : Res.o[170..173],
+      versMemEcr : Res.o[174],
+      inutile[2] : Res.o[175..176],
+      versGR_reader[5] : Res.o[177..181],       
+      versPC[b] : Res.o[182..182+b-1],
+      versProg[b] : pc[0..b-1];
+   
+
+#Micro
+
+ProgCounter <b> (nouvVal[b]) 
+   Delai<b> Res(nouvVal[0..b-1])
+   -> o[b] : Res.o;
+
+MiniMicro <b> ()
+   ProgCounter <b> PC(C.versPC[0..b-1])
+ 
+   #Memory <0,14,0> Mem(C.versAddMem[0..31], C.versValEcrMem[0..31], C.versMemByteEnable[0..3], C.versMemEcr, $0, $0) 
+   Clock_bus <0,14,-1,1> Mem(C.versAddMem[0..31], C.versValEcrMem[0..31], C.versMemByteEnable[0..3], C.versMemEcr, $0, $0)
+ 
+   FiltreSel<32> F(C.versAluOp1[0..31], $1)
+   Alu <32> ALU(F.o[0..31], C.versAluOp2[0..31], C.versAluTypeOp[0..3])
+
+   Zero <32-b> Zcomp()
+   Zero <32> Z32()
+   Zero <25> Z25()
+
+   Memory <1,7,0> GR({$00, C.versGestRegAd[0..4], Z25.o}, C.versGestRegVal[0..31], $1111, C.versGestRegModeEcr, $0, $0)
+   Memory_reader<1> GR_reader({$00, C.versGR_reader, Z25.o }, Z32.o , $1111, $0, $0, $0) 
+
+   Memory <2,20,1> Prog({C.versProg[0..b-1], Zcomp.o}, Z32.o, $1111, $0, $0, $0) 
+
+   Controleur <b> C(Prog.data, ALU.o, GR.data, PC.o, Mem.data, GR_reader.data)
+   -> ;#o[32] : ALU.o;     
+
+start MiniMicro<30>
+
+
+
