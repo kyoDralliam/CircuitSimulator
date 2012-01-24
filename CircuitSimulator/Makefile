@@ -1,4 +1,4 @@
-GPP=clang++
+GPP=g++
 FREQ=8000
 NB_OP=1000000
 

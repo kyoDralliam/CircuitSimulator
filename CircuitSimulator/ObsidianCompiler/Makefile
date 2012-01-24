@@ -1,4 +1,4 @@
-GPP=g++-mp-4.5
+GPP=g++
 
 all: main
 
