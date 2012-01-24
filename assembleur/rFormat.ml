@@ -38,8 +38,8 @@ let map =
       "sle", (0b001100l, [ RD ; RS ; RT ] ) ;
       "sge", (0b001000l, [ RD ; RS ; RT ] ) ;
       (* quels shifts faut-il garder ??? *)
-      "srl", (0b001111l, [ RD ; RT ; SHAMT ] ) ;
-      "srlv", (0b001111l, [ RD ; RT ; RS ] ) ;
+      "srl", (0b001111l, [ RD ; RS ; SHAMT ] ) ;
+      "srlv", (0b001111l, [ RD ; RS ; RS ] ) ;
       (*
 	"sll", (0b111100l, [ RD ; RT ; SHAMT ] ) ;
 	"sllv", (0b111100l, [ RD ; RT ; RS ] ) ;
