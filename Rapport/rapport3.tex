@@ -855,8 +855,33 @@ mémoires reliées directement à l'afficheur $7$ segments.
 
 \section{Utilisation des outils et organisation du code}
 
-
-
+L'ensemble du projet peut se compiler à partir de la racine à l'aide de
+make. Avant toute compilation, il faut éventuellement modifier le compilateur
+c++ employé (g++ par défaut). Les différentes cibles présentent sont :
+\begin{description}
+\item[$\rhd$ run :] lance l'horloge avec une configuration par défaut.
+\item[$\rhd$ obsidian :] compile le compilateur.
+\item[$\rhd$ assembleur :] compile l'assembleur.
+\item[$\rhd$ micro :] compile le microprocesseur en mode \og horloge\fg{}.
+\item[$\rhd$ horloge :] assemble l'horloge.
+\item[$\rhd$ compiled-tests :] compile les tests de circuits présents dans Rock/Tests
+  et les place dans compiled-tests.
+\item[$\rhd$ clean :] efface tous les programmes.
+\end{description}
+\text{}\\
+L'organisation des dossiers est la suivante :
+\begin{description}
+\item[$\rhd$ Asm :] contient les exemples en assembleur.
+\item[$\rhd$ AssembleurDir :] contient le code pour l'assembleur.
+\item[$\rhd$ ObsidianCompiler :] contient le code pour Obsidian.
+\item[$\rhd$ Resources :] contient des fichiers nécéssaires pour le fonctionnement
+  d'Obsidian.
+\item[$\rhd$ Rock :] contient les exemples en rock ainsi que le microprocesseur
+  (fichier Processor/Micro.rock).
+\end{description}
+\text{}\\
+Tous les programmes sont accompagnés d'une aide accessible à l'aide de l'option
+-help permettant de voir les options disponibles.
 
 \begin{figure}[!h]
 \centering
