@@ -33,13 +33,13 @@ let map =
       "addi", (0b110101l, [ RT ; RS ; Imm ] ) ;
       "subi", (0b110110l, [ RT ; RS ; Imm ] ) ;
       "muli", (0b110111l, [ RT ; RS ; Imm ] ) ; 
-      "lw",   (0b100011l, [ RS ; Ad ] ) ; 
-      "sw",   (0b101011l, [ RS ; Ad ] ) ; 
+      "lw",   (0b100011l, [ RT ; Ad ] ) ; 
+      "sw",   (0b101011l, [ RT ; Ad ] ) ; 
       "jr",   (0b100000l, [ RS ]) ; 
-      "lb",   (0b100001l, [ RS ; Ad ] ) ; 
+      "lb",   (0b100001l, [ RT ; Ad ] ) ; 
       (* "lh",   (0b01l, [ RS ; Ad ] ) ; *)
       (* "sh",   (0b01l, [ RS ; Ad ] ) ;  *)
-      "sb",   (0b101001l, [ RS ; Ad ] ) ; 
+      "sb",   (0b101001l, [ RT ; Ad ] ) ; 
       "lui",  (0b111110l, [ RT ; RS ; Imm ]) ; 
       (* slti ? *)
     ]
