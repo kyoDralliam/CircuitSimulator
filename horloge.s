@@ -11,16 +11,9 @@ main:
         addi    $sp, $sp, 4
         sw      $ra, 0($sp)
 
-        li      $a0, 1
-        li      $a1, 1
-        jal     diviser
-        move    $a0, $v0
-        jal     print_int
-        j       finprogramme
-
         # On récupère le timestamp que l'on met dans $s7
         #lw      $s7, timestamp
-        li      $s7, 1329500537
+        li      $s7, 1328118137
 
         # On calcule le nombre de jours écoulés depuis le 01/01/1970
         move    $a0, $s7
