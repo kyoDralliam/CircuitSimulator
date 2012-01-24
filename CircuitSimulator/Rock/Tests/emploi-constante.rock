@@ -1,0 +1,8 @@
+Id<n> (a[n])
+    -> o[n] : a; 
+
+TestBloc	
+    Id<4> I($0101)
+    -> o[4] : I.o;
+
+start TestBloc

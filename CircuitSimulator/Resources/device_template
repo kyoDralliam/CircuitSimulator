@@ -1,0 +1,10 @@
+class $(device_name) : public $(device_class_name)
+ {
+    public :
+    static $(device_class_name) * make($(device_constructor_parameters));
+    virtual ~$(device_name)();
+    $(data_var_type) $(device_cycle_method_name) ($(address_var_type) address,
+      $(data_var_type) data, $(byte_enables_var_type) byte_enables,
+      bool write_enable, bool interrupt_enable, bool iack, char * irq);
+ };
+

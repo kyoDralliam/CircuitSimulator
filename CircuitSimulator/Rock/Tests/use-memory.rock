@@ -1,0 +1,30 @@
+Gnd_Vect<1> ()
+    Gnd G()
+    -> o[1] : G.o;
+
+Gnd_Vect<n> ()
+    Gnd H()
+    Gnd_Vect<n-1> L
+    -> o[n] : {L.o, H.o};
+
+Vdd_Vect<1> ()
+    Vdd V()
+    -> o[1] : V.o;
+
+Vdd_Vect<n> ()
+    Vdd H()
+    Vdd_Vect<n-1> L
+    -> o[n] : {L.o, H.o};
+
+Start ()
+    Gnd_Vect<32> G32()
+    Vdd_Vect<32> V32
+    Vdd_Vect<4> V4
+    Gnd_Vect<1> G1()
+    Vdd_Vect<1> V1
+    Memory<5> M(G32.o, V32.o, V4.o, V1.o, G1.o, G1.o)
+    -> o[32] : M.data;
+
+device Memory<size>
+
+start Start

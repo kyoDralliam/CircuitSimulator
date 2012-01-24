@@ -1,0 +1,17 @@
+Counter<1> (e)
+    Reg M(X.o)
+    Xor X(M.o,e)
+    And A(M.o,e)
+    -> o : M.o, c : A.o;
+
+Counter<n> (e)
+    Counter<n-1> L(e)
+    Counter<1> H(L.c)
+    -> o[n] : {L.o, H.o}, c : H.c;
+
+Start<n> ()
+    Vdd V()
+    Counter<n> C(V.o)
+    -> o[n] : C.o, c : C.c;
+
+start Start<8>
