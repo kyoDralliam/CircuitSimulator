@@ -1,0 +1,136 @@
+device Clock_bus <id, memory_size, number_of_displays, frequency>
+device Clock_bus_reader <id>
+
+Gnd_vect<1> ()
+    Gnd G()
+    -> o[1] : G.o;
+
+Gnd_vect<n> ()
+    Gnd H()
+    Gnd_vect<n-1> L
+    -> o[n] : {L.o, H.o};
+
+Vdd_vect<1> ()
+    Vdd V()
+    -> o[1] : V.o;
+
+Vdd_vect<n> ()
+    Vdd H()
+    Vdd_vect<n-1> L
+    -> o[n] : {L.o, H.o};
+
+Counter<1> (e)
+    Reg M(X.o)
+    Xor X(M.o,e)
+    And A(M.o,e)
+    -> o : M.o, c : A.o;
+
+Counter<n> (e)
+    Counter<n-1> L(e)
+    Counter<1> H(L.c)
+    -> o[n] : {L.o, H.o}, c : H.c;
+
+Counter_reset<1> (e, r)
+    Reg Mem(New_value.o)
+
+    Not Not_reset (r)
+    And New_value (Result.o, Not_reset.o)
+
+    Xor Result(Mem.o,e)
+    And Carry(Mem.o,e)
+    -> o : Mem.o, c : Carry.o;
+
+Counter_reset<n> (e, r)
+    Counter_reset<n-1> L(e, r)
+    Counter_reset<1> H(L.c, r)
+    -> o[n] : {L.o, H.o}, c : H.c;
+
+
+Count_mod_10 (e)
+    Counter_reset<4> C(e, Reset.o)
+
+    Not Not_1(C.o[1])
+    Not Not_2(C.o[2])
+    And_fold<5> Reset({C.o[0], Not_1.o, Not_2.o, C.o[3], e})
+    -> o[4] : C.o, c : Reset.o;
+
+And_fold <1> (a[1])
+	-> o : a;
+And_fold <n> (a[n])
+	And_fold<n-1> Tail(a[0..n-2])
+	And Head(a[n-1], Tail.o)
+	-> o : Head.o;
+
+Mux_scalar <1> (selector, input0[1], input1[1])
+	Mux M(selector, input0, input1)
+	-> o : M.o;
+Mux_scalar <n> (selector, input0[n], input1[n])
+	Mux_scalar<n-1> Low(selector, input0[0..n-2], input1[0..n-2])
+	Mux High(selector, input0[n-1], input1[n-1])
+	-> o[n] : {Low.o, High.o};
+
+Mux_wide <1,d> (selector[1], input[d*2^1])
+	Mux_scalar<d> M(selector, input[0..d-1], input[d..2*d-1])
+	-> output[d] : M.o;
+Mux_wide <a,d> (selector[a], input[d*2^a])
+	Mux_wide<a-1,d> Low(selector[0..a-2], input[0..d*2^(a-1)-1])
+	Mux_wide<a-1,d> High(selector[0..a-2], input[d*2^(a-1)..d*2^a-1])
+	Mux_scalar<d> M(selector[a-1], Low.output, High.output)
+	-> output[d] : M.o;
+
+Seven_segments_decoder (number[4])
+    Gnd_vect<7> G7
+#   Gnd G
+#   Vdd V
+    Mux_wide<4,7> M (number, {$1111110, $0110000, $1101101, 
+                              $1111001, $0110011, $1011011,
+			      $1011111, $1110000, $1111111,
+			      $1111011, G7.o, G7.o, 
+			      G7.o, G7.o, G7.o, G7.o})
+(*                  {V.o, V.o, V.o, V.o, V.o, V.o, G.o,
+                     G.o, V.o, V.o, G.o, G.o, G.o, G.o,
+                     V.o, V.o, G.o, V.o, V.o, G.o, V.o,
+                     V.o, V.o, V.o, V.o, G.o, G.o, V.o,
+                     G.o, V.o, V.o, G.o, G.o, V.o, V.o,  
+                     V.o, G.o, V.o, V.o, G.o, V.o, V.o,
+                     V.o, G.o, V.o, V.o, V.o, V.o, V.o,
+                     V.o, V.o, V.o, G.o, G.o, G.o, G.o,
+                     V.o, V.o, V.o, V.o, V.o, V.o, V.o,
+                     V.o, V.o, V.o, V.o, G.o, V.o, V.o,
+                     G7.o, G7.o, G7.o, G7.o, G7.o, G7.o} *)
+    -> o[7] : M.output;
+
+Id <1> (x[1])
+   Or O(x[0],$0)
+   -> o[1] : O.o;
+
+Id <n> (x[n])
+   Or O(x[0],$0)
+   Id <n-1> I(x[1..n-1])
+   -> o[n] : {O.o, I.o};
+
+
+Start ()
+    Gnd_vect<32> G32()
+    Gnd_vect<23> G23()
+    Gnd_vect<16> G16
+    Vdd_vect<4> V4
+    Gnd_vect<1> G1()
+    Vdd_vect<1> V1
+(*    Count_mod_10 Cu(V1.o)
+    Seven_segments_decoder Du(Cu.o)
+    Count_mod_10 Cd(Cu.c)
+    Seven_segments_decoder Dd(Cd.o) *)
+    Clock_bus<0,5,-1,1> M(G32.o, R.data, $1111, $0, $0, $0)
+    Clock_bus_reader<0> R(G32.o, G32.o, $1111, $0, $0, $0)
+#    Id<32> I (R.data)
+(*
+    Clock_bus<0,5,-1,1> M({$01100000,G23.o, V1.o},
+               {Dd.o, G1.o, Du.o, G1.o, R.data[0..15]},
+                V4.o, V1.o, G1.o, G1.o)
+    Clock_bus_reader<0> R({$01100000,G23.o, V1.o}, G32.o, $1100, $0, $0,
+    $0) *)
+    -> ;
+
+start Start
+

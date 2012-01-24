@@ -1,0 +1,119 @@
+And_scalar <1> (a, b[1])
+	And A(a,b)
+	-> o : A.o;
+
+And_scalar <n> (a, b[n])
+	And_scalar<n-1> Low(a, b[0..n-2])
+	And High(a, b[n-1])
+	-> o[n] : {Low.o, High.o};
+
+
+And_vector <1> (a[1], b[1])
+	And A(a,b)
+	-> o : A.o;
+And_vector <n> (a[n], b[n])
+	And_vector<n-1> Low(a[0..n-2], b[0..n-2])
+	And High(a[n-1], b[n-1])
+	-> o[n] : { Low.o , High.o }  ;
+
+
+Not_vector <1> (a[1])
+	Not N(a)
+	-> o : N.o;
+Not_vector <n> (a[n])
+	Not_vector<n-1> Low(a[0..n-2])
+	Not High(a[n-1])
+	-> o[n] : { Low.o , High.o };
+
+And_fold <1> (a[1])
+	-> o : a;
+And_fold <n> (a[n])
+	And_fold<n-1> Tail(a[0..n-2])
+	And Head(a[n-1], Tail.o)
+	-> o : Head.o;
+
+Or_vector <1> (a[1], b[1])
+	Or O(a,b)
+	-> o : O.o;
+Or_vector <n> (a[n], b[n])
+	Or_vector<n-1> Low(a[0..n-2], b[0..n-2])
+	Or High(a[n-1], b[n-1])
+	-> o[n] : {Low.o, High.o};
+
+
+Mux_scalar <1> (selector, input0[1], input1[1])
+	Mux M(selector, input0, input1)
+	-> o : M.o;
+Mux_scalar <n> (selector, input0[n], input1[n])
+	Mux_scalar<n-1> Low(selector, input0[0..n-2], input1[0..n-2])
+	Mux High(selector, input0[n-1], input1[n-1])
+	-> o[n] : {Low.o, High.o};
+
+
+Demux <1,d> (selector[1], input[d])
+	Not Not_selector(selector)
+	And_scalar<d> Out0(Not_selector.o, input)
+	And_scalar<d> Out1(selector, input)
+	-> output[2*d] : {Out0.o, Out1.o};
+
+Demux <a,d> (selector[a], input[d])
+	Demux<a-1,d> Sub(selector[0..a-2], input)
+	Not Not_selector_msb(selector[a-1])
+	And_scalar<d*2^(a-1)> Low(Not_selector_msb.o, Sub.output)
+	And_scalar<d*2^(a-1)> High(selector[a-1], Sub.output)
+	-> output[2^a*d] : {Low.o, High.o};
+
+
+Sub_demux2 <1,d> (selector[1], not_selector[1], input[d])
+	And_scalar<d> Out0(not_selector, input)
+	And_scalar<d> Out1(selector, input)
+	-> output[2*d] : {Out0.o, Out1.o};
+
+Sub_demux2 <a,d> (selector[a], not_selector[a], input[d])
+	And_scalar<d> Link_low(not_selector[a-1], input)
+	And_scalar<d> Link_high(selector[a-1], input)
+	Sub_demux2<a-1,d> Low(selector[0..a-2], not_selector[0..a-2], Link_low.o)
+	Sub_demux2<a-1,d> High(selector[0..a-2], not_selector[0..a-2], Link_high.o)
+	-> output[2^a*d] : {Low.output, High.output};
+
+Demux2 <a,d> (selector[a], input[d])
+	Not_vector<a> Not_selector(selector)
+	Sub_demux2<a,d> Sub(selector, Not_selector.o, input)
+	-> output[2^a*d] : Sub.output;
+
+
+Mux_wide <1,d> (selector[1], input[d*2^1])
+	Mux_scalar<d> M(selector, input[0..d-1], input[d..2*d-1])
+	-> output[d] : M.o;
+Mux_wide <a,d> (selector[a], input[d*2^a])
+	Mux_wide<a-1,d> Low(selector[0..a-2], input[0..d*2^(a-1)-1])
+	Mux_wide<a-1,d> High(selector[0..a-2], input[d*2^(a-1)..d*2^a-1])
+	Mux_scalar<d> M(selector[a-1], Low.output, High.output)
+	-> output[d] : M.output;
+
+
+Ram <0,1> (data[1], write)
+	Mux M(write, R.o, data[0])
+	Reg R(M.o)	
+	-> data[1] : R.o;
+
+Ram <0,d> (data[d], write)
+	Ram<0,d-1> Low(data[0..d-2], write)
+	Ram<0,1> High(data[d-1], write)
+	-> data[d] : {Low.data, High.data};
+
+Ram <1,d> (address[1], data[d], write)
+	Demux<1,1> Demuxed_write(address, write)
+	Ram<0,d> Low(data, Demuxed_write.output[0])
+	Ram<0,d> High(data, Demuxed_write.output[1])
+	Mux_scalar<d> M(address, Low.data, High.data)
+	-> data[d] : M.o;
+
+Ram <a,d> (address[a], data[d], write)
+	Demux<1,1> Demuxed_write(address[a-1], write)
+	Ram<a-1,d> Low(address[0..a-2], data, Demuxed_write.output[0])
+	Ram<a-1,d> High(address[0..a-2], data, Demuxed_write.output[1])
+	Mux_scalar<d> M(address[a-1], Low.data, High.data)
+	-> data[d] : M.o;
+
+start Ram <4,8>

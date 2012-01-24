@@ -1,0 +1,12 @@
+A (a)
+  #Reg X(a)
+  #And X(a, a)	
+  #-> o : X.o;
+  -> o : a ;
+
+B ()
+  A A1(A2.o)
+  A A2(A1.o)
+  -> o : A1.o ;
+
+start B

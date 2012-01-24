@@ -1,0 +1,110 @@
+Et <1> (a,b)
+   And A (a,b)
+   -> o : A.o ;
+
+Et <n> (a[n],b[n])
+   Et<n-1> D (a[0..n-2],b[0..n-2])
+   And F (a[n-1],b[n-1])
+   -> o[n] : { D.o,F.o } ;
+
+Ou <1> (a,b)
+   Or A (a,b)
+   -> o : A.o ;
+
+Ou <n> (a[n],b[n])
+   Ou<n-1> D (a[0..n-2],b[0..n-2])
+   Or F (a[n-1],b[n-1])
+   -> o[n] : { D.o,F.o } ;
+
+Multiplexer <1> (selector, input0[1], input1[1])
+	Mux M(selector, input0, input1)
+	-> o : M.o;
+
+Multiplexer <n> (selector, input0[n], input1[n])
+	Multiplexer<n-1> Low(selector, input0[0..n-2], input1[0..n-2])
+	Mux High(selector, input0[n-1], input1[n-1])
+	-> o[n] : {Low.o, High.o};
+
+Zero<1> ()
+    Gnd G()
+    -> o[1] : G.o;
+
+Zero<n> ()
+    Gnd H()
+    Zero<n-1> L()
+    -> o[n] : {L.o, H.o};
+
+
+# Addition => checked
+
+HalfAdder ( a, b)
+    Xor X( a, b)
+    And	A( a, b)
+    -> o : X.o, c : A.o ;
+
+FullAdder ( a, b, c)
+    HalfAdder H1( a, b)
+    HalfAdder H2( c, H1.o)
+    Or O( H1.c, H2.c)
+    -> o : H2.o, c : O.o ;  
+
+Adder <1> (a, b)
+    HalfAdder F (a, b) 
+    -> o : F.o, c : F.c ;
+
+Adder <n> (a[n] , b[n])
+    Adder<n-1> A (a[0..n-2], b[0..n-2])  
+    FullAdder F (a[n-1], b[n-1], A.c) 
+    -> 
+       o[n] : { A.o, F.o } , 
+       c : F.c ;
+
+# Transforme un entier n bits en un entier n+m bits => checked
+
+Agrandir <n,1> (a[n])
+    -> o[n+1] : {a[0..n-1],a[n-1]} ;
+    
+Agrandir <n,m> (a[n])
+    Agrandir <n,m-1> A(a[0..n-1])
+    -> o[n+m] : { A.o, a[n-1] } ;
+
+
+# Décale un entier n bits de m bits vers la droite =>checked
+
+RShift <n,m> (a[n])
+   Zero <m> Z()
+   -> o[m+n] : { Z.o , a[0..n-1] } ;
+
+# Multiplication => pas checked 
+
+Mult <n,1> (a[n],b)
+    Zero <n> Z()
+    Multiplexer <n> M(b,Z.o,a[0..n-1])
+    -> o[n] : M.o ;
+
+Mult <n,m> (a[n],b[m])
+    Mult <n,m-1> EtapePrecedente(a[0..n-1],b[0..m-2])
+    Agrandir <n+m-2,1> TermePrecedent(EtapePrecedente.o)
+    RShift <n,m-1> Decalage(a[0..n-1])
+    Zero <n+m-1> Z()
+    Multiplexer <n+m-1> TermeActuel(b[m-1],Z.o,Decalage.o)
+    Adder <n+m-1> Renvoi(TermePrecedent.o,TermeActuel.o)
+    -> o[n+m-1] : Renvoi.o ;
+
+Id (imm[2]) 
+   -> o[2] : imm[0..1];
+
+MiniMicro ()
+   Mult <2,2> M(D.o[0..1], $00)   
+   Id D($00)
+   -> ;
+
+start MiniMicro
+
+
+
+
+
+
+
+

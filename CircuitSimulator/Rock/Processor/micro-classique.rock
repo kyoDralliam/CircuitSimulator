@@ -343,12 +343,12 @@ BinOp<6,m> (a[m],b[m], sel[4])
 #Multiplication ici desactivée pour avoir un circuit plus léger
 
 BinOp<7,m> (a[m],b[m],sel[4])
-    #Mult <m,m> M(a[0..m-1],b[0..m-1])
-    #Filtre<m> F($1110, sel[0..3])
-    #Et <m> Res (M.o[0..m-1],F.o)
-    #-> o[m] : Res.o[0..m-1] ;
-    Zero<m> Z()     
-    -> o[m] :  Z.o ;
+    Mult <m,m> M(a[0..m-1],b[0..m-1])
+    Filtre<m> F($1110, sel[0..3])
+    Et <m> Res (M.o[0..m-1],F.o)
+    -> o[m] : Res.o[0..m-1] ;
+    #Zero<m> Z()     
+    #-> o[m] :  Z.o ;
 
 # Comparaison - Binaire
 # Renvoie 0 (pour false) ou 1 (pour true)
@@ -857,8 +857,8 @@ ProgCounter <b> (nouvVal[b])
 MiniMicro <b> ()
    ProgCounter <b> PC(C.versPC[0..b-1])
  
-   #Memory <0,14,0> Mem(C.versAddMem[0..31], C.versValEcrMem[0..31], C.versMemByteEnable[0..3], C.versMemEcr, $0, $0) 
-   Clock_bus <0,14,-1,8000> Mem(C.versAddMem[0..31], C.versValEcrMem[0..31], C.versMemByteEnable[0..3], C.versMemEcr, $0, $0)
+   Memory <0,14,0> Mem(C.versAddMem[0..31], C.versValEcrMem[0..31], C.versMemByteEnable[0..3], C.versMemEcr, $0, $0) 
+   #Clock_bus <0,14,-1,8000> Mem(C.versAddMem[0..31], C.versValEcrMem[0..31], C.versMemByteEnable[0..3], C.versMemEcr, $0, $0)
  
    FiltreSel<32> F(C.versAluOp1[0..31], $1)
    Alu <32> ALU(F.o[0..31], C.versAluOp2[0..31], C.versAluTypeOp[0..3])
@@ -873,7 +873,7 @@ MiniMicro <b> ()
    Memory <2,20,1> Prog({C.versProg[0..b-1], Zcomp.o}, Z32.o, $1111, $0, $0, $0) 
 
    Controleur <b> C(Prog.data, ALU.o, GR.data, PC.o, Mem.data, GR_reader.data)
-   -> ;#o[32] : ALU.o;     
+   -> o[32] : ALU.o;     
 
 start MiniMicro<30>
 

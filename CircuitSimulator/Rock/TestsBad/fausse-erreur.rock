@@ -1,0 +1,21 @@
+
+Id (a)
+   -> o : a;
+
+Et (a,b)   
+    Id I(a)
+    And A(I.o,b)   
+    -> o[1] : A.o ;
+
+Bug ()
+   Gnd X()
+   Et M(D.o,X.o)
+   Id D(X.o)
+   -> ;
+
+Bug_pas ()
+   Id D($0)
+   Et M(D.o,$0)
+   -> ;
+
+start Bug_pas
