@@ -348,7 +348,7 @@ Et le circuit suivant :
   start Start
 \end{verbatim}
 
-Aura pour sortie :
+aura pour sortie :
 
 \begin{verbatim}
   00000000000000000000000000000000
@@ -358,7 +358,7 @@ Aura pour sortie :
   ...
 \end{verbatim}
 
-On définit les types périphériques de la manière suivante :
+On définit les types périphériques de la façon suivante.
 Chaque type de périphérique est défini par une classe C++, qui doit
 hériter de la classe device :
 \begin{verbatim}
@@ -386,9 +386,9 @@ Pour chaque périphérique du circuit, sa méthode \texttt{cycle} est appelée �
 chaque cycle, avec comme arguments les valeurs lues dans les fils d'entrée.
 
 
-\subsection{Les enables}
+\subsection{Les redéfinitions d'horloges (ou enables)}
 
-Les enables permettent de redéfinir localement l'horloge du circuit :
+Les redéfinitions d'horloges, mot savant pour "enables", permettent de redéfinir localement l'horloge du circuit :
 le circuit suivant :
 \begin{verbatim}
   Count_mod_2
@@ -431,7 +431,7 @@ Si on redéfinit l'horloge d'un bloc, on redéfinit l'horloge de toutes les
 portes et de tous les blocs qu'il contient. Si ce bloc lui-même redéfinit
 l'horloge de l'un de ses composants, celui-ci ne sera actif que lorsque son
 bloc parent l'est et que son bloc parent l'active. Par exemple, on peut
-utiliser les enables pour programmer un compteur modulo $2^n$. Ainsi, le circuit
+utiliser les redéfinitions d'horloges pour programmer un compteur modulo $2^n$. Ainsi, le circuit
 suivant :
 \begin{verbatim}
   Count<1>
@@ -469,10 +469,10 @@ a pour sortie :
   ...
 \end{verbatim}
 
-L'intérêt majeur des enables est qu'ils permettent de gagner du temps en
-n'exécutant que les parties du circuit qui sont utiles au cycle en cours
-(en plus de rendre certains codes plus simples, comme celui du compteur
-modulo $2^n$). Par exemple, grâce aux enables, on peut définir un bloc
+L'intérêt majeur du système des redéfinitions d'horloges est qu'il permettde
+gagner du temps en n'exécutant que les parties du circuit qui sont utiles au
+cycle en cours (en plus de rendre certains codes plus simples, comme celui du
+compteur modulo $2^n$). Par exemple, grâce aux enables, on peut définir un bloc
 \texttt{Ram} de manière (à peu près) efficace :
 \begin{verbatim}
   Mux_scalar <1> (selector, input0[1], input1[1])
@@ -509,11 +509,12 @@ modulo $2^n$). Par exemple, grâce aux enables, on peut définir un bloc
       -> data[d] : M.o;
 \end{verbatim}
 Ainsi, pour une mémoire de $2^a$ mots de $d$ bits, le temps de calcul pour un
-cycle est en $O(a*d)$, au lieu du $O(2^a * d)$ que l'on aurait eu sans enables.
+cycle est en $O(a*d)$, au lieu du $O(2^a * d)$ que l'on aurait eu sans cette
+possibilité.
 
 
 \subsection{Exemples de codes et de blocs classiques}
-Voici quelques exemples de blocs que l'on peut définir avec ce langage :
+Voici quelques exemples de blocs que l'on peut définir avec ce langage.
 
 \begin{verbatim}
 ### Manipulations de fils épais ###
@@ -531,7 +532,7 @@ renversement :
       -> out[n] : {High.out, in[0]};
 \end{verbatim}
 
-On peut aussi étendre les opérations à des fils épais, bit-à-bit :
+On peut aussi étendre les opérations à des fils épais, bit-à-bit...
 
 \begin{verbatim}
   And_vect<1> (a[1],b[1])
@@ -544,7 +545,7 @@ On peut aussi étendre les opérations à des fils épais, bit-à-bit :
       -> o[n] : {Low.o, High.o};
 \end{verbatim}
 
-Ou à la manière d'un produit par un scalaire :
+ou à la manière d'un produit par un scalaire...
 
 \begin{verbatim}
   And_scalar<1> (a,b[1])
@@ -557,7 +558,7 @@ Ou à la manière d'un produit par un scalaire :
       -> o[n] : {Low.o, High.o};
 \end{verbatim}
 
-Ou encore à la manière d'un fold :
+ou encore à la manière d'un fold :
 
 \begin{verbatim}
   And_fold <1> (a[1])
@@ -658,33 +659,34 @@ Et le compteur :
 \end{verbatim}
 
 
-\section{Spécificités techniques de l'implémentation d'Obsidian}
+\section{Spécificités techniques d'Obsidian}
 
-Le compilateur Obsidian s'occupe de transformer un fichier rock en éxécutable.
-Il est codé en OCaml, langage trés partique pour la manipulation d'expression
-symbolique, puis génére du code c++ qui est ensuite compilée par un compilateur
-c++ classique pour tenter d'améliorer les performances. Dans la suite de cette
-section, chaque étape est présentée avec ses particularités techniques et/ou
-algorithmiques.
+Le compilateur Obsidian s'occupe de transformer un fichier rock en exécutable.
+Il est codé en OCaml, langage choisi en raison de ses capacités puissantes de
+manipulation d'expressions symboliques. Il génère du code C++ qui est ensuite
+compilé par un compilateur C++ classique, ce qui permet d'avoir de bien
+meilleures performances que si l'on avait produit nous-mêmes du code assembleur.
+Dans la suite de cette section, on détaillera les particularités techniques et/ou
+algorithmiques de chaque étape. \\
 
 Les principales étapes du compilateur sont :
 \begin{enumerate}
-\item Le lexer et le parseur.
-\item L'analyse sémantique.
-\item La \og destruction \fg{} de l'AST en graphe.
-\item La génération de code c++.
+\item l'analyse lexicale et syntaxique (lexer, parser)
+\item l'analyse sémantique
+\item la transformation de l'AST en graphe
+\item et la génération du code C++.
 \end{enumerate}
 
-\subsection{Le lexer et le parseur}
+\subsection{Analyse lexicale et syntaxique}
 
-Les librairies ocamllex et menhir ont été employées pour faire cette partie. Les
-symboles reconnus par le lexer ainsi que la grammaire employée dans le parser
-ont déja été vus dans la présentation du langage. 
+On a utilisé les librairies ocamllex et menhir pour écrire le lexer et le
+parser. Les symboles reconnus par le lexer ainsi que la grammaire employée dans
+le parser ont déja été vus dans la présentation du langage. \\ 
 
-L'arbre de syntaxe abstraite (ou AST) est formé de la manière suivante :
+L'arbre de syntaxe abstraite (ou AST) est formé de la manière suivante.
 \begin{itemize}
-\item À la racine, d'un tableau associatif qui à chaque nom de bloc associe sa
-  définition, d'une liste des périphériques déclarés avec leur nombre de
+\item À la racine, se trouve un tableau associatif qui à chaque nom de bloc associe sa
+  définition, une liste des périphériques déclarés avec leur nombre de
   paramètres ainsi que du nom et des paramètres du bloc de départ (celui qui
   englobe tout le circuit simulé).
 \item Les définitions de blocs, sont des enregistrements dont les champs sont
@@ -693,41 +695,42 @@ L'arbre de syntaxe abstraite (ou AST) est formé de la manière suivante :
   enregistrement jusqu'à arriver au atomes (nom de fil, nom de bloc, entier, etc).
 \end{itemize}
 
-L'AST, ou plutôt les AST, est paramétré par un module définissant les entiers à
-utiliser dans l'AST (il s'agit donc d'un foncteur). L'intéret de paramétrer la
-définition des entiers à l'intérieur de l'AST est de pouvoir produire à la
-sortie du parser un AST dans lequel la plupart des \og entiers\fg{} sont en fait
-des \emph{expressions entières} pas encore évaluées et qui seront transformées à
+L'AST est paramétré par un module définissant les entiers à utiliser dans l'AST
+(il s'agit donc d'un foncteur). L'intérêt de paramétrer la définition des
+entiers à l'intérieur de l'AST et de pouvoir produire à la sortie du parser un
+AST dans lequel la plupart des \og entiers\fg{} sont en fait des
+\emph{expressions entières} pas encore évaluées et qui seront transformées à
 l'étape suivante.
 
-\subsection{L'analyse sémantique}
+\subsection{Analyse sémantique}
 
-L'analyse sémantique est un des morceaux les plus lourd d'Obsidian, mais aussi
-ce qui fait du langage un outil utilisable car sur. En effet l'analyse statique
+L'analyse sémantique est un des morceaux les plus lourds d'Obsidian, mais aussi
+ce qui fait du langage un outil utilisable car sûr. En effet l'analyse statique
 pratiquée au niveau de l'analyse sémantique permet d'éliminer presque toutes les
-erreurs de sémantiques au niveau du circuit. Concrétement, l'analyse sémantique
+erreurs de sémantique au niveau du circuit. Concrètement, l'analyse sémantique
 vérifie :
 \begin{itemize}
-\item que tous les blocs employés ont été déclarés et que dans chaque blocs
-  toutes les variables (que se soit de bloc ou de fil) ont été définis.
-\item que tous les fils sont corrects c'est à dire qu'il n'y a jamais de fil
-  vide voir d'épaisseur négative et que les branchements fait entre deux fils
-  sont bien fait avec des fils de même largeur.
+\item que tous les blocs employés ont été déclarés et que dans chaque bloc
+  toutes les variables (que se soit de bloc ou de fil) ont été définies,
+\item que tous les fils sont corrects, c'est à dire qu'il n'y a jamais de fil
+  vide ou d'épaisseur négative 
+\item que les branchements opérés entre deux fils sont bien réalisés avec des fils de 
+  même largeur,
 \item que chaque création de sous-fils ( avec la syntaxe $[\ ..\ ]$) est bien
-  fait avec un intervalles valique (c'est à dire inclus dans l'intervalle $[| 0
-  ; n - 1|]$ où $n$ est la taille du fil original).
-\item que chaque applications de paramètres lors d'une instance est bien
-  acceptée par un certain motif.
-\item que la récursion est bien fondée, qu'il n'y a pas de suite infinie de
-  blocs dans le circuit ce qui est une vérification cruciale pour l'étape de
-  transformation en graphe. 
+  fait avec un intervalles valide (c'est à dire inclus dans l'intervalle $[| 0
+  ; n - 1|]$ où $n$ est la taille du fil original),
+\item que chaque application de paramètres lors d'une instance est bien
+  acceptée par un certain motif,
+\item et que la récursion est bien fondée : pas de suite infinie de
+  blocs dans le circuit (vérification cruciale pour l'étape de
+  transformation en graphe). 
 \end{itemize}
 
 En particulier, l'analyse sémantique s'occupe d'une opération que l'on appelle
 réification par analogie avec l'opération que font certains compilateurs pour
-gérer le paramétrage polymorphique (par exemple avec les templates en c++). Il
+gérer le paramétrage polymorphique (par exemple avec les templates en C++). Il
 s'agit en fait de transformer l'AST ne contenant que des entiers \og
-formels\fg{} c'est à dire des \emph{expressions entières} en entiers.
+formels\fg{} (c'est à dire des \emph{expressions entières}) en "vrais" entiers.
 Par exemple, le code suivant :
 \begin{verbatim}
  And_vect<1> (a[1],b[1]) 
@@ -742,30 +745,29 @@ Par exemple, le code suivant :
   start And_vect<4>
 \end{verbatim}
 
-génére d'abord l'AST contenant les définitions de \texttt{And\_vect<1>} et
-\texttt{And\_vect<n>}, puis aprés réification, il contiendra les définitions de
+génère d'abord l'AST contenant les définitions de \texttt{And\_vect<1>} et
+\texttt{And\_vect<n>} ; mais après réification, il contiendra les définitions de
 \texttt{And\_vect<1>}, \texttt{And\_vect<2>}, \texttt{And\_vect<2>},
 \texttt{And\_vect<4>}. 
 
-Cette multiplication de symboles peut paraître trés lourde mais elle permet une
-analyse en détail de chaque blocs et l'étape suivante du compilateur fait
+Cette multiplication de symboles peut paraître très lourde, mais elle permet une
+analyse en détail de chaque bloc. De plus, l'étape suivante du compilateur fait
 disparaître les redondances.
 
 Il faut aussi noter que l'analyse sémantique ne vérifie pas l'absence totale de
 cycle combinatoire. Pour cela, il faut attendre que l'AST soit transformé en
-graphe. Il s'agit donc de la seule vérification doit attendre la phase de
-génération de code pour être faite.
+graphe. Cette vérification est la seule qui doivent attendre la phrase de
+génération de code pour être opérée.
 
 \subsection{La transformation en graphe}
 
 À la sortie de l'analyse sémantique, un AST \emph{réifié} est obtenu. La
 transformation en graphe se fait en deux étapes :
 \begin{itemize}
-\item Un premier parcours de l'AST pour déterminer la liste des portes
-  que contiendra le graphe. Cette liste est ensuite transformée en tableau.
-  Le choix des listes au début est pour permettre une concaténation efficace,
-  tandis que la transformation en tableau à la fin est nécessaire pour avoir un
-  accés aléatoire à chaque éléments.
+\item Un premier parcours de l'AST détermine la liste des portes
+  que contiendra le graphe. Cette liste est ensuite transformée en tableau
+  (cette transformation permet notamment d'obtenir un accés aléatoire à chaque
+  élément).
 \item Un deuxième parcours de l'AST se charge de \emph{brancher} les fils entre
   les portes. Pour cela on considère l'ensemble des \emph{bouts de fil} identifiables
   (c'est à dire l'ensemble des variables de fils en distinguant selon la portée)
@@ -774,13 +776,18 @@ transformation en graphe se fait en deux étapes :
   exactement l'ensemble des fils.
 \end{itemize}
 
-Au passage, tous les blocs qui ne sont pas des blocs de base ou des
-périphériques sont éliminés, ou plutôt oubliés, au cours de l'opération.
-Le résultat est un graphe sous la forme d'un tableau où à chaque indice est
-associé le type de la porte et un tableau contenant pour chaque sortie de la
-porte en question les portes en aval avec lesquelles elle est branchée. Un
-certain nombre d'informations telles que le nombre total de registres ou de
-périphériques est aussi collecté durant cette phase pour aider la génération du code. 
+Au cours de cette opération, les blocs qui ne sont pas des blocs de base ou des
+périphériques sont éliminés, ou plutôt oubliés.
+Le résultat est un graphe implémenté sous la forme d'un tableau où à chaque indice est
+associé :
+\begin{itemize}
+\item le type de la porte 
+\item et un tableau contenant pour chaque sortie de la porte, les portes avec lesquelles 
+      elle est branchée. 
+\end{itemize}
+Un certain nombre d'informations, comme le nombre total de registres, ou de
+périphériques est aussi collecté durant cette phase - ceci afin de faciliter la
+génération du code. 
 
 \subsection{La génération du code c++}
 vérification de l'absence de cycles combinatoires.
@@ -794,10 +801,10 @@ Nous utilisons maintenant des périphériques pour gérer la mémoire, les regis
 et le programme. Le nombre d'instructions supportées a été considérablement 
 augmenté. D'une architecture à trois cycles par instruction, nous sommes passés
 à une architecture à 4 cycles par instruction permettant une grande sécurité des
-échange du controleur, les périphiques assurant parallèlement une protection contre
+échanges du contrôleur, les périphériques assurant parallèlement une protection contre
 les boucles combinatoires.
 
-\subsection{L'ALU}
+\subsection{L'Unité Arithmétique et Logique (ALU)}
 
 L’ALU que nous avons réalisé prend en entrée deux entiers sur
 32 bits ainsi qu’un code sur 4 bits décrivant l’opération à effectuer. Il renvoie
@@ -806,16 +813,19 @@ alors un résultat sur 32 bits. Il s’agit d’un bloc purement combinatoire.\\
 Notre ALU supporte 16 opérations :
 
 \begin{enumerate}
-\item ET, OU, XOR, NAND, NOR pour les opérations logiques binaires
-\item $+$,$-$,$x$,$=$,$\neq$,$<$,$>$,$\leq$,$\geq$ pour les opérations arithmétiques
-\item Une opération renvoyant le premier opérande (utile pour les opérations de shifts)
-\item Une opération de concaténation 16 bit-16 bit (utile pour le \textit{lui})
+\item ET, OU, XOR, NAND, NOR pour les opérations logiques binaires,
+\item $+$,$-$,$x$,$=$,$\neq$,$<$,$>$,$\leq$,$\geq$ pour les opérations
+arithmétiques,
+\item une opération renvoyant le premier opérande (utile pour les opérations de
+shifts),
+\item et une opération de concaténation 16 bit-16 bit (utile pour le
+\textit{lui}).
 \end{enumerate}  
 
-D'autres opérations ont été implémentées, notamment les différentes formes de shift 
-(dans les deux sens, en version classique ou arithmétique) cependant seule l'opération
-de shift classique vers la droite est utilisé par le reste du microprocesseur (il
-est utilisé avec le shift\_amount du R-format ).
+D'autres opérations ont été implémentées, notamment les différentes formes de
+décalage ("shift") dans les deux sens, en version classique ou arithmétique.
+Néanmoins, seule l'opération de décalage classique vers la droite est utilisé par le
+reste du microprocesseur (il est utilisé avec le shift\_amount du R-format ).
 
 \textbf{Fonctionnement:} Chaque opération de l’ALU est codée séparément.
 Puis, à la lecture de deux entiers, toutes les opérations possibles sont exécutées
@@ -835,33 +845,34 @@ Le bloc d'instructions est également un périphérique. Chaque instruction est 
 sur 32 bits. Nous suivons les différents format MIPS (R-format, I-format, J-format) mais
 nous traitons à part certaines opérations de ces formats pour faciliter 
 et mieux diviser le travail du 
-controleur, comme nous le verrons dans la section Instructions.
+contrôleur, comme nous le verrons dans la section Instructions.
 
-Enfin, la Data Memory peut prendre deux formes, selon que l'on est en mode ''classique"
-ou en mode ``horloge'' avec un affichage 7-segments. 
+Enfin, la Data Memory peut prendre deux formes, selon que l'on se trouve dans le
+mode ``classique'' ou en mode ``horloge'' avec un affichage 7-segments. 
 
-\subsection{Controleur}
+\subsection{Contrôleur}
 
-Le bloc de contrôle, présent dans notre projet sous le nom de ``Controleur''
-a dans notre projet non seulement le rôle du bloc ``Control'' de l’architecture
-standart MIPS mais c’est aussi lui qui s’occupe de la synchronisation entre les
-différents cycles parcourus pour une instruction donnée (Tous les autres blocs
-sont donc positionnés en étoile par rapport à lui). Cette synchronisation est
-obtenue et sécurisée par l’utilisation de filtres temporels gérant les trafics d’in-
-formations entre les différents blocs. Toutes les instructions sont executées sur
-quatre cycles.
+Le bloc de contrôle, présent dans notre projet sous le nom de ``Contrôleur'' a
+dans notre projet non seulement le rôle du bloc ``Control'' de l’architecture
+standard MIPS mais il s’occupe aussi de la synchronisation entre les différents
+cycles parcourus pour une instruction donnée : tous les autres blocs sont donc
+positionnés en étoile par rapport à lui. Cette synchronisation est obtenue et
+sécurisée par l’utilisation de filtres temporels gérant les trafics
+d’informations entre les différents blocs. Toutes les instructions sont
+exécutées sur quatre cycles.
 
-Ce controleur agit différemment selon le format de l’instruction à effectuer,
-il contient donc plusieurs décodeurs. Nous avons 3 decodeurs correspondant
-aux formats MIPS habituels : un pour le R-format, un pour le I-format, 
-un pour le J-format. Mais nous avons préféré traiter certains types d'instructions
-à part, car elles correspondent à des échanges spécifiques entre les différents blocs 
-du microprocesseur. Ainsi, nous avons 4 decodeurs plus spécifiques : un pour les écritures en 
-mémoire (sb et sw), un pour les lectures mémoires (lb et lw), un pour les branch et enfin
-un pour jr. 
+Ce contrôleur agit différemment selon le format de l’instruction à effectuer, il
+contient donc plusieurs décodeurs. Nous avons 3 décodeurs correspondant aux
+formats MIPS habituels : un pour le R-format, un pour le I-format, un pour le
+J-format. Mais nous avons préféré traiter certains types d'instructions à part,
+car elles correspondent à des échanges spécifiques entre les différents blocs du
+microprocesseur. Ainsi, nous avons 4 décodeurs plus spécifiques : un pour les
+écritures en mémoire (\texttt{sb} et \texttt{sw}), un pour les lectures mémoire
+(\texttt{lb} et \texttt{lw}), un pour les \texttt{branch} et enfin un pour
+\texttt{jr}. 
 
-Ces decodeurs sont executés en parallèle mais le controleur agit comme un filtre
-et ne laisse transparaitre que les actions du decodeur correspondant à l'instruction en cours.
+Ces décodeurs sont exécutés en parallèle mais le contrôleur agit comme un filtre
+et laisse transparaître uniquement les actions du décodeur correspondant à l'instruction en cours.
 Ce filtrage s'effectue selon la valeur de l'opcode de l'opération.
 
 \subsection{Instructions}
@@ -873,48 +884,48 @@ Décrivons les intervalles de bits de chacun des types d'instructions :
 \subsubsection{R-format}
 
 Ce format intervient par exemple dans les opérations 
-comme add, sub, mul, and, ...
+comme \texttt{add}, \texttt{sub}, \texttt{mul}, \texttt{and}, ...
 
 \begin{format}[codage du R-format]
   \begin{itemize}
   \item 0..5 : les 6 bits de l'opcode
-  \item 6..10 : adresse rs (opérande 1)
-  \item 11..15 : adresse rt (opérande 2)
-  \item 16..20 : adresse rd (résultat)
+  \item 6..10 : adresse \texttt{rs} (opérande 1)
+  \item 11..15 : adresse \texttt{rt} (opérande 2)
+  \item 16..20 : adresse \texttt{rd} (résultat)
   \item 21..25 : shift\_amount
   \item 26..31 : funct code
   \end{itemize}
 \end{format}
 
-Les 6 bits de l'opcode sont toujours nuls ainsi que les deux
-derniers chiffres du funct code. Les quatre premiers bits du
-funct code correspondent, eux, au code de l'opération concernée
-(c'est ce code qui est transmis à l'ALU). Enfin le shift\_amount 
-correspond à la valeur de décalage d'un shift vers la droite 
-(c'est-à-dire à une division par une puissance de 2).
+Les 6 bits de l'opcode sont toujours nuls ainsi que les deux derniers chiffres
+du funct code. Les quatre premiers bits du funct code correspondent, eux, au
+code de l'opération concernée (c'est ce code qui est transmis à l'ALU). Enfin le
+shift\_amount correspond au décalage d'un shift vers la droite (c'est-à-dire à
+une division par $2^{\text{shift\_amount}}$).
 
 \subsubsection{I-format}
 
-Le I-format correspond aux instructions du type addi, subi, andi...
+Le I-format correspond aux instructions du type \texttt{addi}, \texttt{subi},
+\texttt{andi}...
 
 \begin{format}[codage du I-format]
   \begin{itemize}
   \item 0..5 : les 6 bits de l'opcode
-  \item 6..10 : adresse rs (opérande 1)
-  \item 11..15 : adresse rt (resulat)
+  \item 6..10 : adresse \texttt{rs} (opérande 1)
+  \item 11..15 : adresse \texttt{rt} (resulat)
   \item 16..31 : valeur immédiate (opérande 2)
   \end{itemize}
 \end{format}
 
-Les deux derniers bits de l'opcode sont toujours deux 1.
+Les deux derniers bits de l'opcode sont toujours 11.
 Les quatre premiers bits de l'opcode correspondent, eux, au code
-de l'opération de l'ALU. La valeur immédiate est étendue sur 
-32 bits par la droite en répétant son dernier bit 
-(afin de gérer les nombres négatifs).
+de l'opération de l'ALU. La valeur immédiate est étendue à droite sur 
+32 bits en répétant son dernier bit, pour une gestion correcte des nombres
+négatifs.
 
 \subsubsection{J-format}
 
-On définit ici un format pour la seule instruction Jump.
+On définit ici un format pour la seule instruction \texttt{j} (jump).
 
 \begin{format}[codage du J-format]
   \begin{itemize}
@@ -927,28 +938,28 @@ L'opcode est toujours 111101.
 
 \subsubsection{Branch-format}
 
-Le Branch-format regroupe les différentes instructions
-de type branch comme beq, bne, bgt, ble...
+Le Branch-format regroupe les différentes instructions de type branch comme
+\texttt{beq}, \texttt{bne}, \texttt{bgt}, \texttt{ble}...
 
 \begin{format}[codage du Branch-format]
   \begin{itemize}
   \item 0..5 : les 6 bits de l'opcode
-  \item 6..10 : adresse rs (opérande 1)
-  \item 11..15 : adresse rt (opérande 2)
+  \item 6..10 : adresse \texttt{rs} (opérande 1)
+  \item 11..15 : adresse \texttt{rt} (opérande 2)
   \item 16..31 : adresse relative en cas de branch
   \end{itemize}
 \end{format}
 
 Les deux derniers bits de l'opcode sont toujours 10 tandis que
-les quatres premiers bits correspondent au code de l'opération de 
-l'ALU associée (par exemple le code de l'égalité pour un beq).
+les quatre premiers bits correspondent au code de l'opération de 
+l'ALU associée (par exemple le code de l'égalité pour un \texttt{beq}).
 L'adresse relative est définie par rapport à l'adresse qui suit 
 l'instruction branch.
 
 
 \subsubsection{JR-format}
 
-L'instruction Jump Register bénéficie d'un format à part.
+L'instruction \texttt{jr} (jump register) bénéficie d'un format à part.
 
 \begin{format}[codage du JR-format]
   \begin{itemize}
@@ -963,45 +974,45 @@ L'opcode est toujours 000001.
 
 \subsubsection{Format de lecture mémoire}
 
-Ce format correspond aux instructions lw et lb.
+Ce format correspond aux instructions \texttt{lw} et \texttt{lb}.
 
 \begin{format}[codage du format de lecture]
   \begin{itemize}
   \item 0..5 : les 6 bits de l'opcode
-  \item 6..10 : adresse rs (registre contenant l'adresse de base) 
-  \item 11..15 : adresse rt (resulat)
+  \item 6..10 : adresse \texttt{rs} (registre contenant l'adresse de base) 
+  \item 11..15 : adresse \texttt{rt} (resulat)
   \item 16..31 : valeur immédiate de décalage
   \end{itemize}
 \end{format}
 
-L'opcode est soit 110001 pour lw, soit 100001 pour lb. En pratique, 
+L'opcode est 110001 pour \texttt{lw} et 100001 pour \texttt{lb}. En pratique, 
 le deuxième bit de l'opcode est repassé en argument au byte\_enable
 de la mémoire (pour spécifier la plage de lecture).
  
 \subsubsection{Format de l'écriture mémoire}
 
-Ce format correspond aux instructions sw et sb.
+Ce format correspond aux instructions \texttt{sw} et \texttt{sb}.
 
 \begin{format}[codage du format d'écriture]
   \begin{itemize}
   \item 0..5 : les 6 bits de l'opcode
-  \item 6..10 : adresse rs (registre contenant l'adresse de base) 
-  \item 11..15 : adresse rt (registre à stocker)
+  \item 6..10 : adresse \texttt{rs} (registre contenant l'adresse de base) 
+  \item 11..15 : adresse \texttt{rt} (registre à stocker)
   \item 16..31 : valeur immédiate de décalage
   \end{itemize}
 \end{format}
 
-L'opcode est soit 110101 pour lw, soit 100101 pour lb. Ici aussi, 
+L'opcode est soit 110101 pour \texttt{sw}, soit 100101 pour \texttt{sb}. Ici aussi, 
 le deuxième bit de l'opcode est repassé en argument au byte\_enable
 de la mémoire (pour spécifier la plage d'écriture).
 
 
 \section{L'assembleur}
 
-Le microprocesseur lit en entrée du code éxécutable qui se trouve dans un
-fichier \emph{ram} qu'il charge en mémoire. La génération du fichier \emph{ram}
+Le microprocesseur lit en entrée le code exécutable qui se trouve dans un
+fichier \emph{ram} chargé en mémoire. La génération du fichier \emph{ram}
 à partir des sources MIPS incombe donc à l'assembleur. L'assembleur a été codé
-sur la même architecture générale qu' Obsidian (lexer, parser, légére analyse
+sur la même architecture générale qu'Obsidian (lexer, parser, légère analyse
 sémantique et génération du code) en OCaml. \\
 La syntaxe du MIPS est assez simple à parser et à analyser, cependant quelques
 limitations ont été introduites : 
@@ -1013,7 +1024,7 @@ limitations ont été introduites :
 \item Par conséquent, les instructions \texttt{.word}, \texttt{.byte},
   \texttt{.half}, \texttt{.ascii}, \texttt{.asciiz} et \texttt{.space} ne sont
   disponibles que dans le segment de données et le autres instructions
-  commençant par un \og .\fg{} ne sont pas présentent.
+  commençant par un \og .\fg{} ne sont pas présentes.
 \item Les instructions et pseudo-instructions ne sont pas toutes présentent :
   il n'y a pas de \texttt{syscall} par exemple (puisqu'il n'y a pas d'OS sur le
   microprocesseur). Certaines pseudo-instructions comme \texttt{bgt} ou
@@ -1106,6 +1117,7 @@ c++ employé (g++ par défaut). Les différentes cibles présentent sont :
 \item[$\rhd$ horloge :] assemble l'horloge.
 \item[$\rhd$ compiled-tests :] compile les tests de circuits présents dans Rock/Tests
   et les place dans compiled-tests.
+\item[$\rhd$ run-facto :] calcule 7! en utilisant notre processeur.
 \item[$\rhd$ clean :] efface tous les programmes.
 \end{description}
 \text{}\\
