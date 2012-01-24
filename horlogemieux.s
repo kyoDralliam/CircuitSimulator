@@ -191,6 +191,7 @@ main:
         move    $t1, $t0
     moistrouve:
             move    $a0, $s5 # $s5 = Mois
+        sub     $t1, $t1, 1
         sub     $s4, $s4, $t1
             move    $a0, $s4 # $s4 = Jour
 
