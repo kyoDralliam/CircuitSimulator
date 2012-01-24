@@ -13,8 +13,8 @@
 \usepackage{url}
 
 
-\newtheorem{bin}{ \textbf{Logique Binaire} }
-\newtheorem{arit}{ \textbf{Arithmétique} }
+\newtheorem{bin}{  }
+\newtheorem{format}{  }
 \newtheorem{instr}
 { \textbf{Instructions actuellement prises en charges} }
 \newtheorem{instrFutures}
@@ -35,36 +35,28 @@
 
 \maketitle
 \tableofcontents
-\newpage
+
 \section{Introduction}
-Le projet du cours de systéme digital a pour but de programmer une horloge en
-assembleur, cette horloge devant tourner sur un processeur simulé en tant que
-circuit digital synchrone sur un ordinateur. Notre approche du problème consiste
-à encoder les circuits dans un langage nommé \emph{Rock}, puis de le compiler
-avec \emph{Obsidian}, de coder un microprocesseur suivant la spécification de
-l'architecture MIPS en Rock, de coder l'horloge en assembleur MIPS, d'assembler
-ce code MIPS avec un assembleur fabriqué par nos soins et enfin de charger ce
-dernier résultat dans le microprocesseur.\\
-On présentera d'abord le langage rock, avant de s'intéresser à l'implémentation
-du compilateur, du microprocesseur, de l'assembleur, puis de l'horloge. La
-dernière partie contient des informations importantes pour l'utilisation en
-pratique de ce que nous avons produit. 
+
 
 
 \section{Le langage rock}
 
-Le langage de description des circuits est un langage déclaratif basé sur la
-notion de bloc. Nous l'avons appelé \emph{rock}. Il y a trois types de blocs différents :
+Le langage de description des circuits et un langage déclaratif basé sur la notion de bloc nommé \emph{rock}. Il y a trois types de blocs différents :
 \begin{itemize}
 \item Les blocs de base : xor, and, or, mux, not, ground, vdd et reg (déclarés dans Analysis/baseBlocks.ml)
-\item Les blocs déclarés par l'utilisateur, qui peuvent être paramétrés par des
-entiers. Les entrées et les sorties de ces blocs sont des fils, et le corps des
-blocs est déterminé à partir de blocs plus petits précédemment déclarés. 
+\item Les blocs classiques pouvant être paramètrés par des entiers, prenant des fils en entrées et créant des fils en sorties, qui définissent leur corps à partir d'autres blocs.
 \item Les périphériques ou blocs externes.
 \end{itemize}
 
-Il est compilé à l'aide du logiciel \emph{obsidian} dont l'organisation est
-schématisée dans la figure 1. Les sections suivantes présentent les aspects spécifiques du langage et de sa compilation.
+Il est compilé à l'aide du logiciel \emph{obsidian} dont l'organisation est montrée dans la figure 1. Les sections suivantes présentent les aspects spécifiques du langage et de sa compilation.
+
+\begin{figure}[!h]
+\centering
+\includegraphics[width=14.7cm,height=17.96cm]{obsidian.png}
+\caption{Architecture d'Obsidian}
+\label{Architecture d'Obsidian}
+\end{figure}
 
 \subsection{Traitement lexical}
 Le langage contient deux mots clés {\bf start} et {\bf device } ainsi que les
@@ -83,14 +75,6 @@ Les identifiants sont de l'une des deux formes suivantes :
 L'opération d'analyse lexicale se charge aussi d'effacer les commentaires qui
 sont soit de la forme \og $(*$\fg{} \og $*)$\fg{} pour les commentaires
 multi-lignes, soit de la forme \og \#\fg{} pour les commentaires sur une seule ligne.
-
-\begin{figure}
-  \begin{center}
-    \includegraphics[width=14.7cm,height=17.96cm]{obsidian.png}
-    \caption{Architecture d'Obsidian}
-    \label{Architecture d'Obsidian}
-  \end{center}
-\end{figure}
 
 \subsection{Syntaxe du langage}
 Le langage suit la grammaire suivante :\newline\newline
@@ -122,34 +106,17 @@ Le langage suit la grammaire suivante :\newline\newline
   &&| $\mathbf{\{}$ Fil, ... , Fil $\mathbf{\}}$\\ [1.5ex]
   Sorties&$::=$&\: DeclarationFil : Fil, ... , DeclarationFil : Fil
 \end{tabular}
-\text{}\\
-
-\subsection{Principe des blocs}
-Les blocs sont les unités structurantes du langage. Ils sont séparés en 3
-catégories :
-\begin{itemize}
-\item Les blocs de base qui sont fournis par le compilateur ( \texttt{Xor}, \texttt{And}, \texttt{Reg},
-  \texttt{Mux}, \texttt{Vdd}, \texttt{Gnd}, etc).
-\item Les blocs classiques qui définissent la majeure partie du circuit.
-\item Les périphériques qui permettent d'introduire des éléments externe dans le langage.
-\end{itemize}
-\text{}\\
-Les blocs classiqus se construisent par composition. Ils ont en général la forme
-suivante : 
-\begin{verbatim}
-BlocDéfini < params > (arg1, ..., argn)
-   Bloc1  Instance1(arg1', ... , argp')
-   Bloc2  Instance2(arg1'', ... , argq'' )
-   -> sortie1 : fil1, ... , sortiek : filk ;
-\end{verbatim}
 
 
 \subsection{Les entiers} 
-Les constantes entières sont présentes dans les paramètres - pour permettre de
-coder des blocs récusrivement - et dans les fils - pour pouvoir préciser leur taille.
+Les entiers sont présents en rock à deux niveaux : 
+\begin{itemize}
+\item Dans les paramètres pour permettre la récursion.
+\item Dans les fils pour préciser leur taille.
+\end{itemize}
 \text{}\\
 
-On peut les écrire tout aussi bien en hexadécimal (préfixe \og $0x$\fg{} ou \og $0X$\fg{}), en
+On peut les écrires tout aussi bien en hexadécimal (préfixe \og $0x$\fg{} ou \og $0X$\fg{}), en
 octal (préfixe \og $0o$\fg{} ou \og $0O$\fg{}), en binaire (préfixe \og $0b$ \og
 ou \og $0B$\fg{}) ou en décimal (sans préfixe).
 Ils supportent les opérations suivantes :
@@ -157,97 +124,62 @@ Ils supportent les opérations suivantes :
 \item $+$ l'addition
 \item $-$ la soustraction
 \item $*$ le produit
-\item $/$ le quotient (division euclidienne)
-\item $\%$ le reste (division euclidienne)
+\item $/$ le quotient dans la division euclidienne
+\item $\%$ le reste dans la division euclidienne
 \item \^{} l'exponentiation
-\end{itemize}
-
-
-\subsection{Les fils}
-
-Les fils présents dans rock sont des fils épais. Ils sont les seuls moyens de
-communication entre blocs. Ils sont passés en arguments lors de la construction
-d'une instance et retournés à l'aide de la syntaxe \texttt{nom du bloc . nom du
-  fil en sortie}.
-Les fils supportent deux opérations :
-\begin{itemize}
-\item l'extraction d'un sous-fil se fait via la syntaxe $a[\ p\ ..\ q\ ]$ et crée
-  un nouveau fil de largeur $q - p + 1$ qui est branché sur les fils sous-jacents
-  de $a$ indicés de $p$ à $q$.
-\item la fusion de fils se fait via la syntaxe $\{ a_1, a_2, ..., a_n \}$ et
-  produit un fil dont la largeur est la somme des largeurs des $a_i$.
-\end{itemize} 
-\text{}\\
-En plus de ces opérations, du sucre syntaxique a été rajouté pour améliorer
-l'expérience utilisateur :
-\begin{itemize}
-\item La syntaxe $a[n]$ est équivalente à $a[n..n]$ et produit donc un fil de
-  taille 1.
-\item La syntaxe du type $\$01101$ est
-  équivalente à :
-\begin{verbatim}
-    Gnd G
-    Vdd V
-    ... { G.o, V.o, V.o, G.o, V.o } ...
-\end{verbatim}
-  c'est à dire à un fil où chaque $1$ est remplacé par un fil portant toujours
-  la valeur $1$ (instance de \texttt{Vdd}) et chaque $0$ par un fil portant
-  toujours la valeur $0$ (instance de \texttt{Gnd}). 
 \end{itemize}
 
 
 \section{Concepts clés du langage}
 
 Le langage rock est muni de plusieurs concepts qui en font un outil maniable,
-utile, et efficace : citons notamment la récursion, les périphériques et les
-redéfinitions locales d'horloges.
+utile, voir efficace : il s'agit de la récursion, des périphériques et des enables.
 
 \subsection{Motifs et récursion}
-Le langage ne dispose pas des boucles classiques (\texttt{for}, \texttt{while})
-ni de structures conditionnelles (\texttt{if}) pour manipuler le flot d'exécution. Il est par
+Le langage ne dispose pas des opérations classiques comme \texttt{for},
+\texttt{while} ou \texttt{if} pour manipuler le flôt d'éxécution. Il est par
 contre doté d'un système puissant de récursion et de reconnaissance de motifs.
 Il y a deux types de motifs :
 \begin{itemize}
-\item les motifs constants qui n'acceptent que leur valeur. 
+\item les motifs constants qui n'acceptent que la valeur de leur constante. 
 \item les motifs de la forme $ a*n + b $, avec $a$, $b$ constants et $n$
   variable, qui acceptent les entiers $p$  tels que $p \equiv b\
   \text{mod}\ a$ et on a alors $n = \frac{p - b}{a}$.
 \item les motifs de la forme $ a*n + k + b $, avec $a \neq 1 $, $b$ constants et
-  $k$, $n$ variables, qui acceptent tous les entiers $p$, et posent $k \equiv  p - b\
+  $n$ variable, qui acceptent tous les entiers $p$ en posant $k \equiv  p - b\
   \text{mod}\ a$, $0 \leq k < a$ et $n = \frac{p - b - k}{a}$.
 \end{itemize}
 \text{}\\
-Étant donnés un entier $p$ et une liste ordonnée de motifs $(m_i)_i$, les motifs
+Étant donné un entier $p$ et une liste ordonnée de motifs $(m_i)_i$, les motifs
 fonctionnent selon le principe suivant : 
 \begin{itemize}
-\item l'entier est testé sur le $i^{e}$motif (en prenant au départ $i=0$),
-\item s'il est accepté, les variables correspondant au motif sont assignées si
-  nécessaire,
-\item et s'il est rejeté, on passe au motif suivant et on recommence.
+\item l'entier est testé sur le $i^{e}$motif.
+\item s'il est accepté, les variables correspondant au motif sont assignés si
+  nécessaire.
+\item s'il est rejeté, on passe au motif $i+1$.
+\item si aucun motif ne convient, le compilateur lève une erreur.
 \end{itemize}
-Si on ne trouve aucun motif convenable, le compilateur lève une erreur.
 \text{}\\
-\text{}\\
-Un tel système de motifs permet différents types de récursions. Ainsi, on peut :
+La récursion devient alors assez immédiate :
 \begin{itemize}
-\item itérer sur tous les entiers avec les motifs $<n+1>$ et $<0>$,
-\item itérer seulement sur les puissances de deux avec les motifs $<2*n>$ et $<1>$,
-\item ou encore travailler sur des congruences modulo 3 avec les motifs $<3*n>$, $<3*n +
+\item On peut itérer sur tous les entiers avec les motifs $<n+1>$ et $<0>$.
+\item Ou seulement sur les puissances de deux avec les motifs $<2*n>$ et $<1>$.
+\item Ou travailler sur des congruences modulo 3 avec les motifs $<3*n>$, $<3*n +
   1>$ et $<3*n + 2>$.
 \end{itemize}
 \text{}\\
-Ce système est néanmoins sujet à des limitations théoriques : il faut s'assurer
-que les calculs et la compilation se terminent ; et notamment qu'il n'y a pas de
-chaîne infinie de blocs. Pour cela, une contrainte supplémentaire a été ajoutée
-: à l'intérieur d'un bloc ayant comme paramètres les entiers $(n_i)_i$, seuls
-des blocs avec des paramètres plus petits (au sens de l'ordre sur
-$\mathfrak{N}$) peuvent être instanciés.
+Un point important limite cependant l'expressivité de cet outil : à l'intérieur
+d'un bloc ayant comme paramètres les entiers $(n_i)_i$, seuls des blocs avec
+des paramètres plus petit (au sens de l'odre sur $\mathfrak{N}$) peuvent être
+instancier. Ce critère permet notamment d'assurer la terminaison des calculs et
+surtout la terminaison de la compilation en assurant qu'il n'y a pas de chaine
+infini de blocs.
 
 \subsection{Les périphériques}
 
 
 Les périphériques sont un moyen de définir de nouvelles portes en plus des
-portes de base. On peut les utiliser pour simuler des mémoires, ou des
+portes base. On peut les utiliser pour simuler des mémoires, ou des
 périphériques d'entrée/sortie.
 
 Tous les périphériques ont la même interface (les mêmes fils d'entrée et
@@ -255,7 +187,7 @@ les mêmes fils de sortie) :
 \begin{itemize}
 \item Entrée :
 \text{}\\
-\begin{center}
+\text{}\\
   \begin{tabular}{ | c | c | }
     \hline
     Address &  32 bits \\
@@ -271,11 +203,10 @@ les mêmes fils de sortie) :
     Interrupt processed & 1 bit\\
     \hline
   \end{tabular}
-\end{center}
 \text{}\\
 \item Sortie :
 \text{}\\
-\begin{center}
+\text{}\\
  \begin{tabular}{ | c | c | }
     \hline
     Data &  32 bits \\
@@ -283,9 +214,8 @@ les mêmes fils de sortie) :
     Interrupt request & 1 bit \\
     \hline
   \end{tabular}
-\end{center}
 \end{itemize}
-\text{}\\
+
 Les périphériques peuvent contenir du code arbitraire, et peuvent donc a
 priori gérer leurs entrées et sorties de n'importe quelle
 manière. Cependant, ils sont faits pour simuler des périphériques mappés en
@@ -307,7 +237,7 @@ L'entrée \texttt{Byte enables} indique quels octets il faut prendre en compte :
 Les périphériques sont pensés comme des registres, c'est-à-dire que si l'on
 écrit l'adresse où l'on veut lire au cycle t, on pourra lire le résultat au
 cycle t+1. A posteriori, il aurait été plus pratique de donner le choix
-entre les deux modes de fonctionnement (lecture instantanée et lecture
+entre les deux modes de fonctionnement (lecture instantannée et lecture
 retardée d'un cycle), car lorsqu'un périphérique n'est pas utilisé pour
 couper une boucle combianatoire, on perd simplement un cycle à attendre.
 
@@ -326,7 +256,7 @@ autre type de bloc, par exemple, le circuit suivant :
 
   start Start
 \end{verbatim}
-est constitué d'une mémoire sur $2^5 = 32$ octets, et sa sortie correspond au
+Est constitué d'une mémoire sur $2^5 = 32$ octets, et sa sortie correspond au
 mot de $32$ bits contenu à l'adresse $0$ dans la mémoire. Si la mémoire est
 prévue pour initialiser tous ses octets à $0$, la sortie de ce circuit sera :
 
@@ -360,7 +290,7 @@ Aura pour sortie :
 
 On définit les types périphériques de la manière suivante :
 Chaque type de périphérique est défini par une classe C++, qui doit
-hériter de la classe device :
+descendre de la classe device :
 \begin{verbatim}
   class device
   {
@@ -372,9 +302,9 @@ hériter de la classe device :
                                 irq)=0;
   };
 \end{verbatim}
-Chaque périphérique doit également fournir une méthode statique \texttt{make}, qui
+Chaque périhérique doit également fournir une méthode statique \texttt{make}, qui
 construit un objet de cette classe et renvoie un pointeur vers cet objet,
-upcasté en \texttt{device*}. Cette méthode prend un argument (de type \texttt{int}) par
+upcasté en \emph{device*}. Cette méthode prend un argument (de type \emph{int}) par
 paramètre du périphérique. Par exemple, pour le périphérique \texttt{Memory}, la
 méthode \texttt{make} a le prototype suivant :
 
@@ -382,7 +312,7 @@ méthode \texttt{make} a le prototype suivant :
   device * make (int size)
 \end{verbatim}
 
-Pour chaque périphérique du circuit, sa méthode \texttt{cycle} est appelée à
+Pour chaque périphérique du circuit, sa méthode "cycle" est appelée à
 chaque cycle, avec comme arguments les valeurs lues dans les fils d'entrée.
 
 
@@ -404,7 +334,7 @@ le circuit suivant :
   start Start
 \end{verbatim}
 
-contient deux compteurs modulo 2 : C1 et C2, mais à l'intérieur du second,
+Contient deux compteurs modulo 2 : C1 et C2, mais à l'intérieur du second,
 l'horloge est localement redéfinie, de sorte que le second compteur n'est
 actif qu'au cycles où la sortie du premier vaut 1, c'est-à-dire un cycle
 sur deux. La sortie du circuit est donc :
@@ -421,9 +351,9 @@ sur deux. La sortie du circuit est donc :
   ...
 \end{verbatim}
 Lorsqu'une porte n'est pas active, le code C++ correspondant n'est
-simplement pas exécuté : la sortie de la porte garde sa valeur du cycle
+simplement pas exécuté : La sortie de la porte garde sa valeur du cycle
 précédent, et s'il s'agit d'un registre, son contenu n'est pas
-modifié. Dans le cas d'un périphérique, sa méthode \texttt{cycle} n'est pas
+modifié. Dans le cas d'un périphérique, sa méthode "cycle" n'est pas
 appelée.
 
 
@@ -431,7 +361,7 @@ Si on redéfinit l'horloge d'un bloc, on redéfinit l'horloge de toutes les
 portes et de tous les blocs qu'il contient. Si ce bloc lui-même redéfinit
 l'horloge de l'un de ses composants, celui-ci ne sera actif que lorsque son
 bloc parent l'est et que son bloc parent l'active. Par exemple, on peut
-utiliser les enables pour programmer un compteur modulo $2^n$. Ainsi, le circuit
+utiliser les enables pour programmer un compteur modulo $2^n$ : Le bloc
 suivant :
 \begin{verbatim}
   Count<1>
@@ -453,7 +383,7 @@ suivant :
 
   start Start<3>
 \end{verbatim}
-a pour sortie :
+A pour sortie :
 \begin{verbatim}
   000
   100
@@ -660,179 +590,226 @@ Et le compteur :
 
 \section{Spécificités techniques de l'implémentation d'Obsidian}
 
-Le compilateur Obsidian s'occupe de transformer un fichier rock en éxécutable.
-Il est codé en OCaml, langage trés partique pour la manipulation d'expression
-symbolique, puis génére du code c++ qui est ensuite compilée par un compilateur
-c++ classique pour tenter d'améliorer les performances. Dans la suite de cette
-section, chaque étape est présentée avec ses particularités techniques et/ou
-algorithmiques.
+ocamllex et menhir pour lexing et parsing
 
-Les principales étapes du compilateur sont :
-\begin{enumerate}
-\item Le lexer et le parseur.
-\item L'analyse sémantique.
-\item La \og destruction \fg{} de l'AST en graphe.
-\item La génération de code c++.
-\end{enumerate}
+sur -> analyse sémantique lourde mais efficace
+    static bound checking
+    vérification du caractère bien fondé des récursions
 
-\subsection{Le lexer et le parseur}
+union-find pour détruire le graphe en ast
 
-Les librairies ocamllex et menhir ont été employées pour faire cette partie. Les
-symboles reconnus par le lexer ainsi que la grammaire employée dans le parser
-ont déja été vus dans la présentation du langage. 
-
-L'arbre de syntaxe abstraite (ou AST) est formé de la manière suivante :
-\begin{itemize}
-\item À la racine, d'un tableau associatif qui à chaque nom de bloc associe sa
-  définition, d'une liste des périphériques déclarés avec leur nombre de
-  paramètres ainsi que du nom et des paramètres du bloc de départ (celui qui
-  englobe tout le circuit simulé).
-\item Les définitions de blocs, sont des enregistrements dont les champs sont
-  les paramètres du bloc (motifs), les entrées (fils), les instances (création
-  de sous-bloc) et les sorties (fils). Ceux-ci sont eux même des types
-  enregistrement jusqu'à arriver au atomes (nom de fil, nom de bloc, entier, etc).
-\end{itemize}
-
-L'AST, ou plutôt les AST, est paramétré par un module définissant les entiers à
-utiliser dans l'AST (il s'agit donc d'un foncteur). L'intéret de paramétrer la
-définition des entiers à l'intérieur de l'AST est de pouvoir produire à la
-sortie du parser un AST dans lequel la plupart des \og entiers\fg{} sont en fait
-des \emph{expressions entières} pas encore évaluées et qui seront transformées à
-l'étape suivante.
-
-\subsection{L'analyse sémantique}
-
-L'analyse sémantique est un des morceaux les plus lourd d'Obsidian, mais aussi
-ce qui fait du langage un outil utilisable car sur. En effet l'analyse statique
-pratiquée au niveau de l'analyse sémantique permet d'éliminer presque toutes les
-erreurs de sémantiques au niveau du circuit. Concrétement, l'analyse sémantique
-vérifie :
-\begin{itemize}
-\item que tous les blocs employés ont été déclarés et que dans chaque blocs
-  toutes les variables (que se soit de bloc ou de fil) ont été définis.
-\item que tous les fils sont corrects c'est à dire qu'il n'y a jamais de fil
-  vide voir d'épaisseur négative et que les branchements fait entre deux fils
-  sont bien fait avec des fils de même largeur.
-\item que chaque création de sous-fils ( avec la syntaxe $[\ ..\ ]$) est bien
-  fait avec un intervalles valique (c'est à dire inclus dans l'intervalle $[| 0
-  ; n - 1|]$ où $n$ est la taille du fil original).
-\item que chaque applications de paramètres lors d'une instance est bien
-  acceptée par un certain motif.
-\item que la récursion est bien fondée, qu'il n'y a pas de suite infinie de
-  blocs dans le circuit ce qui est une vérification cruciale pour l'étape de
-  transformation en graphe. 
-\end{itemize}
-
-En particulier, l'analyse sémantique s'occupe d'une opération que l'on appelle
-réification par analogie avec l'opération que font certains compilateurs pour
-gérer le paramétrage polymorphique (par exemple avec les templates en c++). Il
-s'agit en fait de transformer l'AST ne contenant que des entiers \og
-formels\fg{} c'est à dire des \emph{expressions entières} en entiers.
-Par exemple, le code suivant :
-\begin{verbatim}
- And_vect<1> (a[1],b[1]) 
-      And A(a[0],b[0])
-      -> o : A.o;
-
-  And_vect<n> (a[n],b[n])
-      And Low(a[0],b[0])
-      And_vect<n-1> High(a[1..n-1],b[1..n-1])
-      -> o[n] : {Low.o, High.o};
-
-  start And_vect<4>
-\end{verbatim}
-
-génére d'abord l'AST contenant les définitions de \texttt{And\_vect<1>} et
-\texttt{And\_vect<n>}, puis aprés réification, il contiendra les définitions de
-\texttt{And\_vect<1>}, \texttt{And\_vect<2>}, \texttt{And\_vect<2>},
-\texttt{And\_vect<4>}. 
-
-Cette multiplication de symboles peut paraître trés lourde mais elle permet une
-analyse en détail de chaque blocs et l'étape suivante du compilateur fait
-disparaître les redondances.
-
-Il faut aussi noter que l'analyse sémantique ne vérifie pas l'absence totale de
-cycle combinatoire. Pour cela, il faut attendre que l'AST soit transformé en
-graphe. Il s'agit donc de la seule vérification doit attendre la phase de
-génération de code pour être faite.
-
-\subsection{La transformation en graphe}
-
-À la sortie de l'analyse sémantique, un AST \emph{réifié} est obtenu. La
-transformation en graphe se fait en deux étapes :
-\begin{itemize}
-\item Un premier parcours de l'AST pour déterminer la liste des portes
-  que contiendra le graphe. Cette liste est ensuite transformée en tableau.
-  Le choix des listes au début est pour permettre une concaténation efficace,
-  tandis que la transformation en tableau à la fin est nécessaire pour avoir un
-  accés aléatoire à chaque éléments.
-\item Un deuxième parcours de l'AST se charge de \emph{brancher} les fils entre
-  les portes. Pour cela on considère l'ensemble des \emph{bouts de fil} identifiables
-  (c'est à dire l'ensemble des variables de fils en distinguant selon la portée)
-  et on construit la relation d'équivalence \og est branché avec\fg{} avec un
-  Union-find. Les classes d'équivalence résultantes à la fin du parcours sont
-  exactement l'ensemble des fils.
-\end{itemize}
-
-Au passage, tous les blocs qui ne sont pas des blocs de base ou des
-périphériques sont éliminés, ou plutôt oubliés, au cours de l'opération.
-Le résultat est un graphe sous la forme d'un tableau où à chaque indice est
-associé le type de la porte et un tableau contenant pour chaque sortie de la
-porte en question les portes en aval avec lesquelles elle est branchée. Un
-certain nombre d'informations telles que le nombre total de registres ou de
-périphériques est aussi collecté durant cette phase pour aider la génération du code. 
-
-\subsection{La génération du code c++}
-vérification de l'absence de cycles combinatoires.
 compilation vers du c++ pour les performances
-
 
 \section{Le microprocesseur}
 
+L'architecture du microprocesseur a été modifiée depuis le dernier rapport.
+Nous utilisons maintenant des périphériques pour gérer la mémoire, les registres
+et le programme. Le nombre d'instructions supportées a été considérablement 
+augmenté. D'une architecture à trois cycles par instruction, nous sommes passés
+à une architecture à 4 cycles par instruction permettant une grande sécurité des
+échange du controleur, les périphiques assurant parallèlement une protection contre
+les boucles combinatoires.
+
+\subsection{L'ALU}
+
+L’ALU que nous avons réalisé prend en entrée deux entiers sur
+32 bits ainsi qu’un code sur 4 bits décrivant l’opération à effectuer. Il renvoie
+alors un résultat sur 32 bits. Il s’agit d’un bloc purement combinatoire.\\
+
+Notre ALU supporte 16 opérations :
+
+\begin{enumerate}
+\item ET, OU, XOR, NAND, NOR pour les opérations logiques binaires
+\item $+$,$-$,$x$,$=$,$\neq$,$<$,$>$,$\leq$,$\geq$ pour les opérations arithmétiques
+\item Une opération renvoyant le premier opérande (utile pour les opérations de shifts)
+\item Une opération de concaténation 16 bit-16 bit (utile pour le \textit{lui})
+\end{enumerate}  
+
+D'autres opérations ont été implémentées, notamment les différentes formes de shift 
+(dans les deux sens, en version classique ou arithmétique) cependant seule l'opération
+de shift classique vers la droite est utilisé par le reste du microprocesseur (il
+est utilisé avec le shift\_amount du R-format ).
+
+\textbf{Fonctionnement:} Chaque opération de l’ALU est codée séparément.
+Puis, à la lecture de deux entiers, toutes les opérations possibles sont exécutées
+simultanément, et un filtre sélectionne le résultat voulu. Tout fonctionne en un
+seul cycle, et les circuits correspondant aux diverses opérations ont tous été
+codés récursivement.
+
+\subsection{Registres, Instruction Memory et Data Memory } 
+
+Le gestionnaire de registres contient 32 registres de 32 bits chacun.
+Il s'agit d'un périphérique de type mémoire. Il est possible de faire plusieurs
+lectures simultanées (un nombre arbitrairement grand) en utilisant des périphériques
+lecteurs auxiliaires. Dans notre cadre, on accède à au plus à deux registres à la fois, un seul 
+périphérique auxiliaire de lecture suffit donc. \\
+
+Le bloc d'instructions est également un périphérique. Chaque instruction est stockée
+sur 32 bits. Nous suivons les différents format MIPS (R-format, I-format, J-format) mais
+nous traitons à part certaines opérations de ces formats pour faciliter 
+et mieux diviser le travail du 
+controleur, comme nous le verrons dans la section Instructions.
+
+Enfin, la Data Memory peut prendre deux formes, selon que l'on est en mode ''classique"
+ou en mode ``horloge'' avec un affichage 7-segments. 
+
+\subsection{Controleur}
+
+Le bloc de contrôle, présent dans notre projet sous le nom de ``Controleur''
+a dans notre projet non seulement le rôle du bloc ``Control'' de l’architecture
+standart MIPS mais c’est aussi lui qui s’occupe de la synchronisation entre les
+différents cycles parcourus pour une instruction donnée (Tous les autres blocs
+sont donc positionnés en étoile par rapport à lui). Cette synchronisation est
+obtenue et sécurisée par l’utilisation de filtres temporels gérant les trafics d’in-
+formations entre les différents blocs. Toutes les instructions sont executées sur
+quatre cycles.
+
+Ce controleur agit différemment selon le format de l’instruction à effectuer,
+il contient donc plusieurs décodeurs. Nous avons 3 decodeurs correspondant
+aux formats MIPS habituels : un pour le R-format, un pour le I-format, 
+un pour le J-format. Mais nous avons préféré traiter certains types d'instructions
+à part, car elles correspondent à des échanges spécifiques entre les différents blocs 
+du microprocesseur. Ainsi, nous avons 4 decodeurs plus spécifiques : un pour les écritures en 
+mémoire (sb et sw), un pour les lectures mémoires (lb et lw), un pour les branch et enfin
+un pour jr. 
+
+Ces decodeurs sont executés en parallèle mais le controleur agit comme un filtre
+et ne laisse transparaitre que les actions du decodeur correspondant à l'instruction en cours.
+Ce filtrage s'effectue selon la valeur de l'opcode de l'opération.
+
+\subsection{Instructions}
+
+Les instructions suivent un codage relativement classique.
+Décrivons les intervalles de bits de chacun des types d'instructions :
+
+
+\subsubsection{R-format}
+
+Ce format intervient par exemple dans les opérations 
+comme add, sub, mul, and, ...
+
+\begin{format}[codage du R-format]
+  \begin{itemize}
+  \item 0..5 : les 6 bits de l'opcode
+  \item 6..10 : adresse rs (opérande 1)
+  \item 11..15 : adresse rt (opérande 2)
+  \item 16..20 : adresse rd (résultat)
+  \item 21..25 : shift\_amount
+  \item 26..31 : funct code
+  \end{itemize}
+\end{format}
+
+Les 6 bits de l'opcode sont toujours nuls ainsi que les deux
+derniers chiffres du funct code. Les quatre premiers bits du
+funct code correspondent, eux, au code de l'opération concernée
+(c'est ce code qui est transmis à l'ALU). Enfin le shift\_amount 
+correspond à la valeur de décalage d'un shift vers la droite 
+(c'est-à-dire à une division par une puissance de 2).
+
+\subsubsection{I-format}
+
+Le I-format correspond aux instructions du type addi, subi, andi...
+
+\begin{format}[codage du I-format]
+  \begin{itemize}
+  \item 0..5 : les 6 bits de l'opcode
+  \item 6..10 : adresse rs (opérande 1)
+  \item 11..15 : adresse rt (resulat)
+  \item 16..31 : valeur immédiate (opérande 2)
+  \end{itemize}
+\end{format}
+
+Les deux derniers bits de l'opcode sont toujours deux 1.
+Les quatre premiers bits de l'opcode correspondent, eux, au code
+de l'opération de l'ALU. La valeur immédiate est étendue sur 
+32 bits par la droite en répétant son dernier bit 
+(afin de gérer les nombres négatifs).
+
+\subsubsection{J-format}
+
+On définit ici un format pour la seule instruction Jump.
+
+\begin{format}[codage du J-format]
+  \begin{itemize}
+  \item 0..5 : les 6 bits de l'opcode
+  \item 6..31 : adresse de la destination sur 26 bits
+  \end{itemize}
+\end{format}
+
+L'opcode est toujours 111101. 
+
+\subsubsection{Branch-format}
+
+Le Branch-format regroupe les différentes instructions
+de type branch comme beq, bne, bgt, ble...
+
+\begin{format}[codage du Branch-format]
+  \begin{itemize}
+  \item 0..5 : les 6 bits de l'opcode
+  \item 6..10 : adresse rs (opérande 1)
+  \item 11..15 : adresse rt (opérande 2)
+  \item 16..31 : adresse relative en cas de branch
+  \end{itemize}
+\end{format}
+
+Les deux derniers bits de l'opcode sont toujours 10 tandis que
+les quatres premiers bits correspondent au code de l'opération de 
+l'ALU associée (par exemple le code de l'égalité pour un beq).
+L'adresse relative est définie par rapport à l'adresse qui suit 
+l'instruction branch.
+
+
+\subsubsection{JR-format}
+
+L'instruction Jump Register bénéficie d'un format à part.
+
+\begin{format}[codage du JR-format]
+  \begin{itemize}
+  \item 0..5 : les 6 bits de l'opcode
+  \item 6..10 : adresse du registre
+  \item 11..31 : bits inutilisés
+  \end{itemize}
+\end{format}
+
+L'opcode est toujours 000001.
+
+
+\subsubsection{Format de lecture mémoire}
+
+Ce format correspond aux instructions lw et lb.
+
+\begin{format}[codage du format de lecture]
+  \begin{itemize}
+  \item 0..5 : les 6 bits de l'opcode
+  \item 6..10 : adresse rs (registre contenant l'adresse de base) 
+  \item 11..15 : adresse rt (resulat)
+  \item 16..31 : valeur immédiate de décalage
+  \end{itemize}
+\end{format}
+
+L'opcode est soit 110001 pour lw, soit 100001 pour lb. En pratique, 
+le deuxième bit de l'opcode est repassé en argument au byte\_enable
+de la mémoire (pour spécifier la plage de lecture).
+ 
+\subsubsection{Format de l'écriture mémoire}
+
+Ce format correspond aux instructions sw et sb.
+
+\begin{format}[codage du format d'écriture]
+  \begin{itemize}
+  \item 0..5 : les 6 bits de l'opcode
+  \item 6..10 : adresse rs (registre contenant l'adresse de base) 
+  \item 11..15 : adresse rt (registre à stocker)
+  \item 16..31 : valeur immédiate de décalage
+  \end{itemize}
+\end{format}
+
+L'opcode est soit 110101 pour lw, soit 100101 pour lb. Ici aussi, 
+le deuxième bit de l'opcode est repassé en argument au byte\_enable
+de la mémoire (pour spécifier la plage d'écriture).
+
+
 \section{L'assembleur}
-
-Le microprocesseur lit en entrée du code éxécutable qui se trouve dans un
-fichier \emph{ram} qu'il charge en mémoire. La génération du fichier \emph{ram}
-à partir des sources MIPS incombe donc à l'assembleur. L'assembleur a été codé
-sur la même architecture générale qu' Obsidian (lexer, parser, légére analyse
-sémantique et génération du code) en OCaml. \\
-La syntaxe du MIPS est assez simple à parser et à analyser, cependant quelques
-limitations ont été introduites : 
-\begin{itemize}
-\item Il doit y avoir au plus une instruction ou étiquette par ligne.
-\item Le code doit se trouver obligatoirement dans le segment de texte
-  (introduit par l'instruction \texttt{.text} et les données dans celui de
-  donnée (introduit par \texttt{.data}). 
-\item Par conséquent, les instructions \texttt{.word}, \texttt{.byte},
-  \texttt{.half}, \texttt{.ascii}, \texttt{.asciiz} et \texttt{.space} ne sont
-  disponibles que dans le segment de données et le autres instructions
-  commençant par un \og .\fg{} ne sont pas présentent.
-\item Les instructions et pseudo-instructions ne sont pas toutes présentent :
-  il n'y a pas de \texttt{syscall} par exemple (puisqu'il n'y a pas d'OS sur le
-  microprocesseur). Certaines pseudo-instructions comme \texttt{bgt} ou
-  \texttt{ble} ont aussi été implémentées comme des vrais instructions.
-\item Les entrées/sorties sont faite à l'aide de deux étiquettes
-  \texttt{clock\_display} et \texttt{timestamp} qui sont des adresses mappées en
-  mémoire dans le processeur.
-\end{itemize}
-\text{}\\
-Les conventions de nommages employées pour les registre sont celles appellées
-\emph{O$32$}. Les registres disponibles sont donc : \$zero, \$at, \$v$0$ -
-\$v$1$, \$a$0$ - \$a$3$, \$t$0$ - \$t$9$, \$s$0$ - \$s$7$, \$k$0$ - \$k$1$,
-\$gp, \$sp, \$fp et \$ra.
-
-\text{}\\
-La liste des pseudo-instructions implémentées est :
-\begin{itemize}
-\item \texttt{move} déplace un registre dans un autre.
-\item \texttt{clear} met un registre à $0$.
-\item \texttt{la} charge une étiquette dans un registre.
-\item \texttt{li} charge une constante de $32$ bits dans un registre.
-\item \texttt{b} branche sans condition.
-\item \texttt{beqz} branche si le registre contient $0$.
-\item \texttt{bnez} branche si le registre ne contient pas $0$.
-\item \texttt{beqd} branche si le registre contient $42$.
-\end{itemize}
 
 \section{L'horloge}
 
@@ -884,40 +861,6 @@ chiffres (pour les années par exemple)) nommées \texttt{two\_digits\_to\_segme
 début pour $00$, dans les deux cases suivantes pour $01$, etc.) pour avoir
 le renseignement voulu. Puis, on stocke le résultat en dur dans des cases
 mémoires reliées directement à l'afficheur $7$ segments.
-
-
-\section{Utilisation des outils et organisation du code}
-
-L'ensemble du projet peut se compiler à partir de la racine à l'aide de
-make. Avant toute compilation, il faut éventuellement modifier le compilateur
-c++ employé (g++ par défaut). Les différentes cibles présentent sont :
-\begin{description}
-\item[$\rhd$ run :] lance l'horloge avec une configuration par défaut.
-\item[$\rhd$ obsidian :] compile le compilateur.
-\item[$\rhd$ assembleur :] compile l'assembleur.
-\item[$\rhd$ micro :] compile le microprocesseur en mode \og horloge\fg{}.
-\item[$\rhd$ horloge :] assemble l'horloge.
-\item[$\rhd$ compiled-tests :] compile les tests de circuits présents dans Rock/Tests
-  et les place dans compiled-tests.
-\item[$\rhd$ clean :] efface tous les programmes.
-\end{description}
-\text{}\\
-L'organisation des dossiers est la suivante :
-\begin{description}
-\item[$\rhd$ Asm :] contient les exemples en assembleur.
-\item[$\rhd$ AssembleurDir :] contient le code pour l'assembleur.
-\item[$\rhd$ ObsidianCompiler :] contient le code pour Obsidian.
-\item[$\rhd$ Resources :] contient des fichiers nécéssaires pour le fonctionnement
-  d'Obsidian.
-\item[$\rhd$ Rock :] contient les exemples en rock ainsi que le microprocesseur
-  (fichier Processor/Micro.rock).
-\end{description}
-\text{}\\
-Tous les programmes sont accompagnés d'une aide accessible à l'aide de l'option
--help permettant de voir les options disponibles. Pour charger un programme
-assembleur dans le microprocesseur, que ce soit avec \texttt{Micro} ou
-\texttt{MicroClassique}, il faut le compiler avec l'instruction suivante : \\
-\texttt{.assembleur -o ram nom\_du\_fichier\_assembleur.s}.
 
 \begin{figure}[!h]
 \centering
