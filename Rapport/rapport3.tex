@@ -1013,31 +1013,32 @@ de la mémoire (pour spécifier la plage d'écriture).
 \section{L'assembleur}
 
 Le microprocesseur lit en entrée le code exécutable qui se trouve dans un
-fichier \emph{ram} chargé en mémoire. La génération du fichier \emph{ram}
+fichier \texttt{ram} chargé en mémoire. La génération du fichier \texttt{ram}
 à partir des sources MIPS incombe donc à l'assembleur. L'assembleur a été codé
-sur la même architecture générale qu'Obsidian (lexer, parser, légère analyse
-sémantique et génération du code) en OCaml. \\
+en OCaml,
+sur la même architecture générale qu'Obsidian (analyse lexicale, syntaxique,
+sémantique, et génération du code). \\
 La syntaxe du MIPS est assez simple à parser et à analyser, cependant quelques
 limitations ont été introduites : 
 \begin{itemize}
 \item Il doit y avoir au plus une instruction ou étiquette par ligne.
 \item Le code doit se trouver obligatoirement dans le segment de texte
-  (introduit par l'instruction \texttt{.text} et les données dans celui de
-  donnée (introduit par \texttt{.data}). 
+  (introduit par l'instruction \texttt{.text}), et les données dans le segment de
+  données (introduit par \texttt{.data}). 
 \item Par conséquent, les instructions \texttt{.word}, \texttt{.byte},
   \texttt{.half}, \texttt{.ascii}, \texttt{.asciiz} et \texttt{.space} ne sont
   disponibles que dans le segment de données et le autres instructions
   commençant par un \og .\fg{} ne sont pas présentes.
-\item Les instructions et pseudo-instructions ne sont pas toutes présentent :
+\item Les instructions et pseudo-instructions ne sont pas toutes présentes :
   il n'y a pas de \texttt{syscall} par exemple (puisqu'il n'y a pas d'OS sur le
   microprocesseur). Certaines pseudo-instructions comme \texttt{bgt} ou
-  \texttt{ble} ont aussi été implémentées comme des vrais instructions.
-\item Les entrées/sorties sont faite à l'aide de deux étiquettes
+  \texttt{ble} ont aussi été implémentées comme des vraies instructions.
+\item Les entrées/sorties sont réalisées à l'aide de deux étiquettes
   \texttt{clock\_display} et \texttt{timestamp} qui sont des adresses mappées en
   mémoire dans le processeur.
 \end{itemize}
 \text{}\\
-Les conventions de nommages employées pour les registre sont celles appellées
+Les conventions de nommage employées pour les registres sont celles appellées
 \emph{O$32$}. Les registres disponibles sont donc : \$zero, \$at, \$v$0$ -
 \$v$1$, \$a$0$ - \$a$3$, \$t$0$ - \$t$9$, \$s$0$ - \$s$7$, \$k$0$ - \$k$1$,
 \$gp, \$sp, \$fp et \$ra.
@@ -1045,7 +1046,7 @@ Les conventions de nommages employées pour les registre sont celles appellées
 \text{}\\
 La liste des pseudo-instructions implémentées est :
 \begin{itemize}
-\item \texttt{move} déplace un registre dans un autre.
+\item \texttt{move} copie la valeur d'un registre dans un autre registre.
 \item \texttt{clear} met un registre à $0$.
 \item \texttt{la} charge une étiquette dans un registre.
 \item \texttt{li} charge une constante de $32$ bits dans un registre.
@@ -1061,11 +1062,11 @@ Le fichier horloge.s est le fichier assembleur qui code l'horloge (d'où son nom
 incroyable, n'est-il pas ?). Son fonctionnement est le suivant :
 
 \begin{enumerate}
-\item Il va chercher le timestamp courant dans l'adresse mémoire ayant comme label
+\item On va chercher le timestamp courant dans l'adresse mémoire ayant comme label
    \emph{timestamp}. Le format est celui du timestamp UNIX standard, accessible (par
    exemple avec la commande \texttt{date +\%s}. Pour mémoire, il s'agit du nombre de
    secondes écoulées depuis le $1^{\text{er}}$ janvier $1970$ à $00:00:00$.\\
-\item Il transforme ce nombre de secondes en nombre de jours en faisant une simple
+\item On transforme ce nombre de secondes en nombre de jours en faisant une simple
    division (codée plus loin, car indisponible dans notre microprocesseur, à
    partir d'une multiplication, elle aussi recodée avec des additions - de façon
    logarithmique bien sûr).\\
@@ -1082,10 +1083,8 @@ incroyable, n'est-il pas ?). Son fonctionnement est le suivant :
    ajoutant l'équivalent d'un jour chaque $28$ février à $23:59:59$ d'une année non
    bissextile. C'est cette deuxième option qui a été choisie.\\
 \item On calcule donc le nombre de jours à ajouter, par paquets de $4$ ans (on
-   rajoute $72$ heures à chaque fois) et en corrigeant en bout de course. On fait
-   un cas particulier pour l'an $2000$ (année non bissextile, comme tous les $400$
-   ans - heureusement, le timestamp UNIX s'arrête en $2038$, on est donc pas tenus
-   de prévoir les autres cas), et finalement on obtient un nombre de jours
+   rajoute $72$ heures à chaque fois) et en corrigeant en bout de course. On
+   obtient finalement on obtient un nombre de jours
    "artificiels" mais qui permet de traiter tous les cas d'un seul coup.
 \item On calcule le mois et le jour en faisant $12$ cas, faute de méthode plus simple
    pour s'adapter aux durées variables des différents mois. Pour le mois de
