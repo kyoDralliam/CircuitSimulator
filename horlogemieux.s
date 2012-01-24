@@ -6,18 +6,31 @@
 # infinie si c'est le cas.
 
     .text
-
+        li $s6, 0
 main:
+
         li $sp, 4000
         # On sauvegarde $ra
         addi    $sp, $sp, 4
         sw      $ra, 0($sp)
+
+attendre:    
+        beq $t6, $zero, recalculer
+        # On récupère le timestamp que l'on met dans $s7
+        li      $t0, timestamp
+        lw      $s7, 0($t0)
+        beq     $t7, $s7, attendre
+        
+recalculer:     
 
         # On récupère le timestamp que l'on met dans $s7
         li      $t0, timestamp
         lw      $s7, 0($t0)
         #li      $s7, 1327338988
 
+        li $t6, 1
+        move $t7, $s7
+        
         # On calcule le nombre de jours écoulés depuis le 01/01/1970
         move    $a0, $s7
         li      $a1, 86400
@@ -191,7 +204,7 @@ main:
         move    $t1, $t0
     moistrouve:
             move    $a0, $s5 # $s5 = Mois
-        sub     $t1, $t1, 1
+        addi    $t1, $t1, -1
         sub     $s4, $s4, $t1
             move    $a0, $s4 # $s4 = Jour
 
