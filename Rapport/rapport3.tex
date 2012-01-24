@@ -1079,7 +1079,7 @@ incroyable, n'est-il pas ?). Son fonctionnement est le suivant :
    approches sont essentiellement possibles : considérer qu'une année "normale"
    est une année de $365$ jours, et prévoir un cas précis pour certains timestamps
    correspondant aux quelques $29$ févriers ; ou bien considérer qu'une année
-   "normale" fait $366$ jours et se contenter de modifier en dur le timestamp en
+   "normale" dure $366$ jours et se contenter de modifier en dur le timestamp en
    ajoutant l'équivalent d'un jour chaque $28$ février à $23:59:59$ d'une année non
    bissextile. C'est cette deuxième option qui a été choisie.\\
 \item On calcule donc le nombre de jours à ajouter, par paquets de $4$ ans (on
@@ -1109,8 +1109,8 @@ mémoires reliées directement à l'afficheur $7$ segments.
 \section{Utilisation des outils et organisation du code}
 
 L'ensemble du projet peut se compiler à partir de la racine à l'aide de
-make. Avant toute compilation, il faut éventuellement modifier le compilateur
-c++ employé (g++ par défaut). Les différentes cibles présentent sont :
+la commande \texttt{make}. Avant toute compilation, il faut éventuellement modifier le compilateur
+C++ employé (g++ par défaut). Les différentes cibles présentes sont :
 \begin{description}
 \item[$\rhd$ run :] lance l'horloge avec une configuration par défaut.
 \item[$\rhd$ obsidian :] compile le compilateur.
