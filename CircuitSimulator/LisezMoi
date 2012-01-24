@@ -1,0 +1,16 @@
+Pour compiler le projet :
+
+make
+
+Pour lancer l'horloge avec une configuration par défaut (Démo !) :
+
+make run
+
+
+L'horloge n'est à ce jour pas optimisée à fond, on recalcule notamment la date à
+chaque calcul de timestamp. Ce défaut sera corrigé lors de la présentation, et
+viendra avec une fonctionnalité supplémentaire inattendue.
+
+Pour plus d'options et d'informations sur l'organisation du projet et les
+différentes cibles possibles de make, on pourra se référer à la section 8 du
+rapport.
