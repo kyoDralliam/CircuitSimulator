@@ -13,8 +13,7 @@
 \usepackage{url}
 
 
-\newtheorem{bin}{ \textbf{Logique Binaire} }
-\newtheorem{arit}{ \textbf{Arithmétique} }
+\newtheorem{format}{  }
 \newtheorem{instr}
 { \textbf{Instructions actuellement prises en charges} }
 \newtheorem{instrFutures}
@@ -34,6 +33,7 @@
 \renewcommand{\labelitemi}{$\triangleright$}
 
 \maketitle
+\newpage
 \tableofcontents
 \newpage
 \section{Introduction}
@@ -788,6 +788,213 @@ compilation vers du c++ pour les performances
 
 
 \section{Le microprocesseur}
+
+L'architecture du microprocesseur a été modifiée depuis le dernier rapport.
+Nous utilisons maintenant des périphériques pour gérer la mémoire, les registres
+et le programme. Le nombre d'instructions supportées a été considérablement 
+augmenté. D'une architecture à trois cycles par instruction, nous sommes passés
+à une architecture à 4 cycles par instruction permettant une grande sécurité des
+échange du controleur, les périphiques assurant parallèlement une protection contre
+les boucles combinatoires.
+
+\subsection{L'ALU}
+
+L’ALU que nous avons réalisé prend en entrée deux entiers sur
+32 bits ainsi qu’un code sur 4 bits décrivant l’opération à effectuer. Il renvoie
+alors un résultat sur 32 bits. Il s’agit d’un bloc purement combinatoire.\\
+
+Notre ALU supporte 16 opérations :
+
+\begin{enumerate}
+\item ET, OU, XOR, NAND, NOR pour les opérations logiques binaires
+\item $+$,$-$,$x$,$=$,$\neq$,$<$,$>$,$\leq$,$\geq$ pour les opérations arithmétiques
+\item Une opération renvoyant le premier opérande (utile pour les opérations de shifts)
+\item Une opération de concaténation 16 bit-16 bit (utile pour le \textit{lui})
+\end{enumerate}  
+
+D'autres opérations ont été implémentées, notamment les différentes formes de shift 
+(dans les deux sens, en version classique ou arithmétique) cependant seule l'opération
+de shift classique vers la droite est utilisé par le reste du microprocesseur (il
+est utilisé avec le shift\_amount du R-format ).
+
+\textbf{Fonctionnement:} Chaque opération de l’ALU est codée séparément.
+Puis, à la lecture de deux entiers, toutes les opérations possibles sont exécutées
+simultanément, et un filtre sélectionne le résultat voulu. Tout fonctionne en un
+seul cycle, et les circuits correspondant aux diverses opérations ont tous été
+codés récursivement.
+
+\subsection{Registres, Instruction Memory et Data Memory } 
+
+Le gestionnaire de registres contient 32 registres de 32 bits chacun.
+Il s'agit d'un périphérique de type mémoire. Il est possible de faire plusieurs
+lectures simultanées (un nombre arbitrairement grand) en utilisant des périphériques
+lecteurs auxiliaires. Dans notre cadre, on accède à au plus à deux registres à la fois, un seul 
+périphérique auxiliaire de lecture suffit donc. \\
+
+Le bloc d'instructions est également un périphérique. Chaque instruction est stockée
+sur 32 bits. Nous suivons les différents format MIPS (R-format, I-format, J-format) mais
+nous traitons à part certaines opérations de ces formats pour faciliter 
+et mieux diviser le travail du 
+controleur, comme nous le verrons dans la section Instructions.
+
+Enfin, la Data Memory peut prendre deux formes, selon que l'on est en mode ''classique"
+ou en mode ``horloge'' avec un affichage 7-segments. 
+
+\subsection{Controleur}
+
+Le bloc de contrôle, présent dans notre projet sous le nom de ``Controleur''
+a dans notre projet non seulement le rôle du bloc ``Control'' de l’architecture
+standart MIPS mais c’est aussi lui qui s’occupe de la synchronisation entre les
+différents cycles parcourus pour une instruction donnée (Tous les autres blocs
+sont donc positionnés en étoile par rapport à lui). Cette synchronisation est
+obtenue et sécurisée par l’utilisation de filtres temporels gérant les trafics d’in-
+formations entre les différents blocs. Toutes les instructions sont executées sur
+quatre cycles.
+
+Ce controleur agit différemment selon le format de l’instruction à effectuer,
+il contient donc plusieurs décodeurs. Nous avons 3 decodeurs correspondant
+aux formats MIPS habituels : un pour le R-format, un pour le I-format, 
+un pour le J-format. Mais nous avons préféré traiter certains types d'instructions
+à part, car elles correspondent à des échanges spécifiques entre les différents blocs 
+du microprocesseur. Ainsi, nous avons 4 decodeurs plus spécifiques : un pour les écritures en 
+mémoire (sb et sw), un pour les lectures mémoires (lb et lw), un pour les branch et enfin
+un pour jr. 
+
+Ces decodeurs sont executés en parallèle mais le controleur agit comme un filtre
+et ne laisse transparaitre que les actions du decodeur correspondant à l'instruction en cours.
+Ce filtrage s'effectue selon la valeur de l'opcode de l'opération.
+
+\subsection{Instructions}
+
+Les instructions suivent un codage relativement classique.
+Décrivons les intervalles de bits de chacun des types d'instructions :
+
+
+\subsubsection{R-format}
+
+Ce format intervient par exemple dans les opérations 
+comme add, sub, mul, and, ...
+
+\begin{format}[codage du R-format]
+  \begin{itemize}
+  \item 0..5 : les 6 bits de l'opcode
+  \item 6..10 : adresse rs (opérande 1)
+  \item 11..15 : adresse rt (opérande 2)
+  \item 16..20 : adresse rd (résultat)
+  \item 21..25 : shift\_amount
+  \item 26..31 : funct code
+  \end{itemize}
+\end{format}
+
+Les 6 bits de l'opcode sont toujours nuls ainsi que les deux
+derniers chiffres du funct code. Les quatre premiers bits du
+funct code correspondent, eux, au code de l'opération concernée
+(c'est ce code qui est transmis à l'ALU). Enfin le shift\_amount 
+correspond à la valeur de décalage d'un shift vers la droite 
+(c'est-à-dire à une division par une puissance de 2).
+
+\subsubsection{I-format}
+
+Le I-format correspond aux instructions du type addi, subi, andi...
+
+\begin{format}[codage du I-format]
+  \begin{itemize}
+  \item 0..5 : les 6 bits de l'opcode
+  \item 6..10 : adresse rs (opérande 1)
+  \item 11..15 : adresse rt (resulat)
+  \item 16..31 : valeur immédiate (opérande 2)
+  \end{itemize}
+\end{format}
+
+Les deux derniers bits de l'opcode sont toujours deux 1.
+Les quatre premiers bits de l'opcode correspondent, eux, au code
+de l'opération de l'ALU. La valeur immédiate est étendue sur 
+32 bits par la droite en répétant son dernier bit 
+(afin de gérer les nombres négatifs).
+
+\subsubsection{J-format}
+
+On définit ici un format pour la seule instruction Jump.
+
+\begin{format}[codage du J-format]
+  \begin{itemize}
+  \item 0..5 : les 6 bits de l'opcode
+  \item 6..31 : adresse de la destination sur 26 bits
+  \end{itemize}
+\end{format}
+
+L'opcode est toujours 111101. 
+
+\subsubsection{Branch-format}
+
+Le Branch-format regroupe les différentes instructions
+de type branch comme beq, bne, bgt, ble...
+
+\begin{format}[codage du Branch-format]
+  \begin{itemize}
+  \item 0..5 : les 6 bits de l'opcode
+  \item 6..10 : adresse rs (opérande 1)
+  \item 11..15 : adresse rt (opérande 2)
+  \item 16..31 : adresse relative en cas de branch
+  \end{itemize}
+\end{format}
+
+Les deux derniers bits de l'opcode sont toujours 10 tandis que
+les quatres premiers bits correspondent au code de l'opération de 
+l'ALU associée (par exemple le code de l'égalité pour un beq).
+L'adresse relative est définie par rapport à l'adresse qui suit 
+l'instruction branch.
+
+
+\subsubsection{JR-format}
+
+L'instruction Jump Register bénéficie d'un format à part.
+
+\begin{format}[codage du JR-format]
+  \begin{itemize}
+  \item 0..5 : les 6 bits de l'opcode
+  \item 6..10 : adresse du registre
+  \item 11..31 : bits inutilisés
+  \end{itemize}
+\end{format}
+
+L'opcode est toujours 000001.
+
+
+\subsubsection{Format de lecture mémoire}
+
+Ce format correspond aux instructions lw et lb.
+
+\begin{format}[codage du format de lecture]
+  \begin{itemize}
+  \item 0..5 : les 6 bits de l'opcode
+  \item 6..10 : adresse rs (registre contenant l'adresse de base) 
+  \item 11..15 : adresse rt (resulat)
+  \item 16..31 : valeur immédiate de décalage
+  \end{itemize}
+\end{format}
+
+L'opcode est soit 110001 pour lw, soit 100001 pour lb. En pratique, 
+le deuxième bit de l'opcode est repassé en argument au byte\_enable
+de la mémoire (pour spécifier la plage de lecture).
+ 
+\subsubsection{Format de l'écriture mémoire}
+
+Ce format correspond aux instructions sw et sb.
+
+\begin{format}[codage du format d'écriture]
+  \begin{itemize}
+  \item 0..5 : les 6 bits de l'opcode
+  \item 6..10 : adresse rs (registre contenant l'adresse de base) 
+  \item 11..15 : adresse rt (registre à stocker)
+  \item 16..31 : valeur immédiate de décalage
+  \end{itemize}
+\end{format}
+
+L'opcode est soit 110101 pour lw, soit 100101 pour lb. Ici aussi, 
+le deuxième bit de l'opcode est repassé en argument au byte\_enable
+de la mémoire (pour spécifier la plage d'écriture).
+
 
 \section{L'assembleur}
 
