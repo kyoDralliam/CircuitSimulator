@@ -92,11 +92,11 @@ main:
         # Dans le cas absurde où on se trouverait avant le premier décalage, on
         # ne fait rien du tout
         li      $t0, 68256000
-        bgt     $t0, $s7, antibug
+        bgt     $t0, $s7, finbissextile
         # On veut donc savoir combien de 29 févriers on doit rajouter
         # artificiellement (information mise dans $s1). On commence par mettre
         # le point de départ du comptage le 1er Mars 1970
-        addi    $s6, $s0, -59 # 31+28
+        addi    $s6, $s0, -58 # 31+28-1
         li      $s1, 0
         move    $a0, $s6
         li      $a1, 1461 # 4*365 + 1
@@ -141,11 +141,10 @@ main:
         sub     $s4, $s0, $v0 # $s4 = Nombre de jours depuis le début de l'année
         li      $s5, 1 # $s5 = Mois
         li      $t1, 0
-        li      $t0, 32 # Janvier + 1 (à cause de la comparaison stricte)
+        li      $t0, 31 # Janvier + 1 (à cause de la comparaison stricte)
         bgt     $t0, $s4, moistrouve
         addi    $s5, $s5, 1
-        li      $t4, 2
-        sub     $t1, $t0, $t4
+        move    $t1, $t0
         addi    $t0, $t0, 29 # Février
         bgt     $t0, $s4, moistrouve
         addi    $s5, $s5, 1

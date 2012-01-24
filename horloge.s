@@ -13,7 +13,7 @@ main:
 
         # On récupère le timestamp que l'on met dans $s7
         #lw      $s7, timestamp
-        li      $s7, 1362246137
+        li      $s7, 1330560000
 
         # On calcule le nombre de jours écoulés depuis le 01/01/1970
         move    $a0, $s7
@@ -63,7 +63,7 @@ main:
         # On veut donc savoir combien de 29 févriers on doit rajouter
         # artificiellement (information mise dans $s1). On commence par mettre
         # le point de départ du comptage le 1er Mars 1970
-        addi    $s6, $s0, -59 # 31+28
+        addi    $s6, $s0, -58 # 31+28-1
         li      $s1, 0
         move    $a0, $s6
         li      $a1, 1461 # 4*365 + 1
