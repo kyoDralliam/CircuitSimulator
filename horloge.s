@@ -111,7 +111,6 @@ main:
 
         # On trouve le mois en mode "gros sac"
         move    $a0, $s6
-        addi    $a0, $a0, -1970
         li      $a1, 366
         jal     multiplier
         sub     $s4, $s0, $v0 # $s4 = Nombre de jours depuis le début de l'année
@@ -120,75 +119,54 @@ main:
         li      $t0, 32 # Janvier + 1 (à cause de la comparaison stricte)
         bgt     $t0, $s4, moistrouve
         addi    $s5, $s5, 1
-        move    $t1, $t0
-        li      $t4, 1
-        sub     $t1, $t1, $t4
+        li      $t4, 2
+        sub     $t1, $t0, $t4
         addi    $t0, $t0, 29 # Février
         bgt     $t0, $s4, moistrouve
         addi    $s5, $s5, 1
         move    $t1, $t0
-        li      $t4, 1
-        sub     $t1, $t1, $t4
         addi    $t0, $t0, 31 # Mars
         bgt     $t0, $s4, moistrouve
         addi    $s5, $s5, 1
         move    $t1, $t0
-        li      $t4, 1
-        sub     $t1, $t1, $t4
         addi    $t0, $t0, 30 # Avril
         bgt     $t0, $s4, moistrouve
         addi    $s5, $s5, 1
         move    $t1, $t0
-        li      $t4, 1
-        sub     $t1, $t1, $t4
         addi    $t0, $t0, 31 # Mai
         bgt     $t0, $s4, moistrouve
         addi    $s5, $s5, 1
         move    $t1, $t0
-        li      $t4, 1
-        sub     $t1, $t1, $t4
         addi    $t0, $t0, 30 # Juin
         bgt     $t0, $s4, moistrouve
         addi    $s5, $s5, 1
         move    $t1, $t0
-        li      $t4, 1
-        sub     $t1, $t1, $t4
         addi    $t0, $t0, 31 # Juillet
         bgt     $t0, $s4, moistrouve
         addi    $s5, $s5, 1
         move    $t1, $t0
-        li      $t4, 1
-        sub     $t1, $t1, $t4
         addi    $t0, $t0, 31 # Août
         bgt     $t0, $s4, moistrouve
         addi    $s5, $s5, 1
         move    $t1, $t0
-        li      $t4, 1
-        sub     $t1, $t1, $t4
         addi    $t0, $t0, 30 # Septembre
         bgt     $t0, $s4, moistrouve
         addi    $s5, $s5, 1
         move    $t1, $t0
-        li      $t4, 1
-        sub     $t1, $t1, $t4
         addi    $t0, $t0, 31 # Octobre
         bgt     $t0, $s4, moistrouve
         addi    $s5, $s5, 1
         move    $t1, $t0
-        li      $t4, 1
-        sub     $t1, $t1, $t4
         addi    $t0, $t0, 30 # Novembre
         bgt     $t0, $s4, moistrouve
         addi    $s5, $s5, 1
         move    $t1, $t0
-        li      $t4, 1
-        sub     $t1, $t1, $t4
     moistrouve:
             move    $a0, $s5 # $s5 = Mois
-            jal print_int
+            jal     print_int
         sub     $s4, $s4, $t1
             move    $a0, $s4 # $s4 = Jour
-            jal print_int
+            jal     print_int
         
         #li      $a0, 22742 
         #li      $a1, 17
