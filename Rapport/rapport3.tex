@@ -312,7 +312,7 @@ Les périphériques sont pensés comme des registres, c'est-à-dire que si l'on
 cycle t+1. A posteriori, il aurait été plus pratique de donner le choix
 entre les deux modes de fonctionnement (lecture instantanée et lecture
 retardée d'un cycle), car lorsqu'un périphérique n'est pas utilisé pour
-couper une boucle combianatoire, on perd simplement un cycle à attendre.
+couper une boucle combinatoire, on perd simplement un cycle à attendre.
 
 On déclare les types de périphériques de la façon suivante :
 
@@ -769,7 +769,7 @@ transformation en graphe se fait en deux étapes :
 \begin{itemize}
 \item Un premier parcours de l'AST détermine la liste des portes
   que contiendra le graphe. Cette liste est ensuite transformée en tableau
-  (cette transformation permet notamment d'obtenir un accés aléatoire à chaque
+  (cette transformation permet notamment d'obtenir un accès aléatoire à chaque
   élément).
 \item Un deuxième parcours de l'AST se charge de \emph{brancher} les fils entre
   les portes. Pour cela on considère l'ensemble des \emph{bouts de fil} identifiables
@@ -923,7 +923,7 @@ Le I-format correspond aux instructions du type \texttt{addi}, \texttt{subi},
   \begin{itemize}
   \item 0..5 : les 6 bits de l'opcode
   \item 6..10 : adresse \texttt{rs} (opérande 1)
-  \item 11..15 : adresse \texttt{rt} (resulat)
+  \item 11..15 : adresse \texttt{rt} (résultat)
   \item 16..31 : valeur immédiate (opérande 2)
   \end{itemize}
 \end{format}
@@ -991,7 +991,7 @@ Ce format correspond aux instructions \texttt{lw} et \texttt{lb}.
   \begin{itemize}
   \item 0..5 : les 6 bits de l'opcode
   \item 6..10 : adresse \texttt{rs} (registre contenant l'adresse de base) 
-  \item 11..15 : adresse \texttt{rt} (resulat)
+  \item 11..15 : adresse \texttt{rt} (résultat)
   \item 16..31 : valeur immédiate de décalage
   \end{itemize}
 \end{format}
@@ -1046,7 +1046,7 @@ limitations ont été introduites :
   mémoire dans le processeur.
 \end{itemize}
 \text{}\\
-Les conventions de nommage employées pour les registres sont celles appellées
+Les conventions de nommage employées pour les registres sont celles appelées
 \emph{O$32$}. Les registres disponibles sont donc : \$zero, \$at, \$v$0$ -
 \$v$1$, \$a$0$ - \$a$3$, \$t$0$ - \$t$9$, \$s$0$ - \$s$7$, \$k$0$ - \$k$1$,
 \$gp, \$sp, \$fp et \$ra.
@@ -1136,7 +1136,7 @@ L'organisation des dossiers est la suivante :
 \item[$\rhd$ Asm :] contient les exemples en assembleur.
 \item[$\rhd$ AssembleurDir :] contient le code pour l'assembleur.
 \item[$\rhd$ ObsidianCompiler :] contient le code pour Obsidian.
-\item[$\rhd$ Resources :] contient des fichiers nécéssaires pour le fonctionnement
+\item[$\rhd$ Resources :] contient des fichiers nécessaires pour le fonctionnement
   d'Obsidian.
 \item[$\rhd$ Rock :] contient les exemples en rock ainsi que le microprocesseur
   (fichier Processor/Micro.rock).
