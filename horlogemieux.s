@@ -7,12 +7,11 @@
 
     .text
         li $s6, 0
-main:
-
         li $sp, 4000
+main:
         # On sauvegarde $ra
-        addi    $sp, $sp, 4
-        sw      $ra, 0($sp)
+#      addi    $sp, $sp, 4
+#        sw      $ra, 0($sp)
 
 attendre:    
         beq $t6, $zero, recalculer
@@ -21,7 +20,7 @@ attendre:
         lw      $s7, 0($t0)
         beq     $t7, $s7, attendre
         
-recalculer:     
+recalculer:
 
         # On récupère le timestamp que l'on met dans $s7
         li      $t0, timestamp
@@ -261,7 +260,8 @@ recalculer:
         # On récupère $ra
         lw      $ra, 0($sp)
         addi    $sp, $sp, -4
-        jr      $ra
+        #jr      $ra
+        j main
 
 # Affiche l'entier présent dans le registre $a0, suivi d'un retour à la ligne
 #print_int:
