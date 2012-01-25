@@ -952,7 +952,7 @@ MiniMicro <b> ()
    Memory <1,7,0> GR({$00, C.versGestRegAd[0..4], Z25.o}, C.versGestRegVal[0..31], $1111, C.versGestRegModeEcr, $0, $0)
    Memory_reader<1> GR_reader({$00, C.versGR_reader, Z25.o }, Z32.o , $1111, $0, $0, $0) 
 
-   Cycleur<1,1,0,0> Read_instr
+   Cycleur<1,1,1,1> Read_instr
    Memory <2,20,1> @ Read_instr.o Prog({C.versProg[0..b-1], Zcomp.o}, Z32.o, $1111, $0, $0, $0) 
 
    Controleur <b> C(Prog.data, ALU.o, GR.data, PC.o, Mem.data, GR_reader.data)

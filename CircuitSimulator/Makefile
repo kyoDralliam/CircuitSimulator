@@ -1,5 +1,5 @@
 GPP=g++
-FREQ=5000
+FREQ=8000
 NB_OP=-
 
 all: micro horloge
@@ -77,6 +77,10 @@ run-fast: micro-fast assembleur
 run-flash: micro-flash assembleur
 	./assembleur -o ram Asm/horloge-recalcule.s
 	./micro-flash $(NB_OP)
+
+run-auto: micro-fast assembleur
+	./assembleur -o ram Asm/horloge-autonome.s
+	./micro-fast $(NB_OP)
 
 clean:
 	$(MAKE) --directory=ObsidianCompiler clean

@@ -940,7 +940,7 @@ MiniMicro <b> ()
    ProgCounter <b> PC(C.versPC[0..b-1])
  
    #Memory <0,14,0> Mem(C.versAddMem[0..31], C.versValEcrMem[0..31], C.versMemByteEnable[0..3], C.versMemEcr, $0, $0) 
-   Clock_bus <0,14,-1,5000> Mem(C.versAddMem[0..31], C.versValEcrMem[0..31], C.versMemByteEnable[0..3], C.versMemEcr, $0, $0)
+   Clock_bus <0,14,-1,8000> Mem(C.versAddMem[0..31], C.versValEcrMem[0..31], C.versMemByteEnable[0..3], C.versMemEcr, $0, $0)
  
    FiltreSel<32> F(C.versAluOp1[0..31], $1)
    Alu <32> @ C.aluUtilisee ALU(F.o[0..31], C.versAluOp2[0..31], C.versAluTypeOp[0..3])
@@ -952,7 +952,7 @@ MiniMicro <b> ()
    Memory <1,7,0> GR({$00, C.versGestRegAd[0..4], Z25.o}, C.versGestRegVal[0..31], $1111, C.versGestRegModeEcr, $0, $0)
    Memory_reader<1> GR_reader({$00, C.versGR_reader, Z25.o }, Z32.o , $1111, $0, $0, $0) 
 
-   Cycleur<1,1,0,0> Read_instr
+   Cycleur<1,1,1,1> Read_instr
    Memory <2,20,1> @ Read_instr.o Prog({C.versProg[0..b-1], Zcomp.o}, Z32.o, $1111, $0, $0, $0) 
 
    Controleur <b> C(Prog.data, ALU.o, GR.data, PC.o, Mem.data, GR_reader.data)
