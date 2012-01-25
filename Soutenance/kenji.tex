@@ -6,8 +6,10 @@
 
 \usepackage{graphicx}
 \usepackage{wrapfig}
+\usepackage{listings}
 
-\usepackage{beamerthemesplit} 
+\usepackage{beamerthemesplit}
+\usetheme{CambridgeUS} 
 
 \title{LCA}
 \author{Maillard Kenji}
@@ -19,7 +21,7 @@
 
 \frame
 {
-  \maketitle
+  \titlepage
 }
 
 \frame
@@ -30,13 +32,42 @@
 \frame
 {
   \frametitle{Description du langage}
+  Le langage de description des circuits est un langage déclaratif basé sur la
+  notion de blocs :
+  \begin{itemize}
+  \item Les blocs de base : \texttt{Xor}, \texttt{And}, \texttt{Or},
+    \texttt{Mux}, \texttt{Not}, \texttt{Gnd}, \texttt{Vdd} et \texttt{Reg}.
+  \item Les blocs définis par l'utilisateur. 
+  \item Les périphériques ou blocs externes.
+  \end{itemize}
 
+  \vspace{1cm}
+  Il est compilé à l'aide du logiciel \emph{Obsidian}.
 }
 
-\frame
-{
+\begin{frame}[fragile]
   \frametitle{Exemple d'emploi}
-}
+  \small
+  \begin{lstlisting}
+ HalfAdder ( a, b)
+    Xor X( a, b)
+    And	A( a, b)
+    -> o : X.o, c : A.o ;
+
+ ParallelAdder <1> ( a, b, c)
+    HalfAdder H1( a, b)
+    HalfAdder H2( c, H1.o)
+    Or O( H1.c, H2.c) (a, b)
+    -> o : H2.o, c : O.o ;  
+
+ ParallelAdder <n> (a[n] , b[n], c)
+    ParallelAdder<n-1> A (a[0..n-2], b[0..n-2], c)  
+    FullAdder F (a[n-1], b[n-1], A.c) 
+    -> o[n] : { A.o, F.o }, c : F.c ;
+
+ start ParallelAdder < 8 >
+  \end{lstlisting}
+\end{frame}
 
 \frame
 {
@@ -55,6 +86,38 @@
 {
   \frametitle{Motifs \& récursion}
 
+}
+
+\frame
+{
+  \frametitle{Les redéfinitions d'horloge}
+}
+
+\frame
+{
+  \frametitle{Les périphiques}
+}
+
+\section{Le compilateur Obsidian}
+
+\frame
+{
+  \frametitle{Organisation globale}
+}
+
+\frame
+{
+  \frametitle{Analyse lexicale, syntaxique et sémantique}
+}
+
+\frame
+{
+  \frametitle{Construction du graphe}
+}
+
+\frame
+{
+  \frametitle{Génération du code}
 }
 
 
