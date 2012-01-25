@@ -11,13 +11,11 @@
 \usepackage{beamerthemesplit}
 \usetheme{CambridgeUS} 
 
-\title{LCA}
-\author{Maillard Kenji}
+\title{Projet du cours\\Système Digital}
+\author{I. Belghiti, D. Desfontaines,\\ G. Geoffroy, K. Maillard}
 \date{\today}
 
 \begin{document}
-
-\section{Le langage Rock}
 
 \frame
 {
@@ -28,6 +26,14 @@
 {
   \tableofcontents
 }
+
+\AtBeginSection[]{
+  \begin{frame}{Sommaire}
+  \tableofcontents[currentsection, hideothersubsections]
+  \end{frame}
+}
+
+\section{Le langage Rock}
 
 \frame
 {
@@ -54,7 +60,7 @@
     And	A( a, b)
     -> o : X.o, c : A.o ;
 
- ParallelAdder <1> ( a, b, c)
+ ParallelAdder <1> ( a, b, c) 
     HalfAdder H1( a, b)
     HalfAdder H2( c, H1.o)
     Or O( H1.c, H2.c) (a, b)
@@ -62,62 +68,362 @@
 
  ParallelAdder <n> (a[n] , b[n], c)
     ParallelAdder<n-1> A (a[0..n-2], b[0..n-2], c)  
-    FullAdder F (a[n-1], b[n-1], A.c) 
+    ParallelAdder<1> F (a[n-1], b[n-1], A.c) 
     -> o[n] : { A.o, F.o }, c : F.c ;
 
- start ParallelAdder < 8 >
+ start ParallelAdder < 3 >
+  \end{lstlisting}
+\end{frame}
+
+\begin{frame}
+  \frametitle{Structure de l'additionneur}
+  \begin{figure}
+    \begin{center}
+      \includegraphics[width=12cm,height=5cm]{parallelAdder3.png}
+      \caption{Additionneur parallèle sur 3 bits (Structure)}
+      \label{Additionneur parallèle sur 3 bits (Structure)}
+    \end{center}
+  \end{figure}
+\end{frame}
+
+\begin{frame}
+  \frametitle{Graphe sous-jacent}
+  \begin{figure}
+    \begin{center} 
+      \includegraphics[width=6.7cm,height=6.14cm]{add.png}
+      \caption{Additionneur parallèle sur 3 bits (Graphe)}
+      \label{Additionneur parallèle sur 3 bits (Graphe)}
+    \end{center}
+  \end{figure}
+\end{frame}
+
+\begin{frame}[fragile]
+  \frametitle{Les blocs}
+  Les blocs peuvent être paramétrés par des entiers. Les entrées et les sorties
+  de ces blocs sont des fils, et le corps des blocs est déterminé à partir d'instances
+  de blocs définis dans le reste des sources.  On accéde à une des sortie
+  d'un bloc avec la syntaxe \texttt{nom\_du\_bloc.nom\_du\_fil\_en\_sortie}.
+
+  \vspace{1cm}
+
+  \begin{lstlisting}
+  BlocDéfini < params > (arg1, ..., argn)
+      Bloc1  Instance1(arg1', ... , argp')
+      Bloc2  Instance2(arg1'', ... , argq'' )
+      -> sortie1 : fil1, ... , sortiek : filk ;
   \end{lstlisting}
 \end{frame}
 
 \frame
 {
-  \frametitle{Les blocs}
-
-}
-
-\frame
-{
   \frametitle{Les fils}
+  Tous les fils sont épais. Ils supportent deux opérations :
+  \begin{itemize}
+  \item l'extraction d'un sous-fil se fait via la syntaxe $a[p\ ..\ q]$ et crée
+    un nouveau fil de largeur $q - p + 1$ qui est branché sur les fils sous-jacents
+    de $a$ indicés de $p$ à $q$.
+  \item la fusion de fils se fait via la syntaxe $\{ a_1, a_2, ...\ , a_n \}$ et
+    produit un fil dont la largeur est la somme des largeurs des $a_i$.
+  \end{itemize} 
+  \text{}\\
+  En plus de ces opérations, du sucre syntaxique a été rajouté pour améliorer
+  l'expérience utilisateur :
+  \begin{itemize}
+  \item La syntaxe $a[n]$ est équivalente à $a[n..n]$ et produit donc un fil de
+    taille 1.
+  \item La syntaxe du type $\$01101$ est équivalente à \texttt{\{ G.o, V.o,
+      V.o, G.o, V.o \}} où \texttt{G} est une instance de \texttt{Gnd} et
+    \texttt{V} une instance de \texttt{Vdd}.
+\end{itemize}
 
 }
 
 
-\frame
-{
-  \frametitle{Motifs \& récursion}
+\begin{frame}
+  \frametitle{Les motifs}
+  Le flôt d'éxécution du programme est manipulé par de la reconnaissance de
+  motif sur les paramètres d'un bloc.\bigskip
 
-}
+  Les motifs reconnus sont :
+  \begin{itemize}
+  \item les motifs constants qui n'acceptent que leur valeur. 
+  \item les motifs de la forme $ a*n + b $, avec $a$, $b$ constants et $n$
+    variable, qui acceptent les entiers $p$  tels que $p \equiv b\
+    \text{mod}\ a$ et on a alors $n = \frac{p - b}{a}$.
+  \item les motifs de la forme $ a*n + k + b $, avec $a \neq 1 $, $b$ constants et
+    $k$, $n$ variables, qui acceptent tous les entiers $p$, et posent $k \equiv  p - b\
+    \text{mod}\ a$, $0 \leq k < a$ et $n = \frac{p - b - k}{a}$.\bigskip
+  \end{itemize}
 
-\frame
-{
+    Une légère phase de calcul symbolique permet de réduire un motif comme
+    $7\text{\^{}}3 + y + 3*x - 21 + 2*x$ en $5*x + y + 322$ qui est bien valide.
+
+\end{frame}
+
+\begin{frame}[fragile]
+  \frametitle{La récursion}
+  Un tel système de motifs permet différents types de récursion. Ainsi, on peut :
+  \begin{itemize}
+  \item itérer sur tous les entiers avec les motifs $<n+1>$ et $<0>$,
+  \item itérer seulement sur les puissances de deux avec les motifs $<2*n>$ et $<1>$,
+  \item ou encore travailler sur des congruences modulo 3 avec les motifs $<3*n>$, $<3*n +
+    1>$ et $<3*n + 2>$ ce qui peut aussi ce faire avec le motif $<3*n + k>$.
+  \end{itemize}
+\end{frame}
+
+
+\begin{frame}[fragile]
+  \frametitle{Compteur modulo $2^{n}$}
+  Par exemple pour définir un compteur modulo $2^{n}$ :
+  \begin{lstlisting}
+  Count<1> (enable)
+      Reg R(X.o)
+      Xor X(R.o,enable)
+      And A(R.o,enable)
+      -> out : R.o,
+         carry : A.o;
+
+  Count<n> (enable)
+      Count<n-1> Low(enable)
+      Count<1> High(Low.carry)
+      -> out[n] : {Low.out, High.out},
+         carry : High.carry;
+   \end{lstlisting}
+\end{frame}
+  
+
+
+
+
+\begin{frame}[fragile]
   \frametitle{Les redéfinitions d'horloge}
-}
+  \begin{itemize}
+  \item
+On peut faire en sorte qu'un bloc ne reçoive le \emph{top} de l'horloge qu'à certains cycles. Par exemple, dans le code suivant :
+  \begin{lstlisting}
+    Reg @ horloge R(valeur)
+  \end{lstlisting}
+  le registre \texttt{R} prend en entrée le fil \texttt{valeur}, mais ne
+  le prend en compte qu'aux cycles où le fil \texttt{horloge} est à  $1$.
+  \bigskip
 
-\frame
-{
-  \frametitle{Les périphiques}
-}
+\item
+  Si on redéfinit l'horloge d'un bloc, on redéfinit l'horloge de tous les blocs qu'il contient.\bigskip
+
+\item
+  On peut cumuler les redéfinitions d'horloge.
+\end{itemize}
+\end{frame}
+
+\begin{frame}[fragile]
+  \frametitle{Les redéfinitions d'horloge - Exemple}
+  Ainsi, on peut réaliser un compteur modulo $2^n$ à l'aide de redéfinitions
+  d'horloge :\medskip
+
+  \begin{lstlisting}
+    Count<1>
+        Reg M(N.o)
+        Not N(M.o)
+        -> out : M.o,
+           carry : M.o;
+
+    Count<n>
+        Count<1>   Low
+        Count<n-1> @ Low.carry High
+        And        A(Low.carry, High.carry)
+        -> out[n] : {Low.out, High.out},
+           carry : A.o;
+  \end{lstlisting}
+\end{frame}
+
+\begin{frame}[fragile]
+  \frametitle{Les redéfinitions d'horloge - Avantages} 
+  \begin{itemize}
+  \item
+    Le code est plus facile à écrire, plus clair, et souvent plus court.
+    \bigskip
+
+\item
+  On gagne en vitesse d'exécution.
+\end{itemize}
+\end{frame}
+
+
+\begin{frame}[fragile]
+  \frametitle{Les périphériques}
+  Les périphériques sont un moyen de définir de nouvelles portes en plus des
+  portes de base. On peut les utiliser pour simuler des mémoires, ou des
+  périphériques d'entrée/sortie.\bigskip
+
+  Tous les périphériques ont la même interface (les mêmes fils d'entrée et
+  les mêmes fils de sortie) :
+  \begin{columns}
+    \begin{column}[l]{4cm}
+      \begin{center}Entrées :\end{center}
+      \begin{center}
+        \begin{tabular}{l l}
+          Address             & (32 bits) \\
+          Data                & (32 bits) \\
+          Write mode          & (1 bit)   \\
+          Byte enables        & (4 bits)  \\
+          Enable interrupt    & (1 bit)   \\
+          Interrupt processed & (1 bit)   \\
+        \end{tabular}
+      \end{center}
+    \end{column}
+    \begin{column}[r]{4cm}
+      \begin{center}Sorties :\end{center}
+      \begin{center}
+        \begin{tabular}{l l}
+          Data                & (32 bits) \\
+          Interrupt request   & (1 bit)   \\
+                              &           \\
+                              &           \\
+                              &           \\
+                              &           \\
+        \end{tabular}
+      \end{center}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+\begin{frame}[fragile]
+  \frametitle{Les périphériques}
+  \begin{itemize}
+    \item
+      Les périphériques peuvent contenir du code arbitraire : à chaque
+      périphérique correspond un objet, dont la méthode \texttt{cycle} est
+      appelée à chaque cycle.\bigskip
+
+    \item
+      Ils sont faits pour simuler des périphériques mappés en
+      mémoire.\bigskip
+
+    \item
+      Les périphériques fonctionnent comme les registres : si l'on écrit
+      l'adresse au cycle $t$, on lit le résultat au cycle $t+1$.\bigskip
+
+    \item
+      A posteriori, il aurait été plus pratique de permettre de choisir le type
+      de comportement.\bigskip
+  \end{itemize}
+\end{frame}
+
+
+\begin{frame}[fragile]
+  \frametitle{Les périphériques}
+  \begin{itemize}
+    \item
+
+      On déclare les types de périphériques de la façon suivante :
+      
+      \begin{lstlisting}
+    device Memory<size>
+      \end{lstlisting}
+      \bigskip
+
+    \item
+
+      Puis, on peut les instancier normalement :
+      \begin{lstlisting}
+    Memory<5> Ram($0000...0000, $1111...1111,
+                  $1011, $1, $0)
+      \end{lstlisting}\medskip%$
+
+      Ram.data vaut successivement :
+      \begin{lstlisting}
+    00000000000000000000000000000000
+    00000000000000000000000000000000
+    11111111000000001111111111111111
+    11111111000000001111111111111111
+    ...
+      \end{lstlisting}
+  \end{itemize}
+\end{frame}
+
+
 
 \section{Le compilateur Obsidian}
 
 \frame
 {
   \frametitle{Organisation globale}
+  \begin{figure}
+  \begin{center}
+    \includegraphics[width=10cm,height=6cm]{obsidian1.png}
+    \caption{Architecture d'Obsidian}
+    \label{Architecture d'Obsidian}
+  \end{center}
+\end{figure}
 }
 
 \frame
 {
-  \frametitle{Analyse lexicale, syntaxique et sémantique}
+  \frametitle{Organisation globale}
+  \begin{figure}
+  \begin{center}
+    \includegraphics[width=10cm,height=6.76cm]{obsidian2.png}
+    \caption{Architecture d'Obsidian}
+    \label{Architecture d'Obsidian}
+  \end{center}
+\end{figure}
+}
+
+\frame
+{
+  \frametitle{Analyse sémantique}
+  L'analyse sémantique se charge d'analyser statiquement le circuit afin
+  de repèrer et de résoudre les problèmes qu'il pourrait contenir.
+  En particulier, cette étape vérifie :
+  \begin{itemize}
+  \item que tous les noms de variable employés ont été déclarés et que leur
+    emploi est cohérent avec leur nature (taille des fils, nom des sorties de blocs),
+  \item que chaque application de paramètres lors d'une instance est bien
+    acceptée par un certain motif,
+  \item que la récursion est bien fondée. 
+  \end{itemize}\medskip
+
+  L'AST est transformé de fond en comble : les paramètres et toutes les
+  expressions en dépendant sont évalués lors de cette phase, en particulier les
+  récursions sont explicitées.
 }
 
 \frame
 {
   \frametitle{Construction du graphe}
+  À la sortie de l'analyse sémantique, un AST réifié est obtenu. La
+  transformation en graphe se fait en deux étapes :
+  \begin{itemize}
+  \item Un premier parcours de l'AST détermine la liste des portes
+    que contiendra le graphe. 
+  \item Un deuxième parcours de l'AST se charge de \emph{brancher} les fils entre
+    les portes. Pour cela on considère l'ensemble des \emph{bouts de fil} identifiables
+    (c'est à dire l'ensemble des variables de fils en distinguant selon la portée)
+    et on construit la relation d'équivalence \og est branché avec\fg{} en
+    utilisant un algorithme d'Union-find. Les classes d'équivalence résultantes
+    à la fin du parcours sont exactement l'ensemble des fils.
+  \end{itemize}
 }
 
 \frame
 {
   \frametitle{Génération du code}
+  \begin{itemize}
+    \item
+      On effectue un tri topologique sur le graphe, en essayant de grouper
+      les blocs où l'horloge est redéfinie de la même façon.\bigskip
+    \item
+      On produit un code C++ qui simule le fonctionnement du circuit.\bigskip
+    \item
+      Un tableau pour les sorties des portes, un tableau temporaire pour
+      les registres et les périphériques.\bigskip
+    \item
+      À chaque cycle, on calcule les sorties des blocs dans l'ordre donné
+      par le tri topologique.\bigskip
+    \item
+      Les sorties des registres et des périphériques sont mises à jour
+      à la fin du cycle.
+  \end{itemize}
 }
 
 
