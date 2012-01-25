@@ -116,7 +116,7 @@ struct
   open Graph2.AstToGraph
 
   let gate gate_type gate_index = sprintf "%s (%d)" 
-    (gate_to_base_block gate_type) gate_index
+    (gate_to_base_block gate_type) gate_index 
 
   (*
     ig : input_gate 

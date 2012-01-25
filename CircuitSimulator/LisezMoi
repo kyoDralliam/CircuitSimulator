@@ -1,19 +1,22 @@
 Pour compiler le projet :
 
-make
+  $ make
 
 Pour lancer l'horloge avec une configuration par défaut (Démo !) :
 
-make run
+  $ make run
+
+Pour voir défiler les jours (une seconde par cycle) :
+
+  $ make run-fast
+
+Pour voir défiler les années :
+
+  $ make run-flash
 
 Pour calculer 7! en utilisant notre processeur :
 
-make facto
-
-
-L'horloge n'est à ce jour pas optimisée à fond, on recalcule notamment la date à
-chaque calcul de timestamp. Ce défaut sera corrigé lors de la présentation, et
-viendra avec une fonctionnalité supplémentaire inattendue.
+  $ make facto
 
 Pour plus d'options et d'informations sur l'organisation du projet et les
 différentes cibles possibles de make, on pourra se référer à la section 8 du
