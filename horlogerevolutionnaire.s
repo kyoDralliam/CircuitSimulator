@@ -6,10 +6,10 @@
 # infinie si c'est le cas.
 
     .text
-        li $s6, 0
+        li $t6, 0
 main:
 
-        li      $sp, 4000
+        li      $sp, 8000
         # On sauvegarde $ra
         addi    $sp, $sp, 4
         sw      $ra, 0($sp)
@@ -260,12 +260,14 @@ recalculer:
         #jal     multiplier
         #move    $a0, $v0
         #jal     print_int
-
+#ebfe:
+#        j ebfe
         # On récupère $ra
-        lw      $ra, 0($sp)
-        addi    $sp, $sp, -4
-        jr      $ra
-
+        #lw      $ra, 0($sp)
+        #addi    $sp, $sp, -4
+        #jr      $ra
+        j attendre
+        
 # Affiche l'entier présent dans le registre $a0, suivi d'un retour à la ligne
 #print_int:
         #li      $v0, 1
