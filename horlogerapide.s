@@ -6,14 +6,15 @@
 # infinie si c'est le cas.
 
     .text
-        li      $s6, 0
-        li      $sp, 4000
-        li      $gp, 0
+        li $t6, 0
 main:
-        # On sauvegarde $ra
-#        addi    $sp, $sp, 4
-#        sw      $ra, 0($sp)
 
+        li      $sp, 4000
+        # On sauvegarde $ra
+        # addi    $sp, $sp, 4
+        # sw      $ra, 0($sp)
+
+        li      $gp, 0
 
 attendre:    
         beq $t6, $zero, recalculer
@@ -22,7 +23,7 @@ attendre:
         lw      $s7, 0($t0)
         beq     $t7, $s7, attendre
         
-recalculer:
+recalculer:     
 
         # On récupère le timestamp que l'on met dans $s7
         li      $t0, timestamp
@@ -269,11 +270,11 @@ recalculer:
         #jal     print_int
 
         # On récupère $ra
-        lw      $ra, 0($sp)
-        addi    $sp, $sp, -4
+        #lw      $ra, 0($sp)
+        #addi    $sp, $sp, -4
         #jr      $ra
-        j main
-
+        j attendre
+        
 # Affiche l'entier présent dans le registre $a0, suivi d'un retour à la ligne
 #print_int:
         #li      $v0, 1

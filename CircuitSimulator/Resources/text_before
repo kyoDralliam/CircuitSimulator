@@ -52,6 +52,7 @@ namespace circuit
   {
     stopping = true;
   }
+  long long int current_cycle = -1;
 }
 
 void $(add_active_register_function_name)(int register_number, int gate_output_number)
@@ -77,7 +78,8 @@ int main (int argc, char ** argv)
     int cycles;
     int i;
     int j;
-    
+
+    bool no_cycles_limit = false;    
     bool step_by_step = false;
     bool clocked = false;
     unsigned int clock_period;
@@ -132,15 +134,22 @@ int main (int argc, char ** argv)
         return -1;
      }
 
-    for (j = 0 ; argv[i][j] ; j++)
+    if (argv[i][0] == '-' && argv[i][1] == 0)
      {
-        if ( argv[i][j] < '0' || argv[i][j] > '9' )
-         {
-            fprintf (stderr, usage_information, argv[0]);
-            return -1;
-         }
+        no_cycles_limit = true;
      }
-    sscanf (argv[i], "%d", &cycles);
+    else
+     {
+        for (j = 0 ; argv[i][j] ; j++)
+         {
+            if ( argv[i][j] < '0' || argv[i][j] > '9' )
+             {
+                fprintf (stderr, usage_information, argv[0]);
+                return -1;
+             }
+         }
+        sscanf (argv[i], "%d", &cycles);
+     }
 
     read_bytes = fread (circuit_inputs,1, $(circuit_inputs_array_length), stdin);
     if (read_bytes != $(circuit_inputs_array_length))

@@ -1,14 +1,13 @@
 Production de code
 ------------
 
-Une fois le graphe produit, on effectue un tri topologique sur le graphe
-représentant le graphe, en "coupant" au niveau des registres et des
-périphériques (afin d'autoriser les boucles qui passent par ces
-portes). Ensuite, on écrit un code C++ qui déclare un tableau qui doit
-contenir les sorties des portes et qui, à chaque cycle, calcule la sortie
-de chaque porte à partir des sorties des portes dont elles dépend, donné
-par le tri topologique. Les registres (et les périphériques) sont traités
-de manière un peu différente : leur nouvelle valeur n'est pas stockée
-directement dans le tableau des sorties, mais dans un autre tableau. Au
-début du cycle suivant, les nouvelles valeurs des registres sont copiées
-depuis cet autre tableau dans le tableau des sorties.
+Une fois que l'on a construit le graphe représentant le circuit, on effectue un
+tri topologique en "coupant" au niveau des registres et des périphériques (afin
+d'autoriser les boucles qui passent par ces portes). Ensuite, on écrit un code
+C++ qui déclare un tableau contenant les sorties des portes et qui, à chaque
+cycle, calcule la sortie de chaque porte à partir des sorties des portes en
+amont (ce renseignement est donné par le tri topologique). Les registres (et les
+périphériques) sont traités de manière un peu différente : leur nouvelle valeur
+n'est pas stockée directement dans le tableau des sorties, mais dans un autre
+tableau. Au début du cycle suivant, les nouvelles valeurs des registres sont
+copiées depuis cet autre tableau dans le tableau des sorties.
