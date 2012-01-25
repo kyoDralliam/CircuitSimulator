@@ -6,60 +6,256 @@
 
 \usepackage{graphicx}
 \usepackage{wrapfig}
+\usepackage{listings}
 
-\usepackage{beamerthemesplit} 
+\usepackage{beamerthemesplit}
+\usetheme{CambridgeUS} 
 
-\title{LCA : Plus petit ancêtre commun dans un arbre}
+\title{LCA}
 \author{Maillard Kenji}
 \date{\today}
 
 \begin{document}
 
-\section{Ma premiere section}
-
-\subsection{Ma sous section}
+\section{Le langage Rock}
 
 \frame
 {
-  \frametitle{Mon titre}
-  Plusieurs problèmes rencontrés pendant le projet :
+  \titlepage
+}
+
+\frame
+{
+  \tableofcontents
+}
+
+\frame
+{
+  \frametitle{Description du langage}
+  Le langage de description des circuits est un langage déclaratif basé sur la
+  notion de blocs :
   \begin{itemize}
-    \item Prise en main du langage C et de ses erreurs parfois assez
-      obscures.
-    \item Adaptation des détails de l'algorithmes, notamment au niveau
-      des parties entières des logarithmes.
+  \item Les blocs de base : \texttt{Xor}, \texttt{And}, \texttt{Or},
+    \texttt{Mux}, \texttt{Not}, \texttt{Gnd}, \texttt{Vdd} et \texttt{Reg}.
+  \item Les blocs définis par l'utilisateur. 
+  \item Les périphériques ou blocs externes.
   \end{itemize}
 
+  \vspace{1cm}
+  Il est compilé à l'aide du logiciel \emph{Obsidian}.
+}
+
+\begin{frame}[fragile]
+  \frametitle{Exemple d'emploi}
+  \small
+  \begin{lstlisting}
+ HalfAdder ( a, b)
+    Xor X( a, b)
+    And	A( a, b)
+    -> o : X.o, c : A.o ;
+
+ ParallelAdder <1> ( a, b, c)
+    HalfAdder H1( a, b)
+    HalfAdder H2( c, H1.o)
+    Or O( H1.c, H2.c) (a, b)
+    -> o : H2.o, c : O.o ;  
+
+ ParallelAdder <n> (a[n] , b[n], c)
+    ParallelAdder<n-1> A (a[0..n-2], b[0..n-2], c)  
+    FullAdder F (a[n-1], b[n-1], A.c) 
+    -> o[n] : { A.o, F.o }, c : F.c ;
+
+ start ParallelAdder < 8 >
+  \end{lstlisting}
+\end{frame}
+
+\frame
+{
+  \frametitle{Les blocs}
+
 }
 
 \frame
 {
+  \frametitle{Les fils}
 
 }
 
-\subsection{ La deuxieme sous section}
 
 \frame
 {
-  hey hey
+  \frametitle{Motifs \& récursion}
+
 }
 
-\section{La deuxieme section }
-
-\subsection{Ma sous section}
-
-\frame
-{
-  \frametitle{Mon titre}
-  Plusieurs problèmes rencontrés pendant le projet :
+\begin{frame}[fragile]
+  \frametitle{Les redéfinitions d'horloge}
   \begin{itemize}
-    \item Prise en main du langage C et de ses erreurs parfois assez
-      obscures.
-    \item Adaptation des détails de l'algorithmes, notamment au niveau
-      des parties entières des logarithmes.
-  \end{itemize}
+  \item[\textbullet]
+On peut faire en sorte qu'un bloc ne reçoive le \emph{top} de l'horloge qu'à certains cycles. Par exemple, dans le code suivant :
+  \begin{lstlisting}
+    Reg @ horloge R(valeur)
+  \end{lstlisting}
+  le registre \texttt{R} prend en entrée le fil \texttt{valeur}, mais ne
+  le prend en compte qu'aux cycles où le fil \texttt{horloge} est à  $1$.
+  \bigskip
 
+\item[\textbullet]
+  Si on redéfinit l'horloge d'un bloc, on redéfinit l'horloge de tous les blocs qu'il contient.\bigskip
+
+\item[\textbullet]
+  On peut cumuler les redéfinitions d'horloge.
+\end{itemize}
+\end{frame}
+
+\begin{frame}[fragile]
+  \frametitle{Les redéfinitions d'horloge - Exemple}
+  Ainsi, on peut réaliser un compteur modulo $2^n$ à l'aide de redéfinitions
+  d'horloge :\medskip
+
+  \begin{lstlisting}
+    Count<1>
+        Reg M(N.o)
+        Not N(M.o)
+        -> out : M.o,
+           carry : M.o;
+
+    Count<n>
+        Count<1>   Low
+        Count<n-1> @ Low.carry High
+        And        A(Low.carry, High.carry)
+        -> out[n] : {Low.out, High.out},
+           carry : A.o;
+  \end{lstlisting}
+\end{frame}
+
+\begin{frame}[fragile]
+  \frametitle{Les redéfinitions d'horloge - Avantages}
+  \begin{itemize}
+  \item[\textbullet]
+    Le code est plus facile à écrire, plus clair, et souvent plus court.
+    \bigskip
+
+\item[\textbullet]
+  On gagne en vitesse d'exécution.
+\end{itemize}
+\end{frame}
+
+
+\begin{frame}[fragile]
+  \frametitle{Les périphériques}
+  Les périphériques sont un moyen de définir de nouvelles portes en plus des
+  portes de base. On peut les utiliser pour simuler des mémoires, ou des
+  périphériques d'entrée/sortie.\bigskip
+
+  Tous les périphériques ont la même interface (les mêmes fils d'entrée et
+  les mêmes fils de sortie) :
+  \begin{columns}
+    \begin{column}[l]{4cm}
+      \begin{center}Entrées :\end{center}
+      \begin{center}
+        \begin{tabular}{l l}
+          Address             & (32 bits) \\
+          Data                & (32 bits) \\
+          Write mode          & (1 bit)   \\
+          Byte enables        & (4 bits)  \\
+          Enable interrupt    & (1 bit)   \\
+          Interrupt processed & (1 bit)   \\
+        \end{tabular}
+      \end{center}
+    \end{column}
+    \begin{column}[r]{4cm}
+      \begin{center}Sorties :\end{center}
+      \begin{center}
+        \begin{tabular}{l l}
+          Data                & (32 bits) \\
+          Interrupt request   & (1 bit)   \\
+                              &           \\
+                              &           \\
+                              &           \\
+                              &           \\
+        \end{tabular}
+      \end{center}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+\begin{frame}[fragile]
+  \frametitle{Les périphériques}
+  \begin{itemize}
+    \item[\textbullet]
+      Les périphériques peuvent contenir du code arbitraire : à chaque
+      périphérique correspond un objet, dont la méthode \texttt{cycle} est
+      appelée à chaque cycle.\bigskip
+
+    \item[\textbullet]
+      Ils sont faits pour simuler des périphériques mappés en
+      mémoire.\bigskip
+
+    \item[\textbullet]
+      Les périphériques fonctionnent comme les registres : si l'on écrit
+      l'adresse au cycle $t$, on lit le résultat au cycle $t+1$.\bigskip
+
+    \item[\textbullet]
+      A posteriori, il aurait été plus pratique de donner le choix.\bigskip
+  \end{itemize}
+\end{frame}
+
+
+\begin{frame}[fragile]
+  \frametitle{Les périphériques}
+  \begin{itemize}
+    \item[\textbullet]
+
+      On déclare les types de périphériques de la façon suivante :
+      
+      \begin{lstlisting}
+    device Memory<size>
+      \end{lstlisting}
+      \bigskip
+
+    \item[\textbullet]
+
+      Puis, on peut les instancier normalement :
+      \begin{lstlisting}
+    Memory<5> Ram($0000...0000, $1111...1111,
+                  $1011, $1, $0)
+      \end{lstlisting}\medskip%$
+
+      Ram.data vaut successivement :
+      \begin{lstlisting}
+    00000000000000000000000000000000
+    00000000000000000000000000000000
+    11111111000000001111111111111111
+    11111111000000001111111111111111
+    ...
+      \end{lstlisting}
+  \end{itemize}
+\end{frame}
+      
+
+\section{Le compilateur Obsidian}
+
+\frame
+{
+  \frametitle{Organisation globale}
 }
+
+\frame
+{
+  \frametitle{Analyse lexicale, syntaxique et sémantique}
+}
+
+\frame
+{
+  \frametitle{Construction du graphe}
+}
+
+\frame
+{
+  \frametitle{Génération du code}
+}
+
 
 \end{document}
 
