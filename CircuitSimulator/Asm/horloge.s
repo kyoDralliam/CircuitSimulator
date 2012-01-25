@@ -258,8 +258,8 @@ recalculer:
         #jal     print_int
 
         # On récupère $ra
-        lw      $ra, 0($sp)
-        addi    $sp, $sp, -4
+        # lw      $ra, 0($sp)
+        # addi    $sp, $sp, -4
         j main
 
 # Affiche l'entier présent dans le registre $a0, suivi d'un retour à la ligne
