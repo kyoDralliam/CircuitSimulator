@@ -52,6 +52,7 @@ namespace circuit
   {
     stopping = true;
   }
+  long long int current_cycle = -1;
 }
 
 void $(add_active_register_function_name)(int register_number, int gate_output_number)

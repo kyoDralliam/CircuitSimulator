@@ -7,12 +7,11 @@
 
     .text
         li $s6, 0
-main:
-
         li $sp, 4000
+main:
         # On sauvegarde $ra
-        addi    $sp, $sp, 4
-        sw      $ra, 0($sp)
+        # addi    $sp, $sp, 4
+        # sw      $ra, 0($sp)
 
 attendre:    
         beq $t6, $zero, recalculer
@@ -259,9 +258,9 @@ recalculer:
         #jal     print_int
 
         # On récupère $ra
-        lw      $ra, 0($sp)
-        addi    $sp, $sp, -4
-        jr      $ra
+        # lw      $ra, 0($sp)
+        # addi    $sp, $sp, -4
+        j main
 
 # Affiche l'entier présent dans le registre $a0, suivi d'un retour à la ligne
 #print_int:
