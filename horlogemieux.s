@@ -7,11 +7,13 @@
 
     .text
         li $s6, 0
-        li $sp, 4000
+        li      $sp, 4000
 main:
         # On sauvegarde $ra
-#      addi    $sp, $sp, 4
+#        addi    $sp, $sp, 4
 #        sw      $ra, 0($sp)
+
+        li      $gp, 0
 
 attendre:    
         beq $t6, $zero, recalculer
@@ -42,6 +44,7 @@ recalculer:
         li      $a1, 86400
         jal     multiplier
         sub     $s1, $s7, $v0 # $s1 = "reste" en secondes
+        move    $fp, $s1
         
         # Calcul de l'heure
         move    $a0, $s1
@@ -102,7 +105,15 @@ recalculer:
             add     $t0, $t0, $t5
             lb      $t1, 0($t0)
             sb      $t1, 5($t2)
-        
+
+        # Si c'est la première fois que l'on passe par là, on force le calcul de la date
+        beq     $gp, $zero, date
+
+        # Si on n'est pas 00:00:00, on recalcule l'heure sans recalculer la date
+        bne     $fp, $zero, attendre
+    
+    date:
+        li      $gp, 42
         # ---- Calcul de la date ----
         # On commence par rajouter un décalage pour les années bissextiles
         # Dans le cas absurde où on se trouverait avant le premier décalage, on
