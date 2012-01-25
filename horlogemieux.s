@@ -6,14 +6,14 @@
 # infinie si c'est le cas.
 
     .text
-        li $s6, 0
+        li      $s6, 0
         li      $sp, 4000
+        li      $gp, 0
 main:
         # On sauvegarde $ra
 #        addi    $sp, $sp, 4
 #        sw      $ra, 0($sp)
 
-        li      $gp, 0
 
 attendre:    
         beq $t6, $zero, recalculer
