@@ -1068,7 +1068,8 @@ let circuit_code (graph, (number_of_circuit_inputs, number_of_circuit_outputs,
     margin ^ "gettimeofday (&simulated_time, NULL);\n" ^
     margin ^ "gettimeofday (&current_time, NULL);\n" ^
     "\n" ^
-    margin ^ "for (i = 0 ; i <= cycles && !stopping ; i++)\n" ^
+    margin ^ 
+    "for (i = 0 ; (i <= cycles || no_cycles_limit) && !stopping ; i++)\n" ^
     margin ^ " {\n" ^
     "\n");
 
