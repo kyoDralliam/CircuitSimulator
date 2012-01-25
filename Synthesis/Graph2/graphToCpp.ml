@@ -617,7 +617,12 @@ let node_code graph old_num gates_inputs_positions gates_outputs_positions
   
   let inputs_codes = Array.map
     (fun input_position ->
-      gates_outputs_array_name ^ "[" ^ (string_of_int input_position) ^ "]")
+      if input_position = 0 then
+        "0"
+      else if input_position = 1 then
+        "1"
+      else
+        gates_outputs_array_name ^ "[" ^ (string_of_int input_position) ^ "]")
     gates_inputs_positions.(node_new)
   in
 
@@ -741,12 +746,22 @@ let add_device_codes buffer graph old_num
           let rec pack_inputs inputs_positions first_bit last_bit =
             if first_bit = last_bit then
               Buffer.add_string buffer
-                (gates_outputs_array_name ^
-                  "[" ^ (string_of_int inputs_positions.(first_bit)) ^ "]")
+                (if inputs_positions.(first_bit) = 0 then
+                  "0"
+                else if inputs_positions.(first_bit) = 1 then 
+                   "1" 
+                 else
+                   gates_outputs_array_name ^
+                     "[" ^ (string_of_int inputs_positions.(first_bit)) ^ "]")
             else
               (Buffer.add_string buffer
-                ("(" ^ gates_outputs_array_name ^
-                  "[" ^ (string_of_int inputs_positions.(first_bit)) ^ "]|(");
+                ("(" ^ (if inputs_positions.(first_bit) = 0 then
+                  "0"
+                else if inputs_positions.(first_bit) = 1 then 
+                   "1" 
+                 else
+                   gates_outputs_array_name ^
+                     "[" ^ (string_of_int inputs_positions.(first_bit)) ^ "]") ^ "|(");
               pack_inputs inputs_positions (first_bit+1) last_bit;
               Buffer.add_string buffer "<<1))")
           in

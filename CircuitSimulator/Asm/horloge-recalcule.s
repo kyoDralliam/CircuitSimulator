@@ -6,15 +6,12 @@
 # infinie si c'est le cas.
 
     .text
-        li $t6, 0
+        li $s6, 0
+        li $sp, 4000
 main:
-
-        li      $sp, 4000
         # On sauvegarde $ra
         # addi    $sp, $sp, 4
         # sw      $ra, 0($sp)
-
-        li      $gp, 0
 
 attendre:    
         beq $t6, $zero, recalculer
@@ -45,7 +42,6 @@ recalculer:
         li      $a1, 86400
         jal     multiplier
         sub     $s1, $s7, $v0 # $s1 = "reste" en secondes
-        move    $fp, $s1
         
         # Calcul de l'heure
         move    $a0, $s1
@@ -106,15 +102,7 @@ recalculer:
             add     $t0, $t0, $t5
             lb      $t1, 0($t0)
             sb      $t1, 5($t2)
-
-        # Si c'est la première fois que l'on passe par là, on force le calcul de la date
-        beq     $gp, $zero, date
-
-        # Si on n'est pas 00:00:00, on recalcule l'heure sans recalculer la date
-        bne     $fp, $zero, attendre
-    
-    date:
-        li      $gp, 42
+        
         # ---- Calcul de la date ----
         # On commence par rajouter un décalage pour les années bissextiles
         # Dans le cas absurde où on se trouverait avant le premier décalage, on
@@ -270,11 +258,10 @@ recalculer:
         #jal     print_int
 
         # On récupère $ra
-        #lw      $ra, 0($sp)
-        #addi    $sp, $sp, -4
-        #jr      $ra
-        j attendre
-        
+        # lw      $ra, 0($sp)
+        # addi    $sp, $sp, -4
+        j main
+
 # Affiche l'entier présent dans le registre $a0, suivi d'un retour à la ligne
 #print_int:
         #li      $v0, 1

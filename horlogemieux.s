@@ -6,7 +6,7 @@
 # infinie si c'est le cas.
 
     .text
-        li      $s6, 0
+        li      $t6, 0
         li      $sp, 4000
         li      $gp, 0
 main:
@@ -29,7 +29,7 @@ recalculer:
         lw      $s7, 0($t0)
         #li      $s7, 1327338988
 
-        li $t6, 1
+        addi $t6, $t6, 1
         move $t7, $s7
         
         # On calcule le nombre de jours écoulés depuis le 01/01/1970
@@ -269,8 +269,8 @@ recalculer:
         #jal     print_int
 
         # On récupère $ra
-        lw      $ra, 0($sp)
-        addi    $sp, $sp, -4
+        #lw      $ra, 0($sp)
+        #addi    $sp, $sp, -4
         #jr      $ra
         j main
 

@@ -1,13 +1,15 @@
 GPP=g++
 
-all: main
+all: ../obsidian
+
+../obsidian: _build/FrontEnd/main.native
+	@cp _build/FrontEnd/main.native ../obsidian
 
 toplevel:
 	ocamlbuild -use-menhir -lib str tools.top
 
-main:
+_build/FrontEnd/main.native:
 	ocamlbuild -use-menhir -lib str main.native
-	@cp _build/FrontEnd/main.native ../obsidian
 	rm main.native
 
 debug:

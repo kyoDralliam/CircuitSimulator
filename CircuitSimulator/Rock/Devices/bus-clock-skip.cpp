@@ -202,7 +202,7 @@ unsigned int Clock_bus::cycle (unsigned int address, unsigned int data,
                             bool interrupt_enable, bool iack, char * irq)
 {
   unsigned int r = memory_access(address, data, byte_enables, write_enable);
-  if (++ticks == frequency) {ticks = 0; timestamp+=0x7F;}
+  if (++ticks == frequency) {ticks = 0; timestamp+=100;}
   wrote = write_enable;
   return r;
 }
@@ -573,5 +573,6 @@ namespace
           }
         pthread_mutex_unlock(&ncurses_mutex);
       }
+    return 0;
   }
 }

@@ -9,4 +9,4 @@ debug:
 
 clean:
 	ocamlbuild -clean
-	rm ../assembleur
+	rm -f ../assembleur

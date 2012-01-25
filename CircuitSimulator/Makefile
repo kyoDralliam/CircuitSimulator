@@ -1,13 +1,13 @@
 GPP=g++
-FREQ=8000
-NB_OP=1000000
+FREQ=5000
+NB_OP=-
 
 all: micro horloge
 
 run: all
-	./Micro -c $(FREQ) $(NB_OP)
+	./micro -c $(FREQ) $(NB_OP)
 
-obsidian:
+obsidian: .FORCE
 	$(MAKE) --directory=ObsidianCompiler 
 
 compiled-tests/:
@@ -32,9 +32,9 @@ micro: obsidian
 	mkdir _build
 	$(GPP) -o _build/memory.o -c Rock/Devices/memory.cpp
 	$(GPP) -o _build/bus-clock.o -c Rock/Devices/bus-clock.cpp
-	./obsidian -cc $(GPP) -o Micro _build/bus-clock.o _build/memory.o \
-	-ccflags "-lncurses,-lpthread" Rock/Processor/Micro.rock
-	rm -R _build
+	./obsidian -cc $(GPP) -o micro _build/bus-clock.o _build/memory.o \
+	-ccflags "-lncurses,-lpthread,-O2" Rock/Processor/Micro.rock
+	rm -Rf _build
 
 micro-classique: obsidian
 	mkdir _build
@@ -52,12 +52,42 @@ run-facto: micro-classique assembleur
 	./assembleur -o ram Asm/facto_rec.s
 	./MicroClassique -s 567
 
+micro-fast: obsidian
+	mkdir _build
+	$(GPP) -o _build/memory.o -c Rock/Devices/memory.cpp
+	$(GPP) -o _build/bus-clock.o -c Rock/Devices/bus-clock.cpp
+	./obsidian -cc $(GPP) -o micro-fast _build/bus-clock.o \
+	    _build/memory.o -ccflags "-lncurses,-lpthread,-O2" \
+	    Rock/Processor/Micro-freq-1.rock
+	rm -Rf _build
+
+micro-flash: obsidian
+	mkdir _build
+	$(GPP) -o _build/memory.o -c Rock/Devices/memory.cpp
+	$(GPP) -o _build/bus-clock.o -c Rock/Devices/bus-clock-skip.cpp
+	./obsidian -cc $(GPP) -o micro-flash _build/bus-clock.o \
+	    _build/memory.o -ccflags "-lncurses,-lpthread,-O2" \
+	    Rock/Processor/Micro-freq-1.rock
+	rm -Rf _build
+
+run-fast: micro-fast assembleur
+	./assembleur -o ram Asm/horloge-recalcule.s
+	./micro-fast $(NB_OP)
+
+run-flash: micro-flash assembleur
+	./assembleur -o ram Asm/horloge-recalcule.s
+	./micro-flash $(NB_OP)
+
 clean:
 	$(MAKE) --directory=ObsidianCompiler clean
 	$(MAKE) --directory=AssembleurDir clean	
 	rm -rf compiled-tests
-	rm -f Micro
+	rm -f micro
 	rm -f ram
 	rm -f MicroClassique
+	rm -f micro-fast
+	rm -f micro-flash
+
+.FORCE:
 
 .PHONY: all clean run toplevel main debug tests assembleur
