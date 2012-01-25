@@ -254,6 +254,22 @@ On peut faire en sorte qu'un bloc ne reçoive le \emph{top} de l'horloge qu'à cer
 \frame
 {
   \frametitle{Génération du code}
+  \begin{itemize}
+    \item[\textbullet]
+      On effectue un tri topologique sur le graphe, en essayant de grouper
+      les blocs où l'horloge est redéfinie de la même façon.\bigskip
+    \item[\textbullet]
+      On produit un code C++ qui simule le fonctionnement du circuit.\bigskip
+    \item[\textbullet]
+      Un tableau pour les sorties des portes, un tableau temporaire pour
+      les registres et les périphériques.\bigskip
+    \item[\textbullet]
+      À chaque cycle, on calcule les sorties des blocs dans l'ordre donné
+      par le tri topologique.\bigskip
+    \item[\textbullet]
+      Les sorties des registres et des périphériques sont mises à jour
+      à la fin du cycle.
+  \end{itemize}
 }
 
 
