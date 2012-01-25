@@ -8,6 +8,28 @@ device Memory_reader <id>
 device Clock_bus <id, memory_size, number_of_displays, frequency>
 device Clock_bus_reader <id>
 
+#############################
+# Multiplexeur avec enables #
+#############################
+
+Mux_scalar <1> (selector, input0[1], input1[1])
+	Mux M(selector, input0, input1)
+	-> o : M.o;
+Mux_scalar <n> (selector, input0[n], input1[n])
+	Mux_scalar<n-1> Low(selector, input0[0..n-2], input1[0..n-2])
+	Mux High(selector, input0[n-1], input1[n-1])
+	-> o[n] : {Low.o, High.o};
+
+Mux_enables <1,d> (selector[1], input[d*2^1])
+	Mux_scalar<d> M(selector, input[0..d-1], input[d..2*d-1])
+	-> output[d] : M.o;
+Mux_enables <a,d> #(selector[a], input[d*2^a])
+       Not Use_low (selector[a-1])
+       Mux_enables<a-1,d> @ Use_low.o     Low(selector[0..a-2], input[0..d*2^(a-1)-1])
+       Mux_enables<a-1,d> @ selector[a-1] High(selector[0..a-2], input[d*2^(a-1)..d*2^a-1])
+       Mux_scalar<d> M(selector[a-1], Low.output, High.output)
+       -> ;#output[d] : M.output;
+
 ##################################
 # Opérations standard sur n bits #
 ##################################
@@ -18,7 +40,7 @@ device Clock_bus_reader <id>
 # Opérations logiques 
 
 Et <1> (a,b)
-   And A (a,b)
+   And A(a,b)
    -> o : A.o ;
 
 Et <n> (a[n],b[n])
@@ -278,38 +300,38 @@ Not32 (a[32])
 
 #Et 
 BinOp<0,m> (a[m], b[m], sel[4]) 
-    Et <m> A(a[0..m-1], b[0..m-1])
-    Filtre<m> F($0000, sel[0..3])
-    Et <m> Res (A.o, F.o)             
-    -> o[m] : Res.o;
+    Et <m> A(a[0..m-1], b[0..m-1])    
+    #Filtre<m> F($0000, sel[0..3])
+    #Et <m> Res (A.o, F.o)             
+    -> o[m] : A.o;
 
 #Ou 
 BinOp<1,m> (a[m], b[m], sel[4])
     Ou <m> A(a[0..m-1], b[0..m-1])
-    Filtre<m> F($1000, sel[0..3])
-    Et <m> Res (A.o, F.o)          
-    -> o[m] : Res.o ;
+    #Filtre<m> F($1000, sel[0..3])
+    #Et <m> Res (A.o, F.o)          
+    -> o[m] : A.o ;
 
 #Xor 
 BinOp<2,m> (a[m], b[m], sel[4])
     Xou <m> A(a[0..m-1], b[0..m-1])
-    Filtre<m> F($0100, sel[0..3])
-    Et <m> Res (A.o, F.o)          
-    -> o[m] : Res.o ;
+    #Filtre<m> F($0100, sel[0..3])
+    #Et <m> Res (A.o, F.o)          
+    -> o[m] : A.o ;
 
 #Nand 
 BinOp<3,m> (a[m], b[m], sel[4])
     Net <m> A(a[0..m-1],b[0..m-1])
-    Filtre<m> F($1100, sel[0..3])
-    Et <m> Res (A.o, F.o)          
-    -> o[m] : Res.o ;
+    #Filtre<m> F($1100, sel[0..3])
+    #Et <m> Res (A.o, F.o)          
+    -> o[m] : A.o ;
 
 #Nor 
 BinOp<4,m> (a[m], b[m], sel[4])
     Nou <m> A(a[0..m-1],b[0..m-1])
-    Filtre<m> F($0010, sel[0..3])
-    Et <m> Res (A.o, F.o)          
-    -> o[m] : Res.o ;
+    #Filtre<m> F($0010, sel[0..3])
+    #Et <m> Res (A.o, F.o)          
+    -> o[m] : A.o ;
 
 
 # Logique - Ternaire
@@ -329,16 +351,16 @@ USub32 (a[32])
 #addition
 BinOp<5,m> (a[m], b[m], sel[4])
     Adder <m> A(a[0..m-1],b[0..m-1])
-    Filtre<m> F($1010, sel[0..3])
-    Et <m> Res (A.o, F.o)          
-    -> o[m] : Res.o ;
+    #Filtre<m> F($1010, sel[0..3])
+    #Et <m> Res (A.o, F.o)          
+    -> o[m] : A.o ;
 
 #Soustraction
 BinOp<6,m> (a[m],b[m], sel[4])
     Sub <m> A(a[0..m-1],b[0..m-1])
-    Filtre<m> F($0110, sel[0..3])
-    Et <m> Res (A.o, F.o)          
-    -> o[m] : Res.o ;
+    #Filtre<m> F($0110, sel[0..3])
+    #Et <m> Res (A.o, F.o)          
+    -> o[m] : A.o ;
 
 #Multiplication ici desactivée pour avoir un circuit plus léger
 
@@ -356,64 +378,64 @@ BinOp<7,m> (a[m],b[m],sel[4])
 #Egal
 BinOp<8,m> (a[m],b[m], sel[4])
     Egal <m> A(a[0..m-1],b[0..m-1])
-    Filtre<1> F($0001, sel[0..3])
-    Et <1> Res (A.o, F.o)
+    #Filtre<1> F($0001, sel[0..3])
+    #Et <1> Res (A.o, F.o)
     Zero<m-1> Z() 
-    -> o[m] : {Res.o, Z.o} ;
+    -> o[m] : {A.o, Z.o} ;
 
 #Différent
 BinOp<9,m> (a[m],b[m], sel[4])
     Egal <m> B(a[0..m-1],b[0..m-1])
     Not A(B.o)
-    Filtre<1> F($1001, sel[0..3])
-    Et <1> Res (A.o, F.o)
+    #Filtre<1> F($1001, sel[0..3])
+    #Et <1> Res (A.o, F.o)
     Zero<m-1> Z()          
-    -> o[m] : {Res.o, Z.o} ;
+    -> o[m] : {A.o, Z.o} ;
 
 #inf
 BinOp<10,m> (a[m],b[m], sel[4])
     InfStrict <m> A(a[0..m-1],b[0..m-1])
-    Filtre<1> F($0101, sel[0..3])
-    Et <1> Res (A.o, F.o)
+    #Filtre<1> F($0101, sel[0..3])
+    #Et <1> Res (A.o, F.o)
     Zero<m-1> Z()          
-    -> o[m] : {Res.o, Z.o} ;
+    -> o[m] : {A.o, Z.o} ;
 
 #sup
 BinOp<11,m> (a[m],b[m], sel[4])
     SupStrict <m> A(a[0..m-1],b[0..m-1])
-    Filtre<1> F($1101, sel[0..3])
-    Et <1> Res (A.o, F.o)
+    #Filtre<1> F($1101, sel[0..3])
+    #Et <1> Res (A.o, F.o)
     Zero<m-1> Z()          
-    -> o[m] : {Res.o, Z.o} ;
+    -> o[m] : {A.o, Z.o} ;
 
 #inf ou egal
 BinOp<12,m> (a[m],b[m], sel[4])
     InfEgal <m> A(a[0..m-1],b[0..m-1])
-    Filtre<1> F($0011, sel[0..3])
-    Et <1> Res (A.o, F.o)
+    #Filtre<1> F($0011, sel[0..3])
+    #Et <1> Res (A.o, F.o)
     Zero<m-1> Z()          
-    -> o[m] : {Res.o, Z.o} ;
+    -> o[m] : {A.o, Z.o} ;
 
 #sup ou egal
 BinOp<13,m> (a[m],b[m], sel[4])
     SupEgal <m> A(a[0..m-1],b[0..m-1])
-    Filtre<1> F($1011, sel[0..3])
-    Et <1> Res (A.o, F.o)
+    #Filtre<1> F($1011, sel[0..3])
+    #Et <1> Res (A.o, F.o)
     Zero<m-1> Z()          
-    -> o[m] : {Res.o, Z.o} ;
+    -> o[m] : {A.o, Z.o} ;
 
 #decalage de 16 bit de l'opérande gauche
 
 BinOp<14,2*m> (a[2*m],b[2*m], sel[4])
-    Filtre<2*m> F($0111, sel[0..3])
-    Et <2*m> Res ({a[0..m-1],b[0..m-1]}, F.o)          
-    -> o[2*m] : {Res.o} ;
+    #Filtre<2*m> F($0111, sel[0..3])
+    #Et <2*m> Res ({a[0..m-1],b[0..m-1]}, F.o)          
+    -> o[2*m] : {a[0..m-1],b[0..m-1]} ;
 
 #val op gauche
 BinOp<15,m> (a[m],b[m], sel[4])
-    Filtre<m> F($1111, sel[0..3])
-    Et <m> Res (a[0..m-1], F.o)          
-    -> o[m] : {Res.o} ;
+    #Filtre<m> F($1111, sel[0..3])
+    #Et <m> Res (a[0..m-1], F.o)          
+    -> o[m] : a[0..m-1] ;
 
 
 
@@ -501,6 +523,7 @@ Entier <2*n+1,m> ()
 # ALU #
 #######
 
+(*
 AluPartiel <0,m> (a[m], b[m], sel[4])
    BinOp<0,m> B(a[0..m-1], b[0..m-1], sel[0..3])
    -> o[m] : B.o;
@@ -510,9 +533,24 @@ AluPartiel <n,m> (a[m], b[m], sel[4])
    BinOp <n,m> B(a[0..m-1], b[0..m-1], sel[0..3])
    Ou <m> O(A.o, B.o)
    -> o[m] : O.o;   
+*)
+
+AluPartiel <1,n,m> (a[m], b[m], sel[4])
+   Not Use_n (sel[0])
+   BinOp<n,m>   @ Use_n.o A(a[0..m-1], b[0..m-1], sel[0..3])
+   BinOp<n+1,m> @ sel[0]  B(a[0..m-1], b[0..m-1], sel[0..3])
+   Mux_scalar<m> M(sel[0],A.o,B.o)
+   -> o[m] : M.o;
+   
+AluPartiel <p,n,m> (a[m], b[m], sel[4])
+   Not Use_low (sel[p-1])
+   AluPartiel <p-1,n,m>         @ Use_low.o A(a[0..m-1], b[0..m-1], sel[0..3])
+   AluPartiel <p-1,n+2^(p-1),m> @ sel[p-1]  B(a[0..m-1], b[0..m-1], sel[0..3])
+   Mux_scalar<m> M(sel[p-1],A.o,B.o)
+   -> o[m] : M.o;   
 
 Alu <m> (a[m], b[m], sel[4])
-   AluPartiel <15,m> A(a[0..m-1], b[0..m-1], sel[0..3])
+   AluPartiel <4,0,m> A(a[0..m-1], b[0..m-1], sel[0..3])
    -> o[m] : A.o;  
 
 ###########
@@ -804,34 +842,54 @@ Controleur <b> (instr[32], alu[32], gestReg[32], pc[b], memVal[32], gr_reader[32
     Egal <4> OpcodeMemLect({instr[0], instr[3..5]}, $1001)
     Egal <4> OpcodeMemEcr (instr[2..5], $0101)
 
-    DecodeurR <b> DR(instr[0..5], instr[6..10], instr[11..15], instr[16..20], instr[21..25], instr[26..31], alu[0..31], gestReg[0..31], pc[0..b-1], gr_reader[0..31])
-    FiltreSel <1+5+32+32+32+4+32 + 32 + 4 + 3 + 5 +b> SortieR(DR.sortieConc, OpcodeR.o)
+    DecodeurR <b> @ OpcodeR.o DR(instr[0..5], instr[6..10], instr[11..15], instr[16..20], instr[21..25], instr[26..31], alu[0..31], gestReg[0..31], pc[0..b-1], gr_reader[0..31])
+    #FiltreSel <1+5+32+32+32+4+32 + 32 + 4 + 3 + 5 +b> SortieR(DR.sortieConc, OpcodeR.o)
 
-    DecodeurI <b> DI(instr[0..5], instr[6..10], instr[11..15], instr[16..31], alu[0..31], gestReg[0..31], pc[0..b-1])
-    FiltreSel <1+5+32+32+32+4+32 + 32 + 4 + 3 +5+b> SortieI(DI.sortieConc, OpcodeI.o)
+    DecodeurI <b> @ OpcodeI.o DI(instr[0..5], instr[6..10], instr[11..15], instr[16..31], alu[0..31], gestReg[0..31], pc[0..b-1])
+    #FiltreSel <1+5+32+32+32+4+32 + 32 + 4 + 3 +5+b> SortieI(DI.sortieConc, OpcodeI.o)
 
-    DecodeurJ <b> DJ(instr[0..5], instr[6..31], pc[0..b-1])
-    FiltreSel <1+5+32+32+32+4+32 + 32 + 4 + 3 + 5+b> SortieJ(DJ.sortieConc, OpcodeJ.o) 
+    DecodeurJ <b> @ OpcodeJ.o DJ(instr[0..5], instr[6..31], pc[0..b-1])
+    #FiltreSel <1+5+32+32+32+4+32 + 32 + 4 + 3 + 5+b> SortieJ(DJ.sortieConc, OpcodeJ.o) 
 
-    DecodeurBranch <b> DB(instr[0..5], instr[6..10], instr[11..15], instr[16..31], gestReg[0..31], pc[0..b-1], gr_reader[0..31], alu[0..31])
-    FiltreSel <1+5+32+32+32+4+32 + 32 + 4 + 3 + 5+b> SortieB(DB.sortieConc, OpcodeBranch.o)
+    DecodeurBranch <b> @ OpcodeBranch.o DB(instr[0..5], instr[6..10], instr[11..15], instr[16..31], gestReg[0..31], pc[0..b-1], gr_reader[0..31], alu[0..31])
+    #FiltreSel <1+5+32+32+32+4+32 + 32 + 4 + 3 + 5+b> SortieB(DB.sortieConc, OpcodeBranch.o)
 
-    DecodeurMemLect <b> DML(instr[0..5], instr[6..10], instr[11..15], instr[16..31], alu[0..31], gestReg[0..31], pc[0..b-1], memVal[0..31])
-    FiltreSel <1+5+32+32+32+4+32 + 32 + 4 + 3 + 5+b> SortieML(DML.sortieConc, OpcodeMemLect.o)
+    DecodeurMemLect <b> @ OpcodeMemLect.o DML(instr[0..5], instr[6..10], instr[11..15], instr[16..31], alu[0..31], gestReg[0..31], pc[0..b-1], memVal[0..31])
+    #FiltreSel <1+5+32+32+32+4+32 + 32 + 4 + 3 + 5+b> SortieML(DML.sortieConc, OpcodeMemLect.o)
 
-    DecodeurMemEcr <b> DME(instr[0..5], instr[6..10], instr[11..15], instr[16..31], alu[0..31], gestReg[0..31], pc[0..b-1])
-    FiltreSel <1+5+32+32+32+4+32 + 32 + 4 + 3 + 5+b> SortieME(DME.sortieConc, OpcodeMemEcr.o)
+    DecodeurMemEcr <b> @ OpcodeMemEcr.o DME(instr[0..5], instr[6..10], instr[11..15], instr[16..31], alu[0..31], gestReg[0..31], pc[0..b-1])
+    #FiltreSel <1+5+32+32+32+4+32 + 32 + 4 + 3 + 5+b> SortieME(DME.sortieConc, OpcodeMemEcr.o)
 
-    DecodeurJR <b> DJR(instr[0..5], instr[6..10], instr[11..15], instr[16..20], instr[21..25], instr[26..31], gestReg[0..31], pc[0..b-1])
-    FiltreSel <1+5+32+32+32+4+32 + 32 + 4 + 3 + 5 +b> SortieJR(DJR.sortieConc, OpcodeJR.o)    
+    DecodeurJR <b> @ OpcodeJR.o DJR(instr[0..5], instr[6..10], instr[11..15], instr[16..20], instr[21..25], instr[26..31], gestReg[0..31], pc[0..b-1])
+    #FiltreSel <1+5+32+32+32+4+32 + 32 + 4 + 3 + 5 +b> SortieJR(DJR.sortieConc, OpcodeJR.o)    
 
+    Or Is_R_or_J (OpcodeR.o, OpcodeJ.o)
+    Or Is_I_or_B (OpcodeI.o, OpcodeBranch.o)
+    Or Is_R_or_J_or_I_or_B (Is_R_or_J.o, Is_I_or_B.o)
+    Or Is_Ml_or_Me (OpcodeMemLect.o, OpcodeMemEcr.o)
+    Or Is_Ml_or_Me_or_Jr (Is_Ml_or_Me.o, OpcodeJR.o)    
+
+    Mux_scalar <1+5+32+32+32+4+ 32 + 32 + 4 + 3 + 5 + b> @ Is_R_or_J.o
+               Mux_RJ (OpcodeJ.o, DR.sortieConc, DJ.sortieConc)
+    Mux_scalar <1+5+32+32+32+4+ 32 + 32 + 4 + 3 + 5 + b> @ Is_I_or_B.o
+               Mux_IB (OpcodeBranch.o, DI.sortieConc, DB.sortieConc)
+    Mux_scalar <1+5+32+32+32+4+ 32 + 32 + 4 + 3 + 5 + b> @ Is_R_or_J_or_I_or_B.o
+               Mux_RJIB (Is_I_or_B.o, Mux_RJ.o, Mux_IB.o)
+    Mux_scalar <1+5+32+32+32+4+ 32 + 32 + 4 + 3 + 5 + b> @ Is_Ml_or_Me.o
+               Mux_MlMe (OpcodeMemEcr.o, DML.sortieConc, DME.sortieConc)
+    Mux_scalar <1+5+32+32+32+4+ 32 + 32 + 4 + 3 + 5 + b> @ Is_Ml_or_Me_or_Jr.o
+               Mux_MlMeJr (OpcodeJR.o, Mux_MlMe.o, DJR.sortieConc)
+    Mux_scalar <1+5+32+32+32+4+ 32 + 32 + 4 + 3 + 5 + b>
+               Res (Is_R_or_J_or_I_or_B.o, Mux_MlMeJr.o, Mux_RJIB.o)
+
+(*
     Ou <1+5+32+32+32+4+ 32 + 32 + 4 + 3 + 5 + b> O1(SortieR.o, SortieI.o)
     Ou <1+5+32+32+32+4+ 32 + 32 + 4 + 3 + 5 + b> O2(SortieJ.o, SortieB.o)
     Ou <1+5+32+32+32+4+ 32 + 32 + 4 + 3 + 5 + b> O3(SortieML.o, O2.o)
     Ou <1+5+32+32+32+4+ 32 + 32 + 4 + 3 + 5 + b> O4(SortieME.o, O3.o)
     Ou <1+5+32+32+32+4+ 32 + 32 + 4 + 3 + 5 + b> O5(SortieJR.o, O4.o)
     Ou <1+5+32+32+32+4+ 32 + 32 + 4 + 3 + 5 + b> Res(O1.o, O5.o)        
-
+*)
     ->versGestRegModeEcr :  Res.o[0],
       versGestRegAd[5] : Res.o[1..5], 
       versGestRegVal[32] :  Res.o[6..37],

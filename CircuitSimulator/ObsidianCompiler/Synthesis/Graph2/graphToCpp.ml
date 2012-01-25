@@ -891,6 +891,20 @@ let circuit_code (graph, (number_of_circuit_inputs, number_of_circuit_outputs,
   let (new_num,old_num) = topological_sort graph 
     number_of_circuit_inputs number_of_circuit_outputs enables_tree
   in
+  (* DEBUG *)
+  for node_old = 0 to Array.length graph - 1 do
+    match fst graph.(node_old) with
+      | Register | Device _ -> ()
+      | _ ->
+          Array.iter
+            (fun target_nodes ->
+              List.iter
+	        (fun (target_node_old,_) ->
+                  assert (new_num.(target_node_old) > new_num.(node_old)))
+	        target_nodes)
+            (snd graph.(node_old))
+  done;
+  (* /DEBUG *)
   remove_enables_from_outputs graph enables;
 
   let (gates_outputs_positions, gates_outputs_array_size) =
@@ -1061,7 +1075,8 @@ let circuit_code (graph, (number_of_circuit_inputs, number_of_circuit_outputs,
   let margin = String.make 8 ' ' in
   
   Buffer.add_string res  
-    (margin ^ "while (clocked && time_gt (&simulated_time, &current_time))\n" ^
+    (margin ^ "circuit::current_cycle++;\n" ^
+      margin ^ "while (clocked && time_gt (&simulated_time, &current_time))\n"^
       margin ^ "  gettimeofday (&current_time, NULL);\n" ^
       "\n");
 (*

@@ -5,6 +5,11 @@
 
 #include "device.h"
 
+namespace circuit
+{
+  extern long long int current_cycle;
+}
+
 namespace
 {
   class memory_cons;
@@ -32,14 +37,12 @@ private :
   
   memory_cons * cons;
 
-  int current_time;
-
   int id;
 
   unsigned int * mod_ptr;
   unsigned int mod_val;
   unsigned int mod_addr;
-  bool wrote;
+  long long int mod_time;
 
   friend class Memory_reader;
 };
@@ -59,7 +62,6 @@ public :
 private :
   Memory * target;
   int id;
-  int current_time;
 };
 
 
@@ -112,9 +114,7 @@ Memory::Memory(int id, int size, int init_ram)
   mem_size = 1<<size;
   mem = new char[mem_size];
   
-  current_time = 0;
-  
-  wrote = false;
+  mod_time = -1;
 
   if (init_ram)
     {
@@ -140,8 +140,7 @@ unsigned int Memory::cycle (unsigned int address, unsigned int data,
                             bool interrupt_enable, bool iack, char * irq)
 {
   unsigned int r = memory_access(address, data, byte_enables, write_enable);
-  current_time++;
-  wrote = write_enable;
+  if (write_enable) mod_time = circuit::current_cycle;
   return r;
 }
 
@@ -154,7 +153,7 @@ unsigned int Memory::memory_access (unsigned int address, unsigned int data,
     | ((byte_enables & 2) ? 0x0000FF00 : 0)
     | ((byte_enables & 4) ? 0x00FF0000 : 0)
     | ((byte_enables & 8) ? 0xFF000000 : 0);
-  
+
   if (address > mem_size - 4) fatal();
   
   r = *(reinterpret_cast<unsigned int *>(mem + address));
@@ -177,8 +176,6 @@ Memory_reader::Memory_reader(int id)
      fatal();
    }
 
-  current_time = 0;
- 
   this->id = id;
   target = NULL;
 }
@@ -213,19 +210,18 @@ unsigned int Memory_reader::cycle (unsigned int address, unsigned int data,
    }
 
   if (address + 3 < target->mod_addr || address > target->mod_addr + 3
-      || !target->wrote || current_time == target->current_time)
+      || target->mod_time < circuit::current_cycle)
    {
      r = target->memory_access(address, data, byte_enables, false);
    }
   else
-   {
+    {
      unsigned int saved = *target->mod_ptr;
      *target->mod_ptr = target->mod_val;
      r = target->memory_access(address, data, byte_enables, false);
      *target->mod_ptr = saved;
-   }
- 
-  current_time++;
+}
+
   return r;
 }
 
