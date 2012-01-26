@@ -82,9 +82,9 @@ run-auto: micro-fast assembleur
 	./assembleur -o ram Asm/horloge-autonome.s
 	./micro-fast $(NB_OP)
 
-run-revol: micro-fast assembleur
+run-revol: micro assembleur
 	./assembleur -o ram Asm/horlogerevolutionnaire.s
-	./micro-fast $(NB_OP)
+	./micro $(NB_OP)
 
 
 clean:
