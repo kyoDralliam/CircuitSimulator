@@ -84,7 +84,7 @@ run-auto: micro-fast assembleur
 
 run-revol: micro assembleur
 	./assembleur -o ram Asm/horlogerevolutionnaire.s
-	./micro $(NB_OP)
+	./micro -c $(FREQ) $(NB_OP)
 
 run-revol-fast: micro-fast assembleur
 	./assembleur -o ram Asm/horlogerevolutionnaire.s
