@@ -157,7 +157,7 @@ Clock_bus::Clock_bus(int id, int size, int number_of_displays, int frequency)
   ticks = 0;
   this->frequency = frequency;
 
-  mem_size = 1<<size;
+  mem_size = 1<<size + 4;
   mem = new char[mem_size];
   
   this->number_of_displays = number_of_displays;
@@ -166,12 +166,12 @@ Clock_bus::Clock_bus(int id, int size, int number_of_displays, int frequency)
 
   if (number_of_displays > 0)
    {
-     displays_mem = new char[number_of_displays * 16];
+     displays_mem = new char[number_of_displays * 16+4];
      memset (displays_mem, 0, number_of_displays * 16);
    }
   else if (number_of_displays == -1)
    {
-     displays_mem = new char[14];
+     displays_mem = new char[14+4];
      memset (displays_mem, 0, 14);
    }
   else
@@ -228,11 +228,11 @@ unsigned int Clock_bus::memory_access (unsigned int address, unsigned int data,
        {
          if (number_of_displays == -1)
            {
-             if ((address & 0xFFF) + 4 > 14) fatal();
+             if ((address & 0xFFF) + 1 > 14) fatal();
            }
          else
            {
-             if ((address & 0xFFF) + 4 > number_of_displays * 16) fatal();
+             if ((address & 0xFFF) + 1 > number_of_displays * 16) fatal();
            }
 
          r = *(reinterpret_cast<unsigned int *>(displays_mem + (address & 0xFFF)));

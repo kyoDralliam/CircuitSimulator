@@ -26,10 +26,10 @@ main:
 attendre:    
         #beq $t6, $zero, recalculer
         # On récupère le timestamp que l'on met dans $s7
-        #li      $t0, timestamp
-        #lw      $s7, 0($t0)
+        li      $t0, timestamp
+        lw      $s7, 0($t0)
         #beq     $t7, $s7, attendre
-        li      $s7, 1328012616
+        #li      $s7, 1328012616
         #li      $s7, 1327338988
         
 recalculer:     
@@ -111,123 +111,18 @@ recalculer:
             la      $t2, clock_display
             sb      $t1, 5($t2)
         
-        addi    $s7, $s7, 1
-        j       recalculer
 
-        # Si c'est la première fois que l'on passe par là, on force le calcul de la date
-        beq     $gp, $zero, date
+        ## Si c'est la première fois que l'on passe par là, on force le calcul de la date
+        #beq     $gp, $zero, date
 
-        # Si on n'est pas 00:00:00, on recalcule l'heure sans recalculer la date
-        bne     $fp, $zero, attendre
+        ## Si on n'est pas 00:00:00, on recalcule l'heure sans recalculer la date
+        #bne     $fp, $zero, attendre
     
     date:
-        li      $gp, 42
-        # ---- Calcul de la date ----
-        # On commence par rajouter un décalage pour les années bissextiles
-        # Dans le cas absurde où on se trouverait avant le premier décalage, on
-        # ne fait rien du tout
-        li      $t0, 68256000
-        bgt     $t0, $s7, finbissextile
-        # On veut donc savoir combien de 29 févriers on doit rajouter
-        # artificiellement (information mise dans $s1). On commence par mettre
-        # le point de départ du comptage le 1er Mars 1970
-        addi    $s6, $s0, -58 # 31+28-1
-        li      $s1, 0
-        move    $a0, $s6
-        li      $a1, 1461 # 4*365 + 1
-        jal     diviser
-        move    $s5, $v0 # $s5 = Nombre de paquets de 4 ans
-        move    $a0, $v0
-        li      $a1, 1461
-        jal     multiplier
-        sub     $s6, $s6, $v0 # $s6 = "reste"
-        move    $a0, $s5
-        li      $a1, 3 # 3 corrections en 4 ans
-        jal multiplier
-        add     $s1, $s1, $v0 # Corrections par paquets de 4 ans
-        addi    $s1, $s1, 1
-        li      $t0, 366
-        bgt     $t0, $s6, finbissextile
-        addi    $s1, $s1, 1
-        li      $t0, 1097
-        bgt     $t0, $s6, finbissextile
-        addi    $s1, $s1, 1
-    finbissextile:
-        # 2000 n'est pas une année bissextile
-        li      $t0, 951868799
-        bgt     $t0, $s7, antibug
-        addi    $s1, $s1, 1
-    antibug:
-        # Et on effectue la correction calculée dans $s1
-        add     $s0, $s0, $s1 # Rappel // $s0 = Jours depuis le 01/01/1970
-
-        # Maintenant on a facilement l'année
-        li      $s6, 0
-        move    $a0, $s0
-        li      $a1, 366
-        jal     diviser
-        move    $s6, $v0 # $s6 = Année
-            move    $a0, $s6
-
-        # On trouve le mois en mode "gros sac"
-        move    $a0, $s6
-        li      $a1, 366
-        jal     multiplier
-        sub     $s4, $s0, $v0 # $s4 = Nombre de jours depuis le début de l'année
-        li      $s5, 1 # $s5 = Mois
-        li      $t1, 0
-        li      $t0, 31 # Janvier + 1 (à cause de la comparaison stricte)
-        bgt     $t0, $s4, moistrouve
-        addi    $s5, $s5, 1
-        move    $t1, $t0
-        addi    $t0, $t0, 29 # Février
-        bgt     $t0, $s4, moistrouve
-        addi    $s5, $s5, 1
-        move    $t1, $t0
-        addi    $t0, $t0, 31 # Mars
-        bgt     $t0, $s4, moistrouve
-        addi    $s5, $s5, 1
-        move    $t1, $t0
-        addi    $t0, $t0, 30 # Avril
-        bgt     $t0, $s4, moistrouve
-        addi    $s5, $s5, 1
-        move    $t1, $t0
-        addi    $t0, $t0, 31 # Mai
-        bgt     $t0, $s4, moistrouve
-        addi    $s5, $s5, 1
-        move    $t1, $t0
-        addi    $t0, $t0, 30 # Juin
-        bgt     $t0, $s4, moistrouve
-        addi    $s5, $s5, 1
-        move    $t1, $t0
-        addi    $t0, $t0, 31 # Juillet
-        bgt     $t0, $s4, moistrouve
-        addi    $s5, $s5, 1
-        move    $t1, $t0
-        addi    $t0, $t0, 31 # Août
-        bgt     $t0, $s4, moistrouve
-        addi    $s5, $s5, 1
-        move    $t1, $t0
-        addi    $t0, $t0, 30 # Septembre
-        bgt     $t0, $s4, moistrouve
-        addi    $s5, $s5, 1
-        move    $t1, $t0
-        addi    $t0, $t0, 31 # Octobre
-        bgt     $t0, $s4, moistrouve
-        addi    $s5, $s5, 1
-        move    $t1, $t0
-        addi    $t0, $t0, 30 # Novembre
-        bgt     $t0, $s4, moistrouve
-        addi    $s5, $s5, 1
-        move    $t1, $t0
-    moistrouve:
-            move    $a0, $s5 # $s5 = Mois
-        addi    $t1, $t1, -1
-        sub     $s4, $s4, $t1
-            move    $a0, $s4 # $s4 = Jour
 
             # Affichage de la date
             # Jour
+            li      $s4, 6
             add     $t0, $s4, $s4
             li      $t5, two_digits_to_segments 
             add     $t0, $t0, $t5
@@ -241,6 +136,7 @@ recalculer:
             lb      $t1, 0($t0)
             sb      $t1, 7($t2)
             # Mois
+            li      $s5, 5
             add     $t0, $s5, $s5
             li      $t5, two_digits_to_segments 
             add     $t0, $t0, $t5
@@ -254,15 +150,35 @@ recalculer:
             lb      $t1, 0($t0)
             sb      $t1, 9($t2)
             # Années
+            li      $s6, 2
             add     $t0, $s6, $s6
-            add     $t0, $t0, $t0
-            li      $t5, year_to_segments 
+            li      $t5, two_digits_to_segments 
             add     $t0, $t0, $t5
-            lw      $t1, 0($t0)
+            lb      $t1, 0($t0)
             la      $t2, clock_display
-            addi    $t2, $t2, 10
-            sw      $t1, 0($t2)
+            sb      $t1, 10($t2)
+            add     $t0, $s6, $s6
+            addi    $t0, $t0, 1
+            li      $t5, two_digits_to_segments 
+            add     $t0, $t0, $t5
+            lb      $t1, 0($t0)
+            sb      $t1, 11($t2)
+            li      $s6, 20
+            add     $t0, $s6, $s6
+            li      $t5, two_digits_to_segments 
+            add     $t0, $t0, $t5
+            lb      $t1, 0($t0)
+            la      $t2, clock_display
+            sb      $t1, 12($t2)
+            add     $t0, $s6, $s6
+            addi    $t0, $t0, 1
+            li      $t5, two_digits_to_segments 
+            add     $t0, $t0, $t5
+            lb      $t1, 0($t0)
+            sb      $t1, 13($t2)
 
+        addi    $s7, $s7, 1
+        j       recalculer
         
         #li      $a0, 22742 
         #li      $a1, 17
