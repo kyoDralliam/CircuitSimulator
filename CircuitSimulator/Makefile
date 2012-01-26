@@ -86,6 +86,10 @@ run-revol: micro assembleur
 	./assembleur -o ram Asm/horlogerevolutionnaire.s
 	./micro $(NB_OP)
 
+run-revol-fast: micro-fast assembleur
+	./assembleur -o ram Asm/horlogerevolutionnaire.s
+	./micro-fast $(NB_OP)
+
 
 clean:
 	$(MAKE) --directory=ObsidianCompiler clean
