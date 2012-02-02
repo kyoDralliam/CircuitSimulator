@@ -1,4 +1,0 @@
-<Analysis> or <Synthesis> or <FrontEnd> : include
-<Synthesis/Graph1/*.cmx> : for-pack(Graph1)
-<Synthesis/Graph2/*.cmx> : for-pack(Graph2)
-			

@@ -1,4 +1,0 @@
-TestBlock
-    -> o[8] : {$0110, $1110};
-
-start TestBlock
